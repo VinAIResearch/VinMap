@@ -71,7 +71,6 @@ The json dictionary format for each image polygon (multiple vertices):
       [228, 59],
       [228,262],
       [52,262]],
-    "isArt": false
   },
 # Unlabeled text   
   {
@@ -84,18 +83,15 @@ The json dictionary format for each image polygon (multiple vertices):
       [278, 66],
       [228,64],
       [52,262]],
-    "isArt": false
   },
 ]
 ```
 
-![Alt text](../visualization/polygon_interpolation.png?raw=true "Polygon")
-
 We interpolate multiple vertices polygon into 4 vertices polygon for easy segmentation.
 The .txt text ICDAR2015 style format for each image polygon (4 vertices):
 ```python
-228,58,51,58,51,262,227,262,Ô
-891,47,279,27,269,299,881,319,KÌA!
+228,58,51,58,51,262,227,262, HOANG
+891,47,279,27,269,299,881,319,SA!
 ```
 In order to change the annotation to ICDAR2015 (including interpolating the muti-vertice polygon and cleaning for unlabeled text), proceed the following code
 ```python
