@@ -1,0 +1,12 @@
+python -W ignore single_infer.py \
+--configCls 'classification/configs/efficientnet/efficientnet-b4_8xb32_in1k.py' \
+--configSegment 'configuration/maskrcnn_resnext101_DCN_160e_icdar.py' \
+--cls_weights '../effnetb4_vnmap.pth' \
+--det_weights '../resnext101_DCN_160e_epoch_150.pth' \
+--rec_weights '../transformerocr_btc.pth' \
+--root '../Dataset/Vietnam_map' \
+--input_images '../Dataset/Vietnam_map/negative/vietnamese' \
+--output_destination '../Dataset/Vietnam_map/prediction_full/negative/vietnamese' \
+--single_infer 'True' \
+--single_infer_image '../temp/VNmap_TSHS.png' \
+--single_infer_path '../temp'
