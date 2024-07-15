@@ -1,4 +1,0 @@
-{}
-{"mode": "train", "epoch": 1, "iter": 10, "lr": 0.1, "memory": 3487, "data_time": 0.24834, "loss": 0.7933, "time": 0.46696}
-{"mode": "train", "epoch": 1, "iter": 20, "lr": 0.1, "memory": 3487, "data_time": 0.00054, "loss": 1.78606, "time": 0.20615}
-{"mode": "train", "epoch": 1, "iter": 30, "lr": 0.1, "memory": 3487, "data_time": 0.00041, "loss": 4.92132, "time": 0.20298}

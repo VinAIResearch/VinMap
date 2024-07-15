@@ -1,11 +1,63 @@
 
 # VinMap dataset
+**Dataset link:** [Google Drive](https://drive.google.com/drive/folders/1Pgzv6hz977c82HpeSZsgkY5CYxG5FRV2?usp=sharing)
+* MapData (Classification#1)
+* MapT12_classification (Classification#2)
+* Maps containing HS TS - Box Labled
+* VinMap
 
+Download and unzip the files. For classification, the dataset is already formatted for training/testing. For detection/recognition, follow bellow steps for pretraining and fine-tuning the model.
+
+# VinMap dataset 
+The dataset policy (positive/negative) is determined by the our paper.
+
+    VinMap
+    │   ├── positive
+    │   │   ├── english
+    │   │   ├── vietnamese
+    │   ├── negative
+    │   │   ├── english
+    │   │   ├── vietnamese
+
+Box annotations labeling process: [Youtube link](https://www.youtube.com/watch?v=R_eyNzhdJuE)
+
+    Maps containing HS TS - Box Labled
+    │   ├── Vietnamese
+    │   │   ├── english
+    │   │   ├── vietnamese
+    │   ├── Not Vietnamese
+    │   │   ├── english
+    │   │   ├── vietnamese
 # Map classification
 ## Classification 1: Map classification
+
+Classify if image is a map or not
+
+    MapData
+    │   ├── map
+    │   │   ├── anhbando.png
+    │   │   ├── map.jpg
+    │   │   ├── ...
+    │   ├── notmap
+    │   │   ├── coco.jpg
+    │   │   ├── car.png
+    │   │   ├── ...
 ## Classification 2: Vietnam Map classification
+
+Classify if the map is Vietnam map or not
+
+    MapT12_classification
+    │   ├── vietnam
+    │   │   ├── bandovietnam.png
+    │   │   ├── hoangsatruongsa.jpg
+    │   │   ├── ...
+    │   ├── notvietnam
+    │   │   ├── russia.jpg
+    │   │   ├── seattle_usa.png
+    │   │   ├── ...
+
 # ICDAR 2015 pretraining
-In this section ICDAR 2015 pretraining for Text detection and Text recognition are presented. The same procedure is applied for VinText dataset!
+In this section ICDAR 2015 pretraining for Text detection and Text recognition are presented. The same procedure is applied for VinText and VinMap dataset.
 ## Text Detection
 For the detection task, we provide the data conversion from json to ICDAR2015 .txt style.
 The json dictionary format for each image polygon (multiple vertices):
@@ -37,7 +89,7 @@ The json dictionary format for each image polygon (multiple vertices):
 ]
 ```
 
-![Alt text](visualization/polygon_interpolation.png?raw=true "Polygon")
+![Alt text](../visualization/polygon_interpolation.png?raw=true "Polygon")
 
 We interpolate multiple vertices polygon into 4 vertices polygon for easy segmentation.
 The .txt text ICDAR2015 style format for each image polygon (4 vertices):
