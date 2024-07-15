@@ -9,8 +9,8 @@ pip install torch==1.10.1+cpu torchvision==0.11.2+cpu torchaudio==0.10.1 -f http
 ```
 
 ``` python
-git clone https://github.com/PhucNDA/VinAI_MICVN
-cd VinAI_MICVN
+git clone https://github.com/VinAIResearch/VinMap
+cd VinMap
 
 # Essential env
 pip install mmcv-full

@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import torch
-sys.path.append('/home/phucnda/applied/E2E_WordArt_DetRec/')
+sys.path.append('/root/VinMap')
 
 # segmentation
 from tqdm import tqdm
