@@ -10,7 +10,7 @@
 
 by [Phuc Nguyen](https://phucnda.github.io/), [Anh Do](https://english.mic.gov.vn/information-center-197114238.htm), and [Minh Hoai](https://researchers.adelaide.edu.au/profile/minhhoai.nguyen)
 
-<a href="https://arxiv.org/abs/2312.10671"><img src="https://img.shields.io/badge/arxiv-2312.10671-red?style=for-the-badge"></a>
+<a href="https://arxiv.org/abs/2407.10709"><img src="https://img.shields.io/badge/arxiv-2312.10671-red?style=for-the-badge"></a>
 
 
 > **Abstract**: 
@@ -27,7 +27,7 @@ Details of the model architecture and experimental results can be found in [our 
   booktitle={2024 International Conference on Multimedia Analysis and Pattern Recognition (MAPR)}
 }
 ```
-**Please CITE** our paper whenever this repository is used to help produce published results or incorporated into other software.
+**Please CITE** our [paper](https://arxiv.org/abs/2407.10709) whenever this repository is used to help produce published results or incorporated into other software.
 
 
 
@@ -91,18 +91,6 @@ export PYTHONPATH='/root/VinMap'
 python -W ignore single_infer.py --single_infer_image <image_path> --single_infer_path '../temp'
 # CPU
 python -W ignore single_infer_cpu.py --single_infer_image <image_path> --single_infer_path '../temp'
-```
-### Industry version:
-(Minimum requirements: 8GB)
-
-This version is confidential and for industrial use only. Include testing, demo code.
-
-#### Testing:
-
-```python
-export PYTHONPATH='/root/VinMap'
-# GPU
-python -W ignore single_infer_optimize.py --single_infer_image <image_path> --single_infer_path '../temp'
 ```
 
 #### Drag and drop:
