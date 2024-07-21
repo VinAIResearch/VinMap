@@ -18,11 +18,9 @@ class ResizeNoImg:
         self.keep_ratio = keep_ratio
 
     def __call__(self, results):
-        w, h = results['img_info']['width'], results['img_info']['height']
+        w, h = results["img_info"]["width"], results["img_info"]["height"]
         if self.keep_ratio:
-            (new_w, new_h) = rescale_size((w, h),
-                                          self.img_scale,
-                                          return_scale=False)
+            (new_w, new_h) = rescale_size((w, h), self.img_scale, return_scale=False)
             w_scale = new_w / w
             h_scale = new_h / h
         else:
@@ -30,11 +28,10 @@ class ResizeNoImg:
 
         w_scale = new_w / w
         h_scale = new_h / h
-        scale_factor = np.array([w_scale, h_scale, w_scale, h_scale],
-                                dtype=np.float32)
-        results['img_shape'] = (new_h, new_w, 1)
-        results['scale_factor'] = scale_factor
-        results['keep_ratio'] = True
+        scale_factor = np.array([w_scale, h_scale, w_scale, h_scale], dtype=np.float32)
+        results["img_shape"] = (new_h, new_w, 1)
+        results["scale_factor"] = scale_factor
+        results["keep_ratio"] = True
 
         return results
 
@@ -71,15 +68,15 @@ class KIEFormatBundle(DefaultFormatBundle):
                 default bundle.
         """
         super().__call__(results)
-        if 'ann_info' in results:
-            for key in ['relations', 'texts']:
-                value = results['ann_info'][key]
-                if key == 'relations' and 'scale_factor' in results:
-                    scale_factor = results['scale_factor']
+        if "ann_info" in results:
+            for key in ["relations", "texts"]:
+                value = results["ann_info"][key]
+                if key == "relations" and "scale_factor" in results:
+                    scale_factor = results["scale_factor"]
                     if isinstance(scale_factor, float):
                         sx = sy = scale_factor
                     else:
-                        sx, sy = results['scale_factor'][:2]
+                        sx, sy = results["scale_factor"][:2]
                     r = sx / sy
                     factor = np.array([sx, sy, r, 1, r]).astype(np.float32)
                     value = value * factor[None, None]

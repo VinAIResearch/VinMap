@@ -16,12 +16,12 @@ This code is refer from:
 https://github.com/open-mmlab/mmocr/blob/main/mmocr/models/textdet/dense_heads/fce_head.py
 """
 
-from paddle import nn
-from paddle import ParamAttr
-import paddle.nn.functional as F
-from paddle.nn.initializer import Normal
-import paddle
 from functools import partial
+
+import paddle
+import paddle.nn.functional as F
+from paddle import ParamAttr, nn
+from paddle.nn.initializer import Normal
 
 
 def multi_apply(func, *args, **kwargs):
@@ -60,11 +60,9 @@ class FCEHead(nn.Layer):
             stride=1,
             padding=1,
             groups=1,
-            weight_attr=ParamAttr(
-                name='cls_weights',
-                initializer=Normal(
-                    mean=0., std=0.01)),
-            bias_attr=True)
+            weight_attr=ParamAttr(name="cls_weights", initializer=Normal(mean=0.0, std=0.01)),
+            bias_attr=True,
+        )
         self.out_conv_reg = nn.Conv2D(
             in_channels=self.in_channels,
             out_channels=self.out_channels_reg,
@@ -72,11 +70,9 @@ class FCEHead(nn.Layer):
             stride=1,
             padding=1,
             groups=1,
-            weight_attr=ParamAttr(
-                name='reg_weights',
-                initializer=Normal(
-                    mean=0., std=0.01)),
-            bias_attr=True)
+            weight_attr=ParamAttr(name="reg_weights", initializer=Normal(mean=0.0, std=0.01)),
+            bias_attr=True,
+        )
 
     def forward(self, feats, targets=None):
         cls_res, reg_res = multi_apply(self.forward_single, feats)
@@ -86,11 +82,10 @@ class FCEHead(nn.Layer):
             for i in range(level_num):
                 tr_pred = F.softmax(cls_res[i][:, 0:2, :, :], axis=1)
                 tcl_pred = F.softmax(cls_res[i][:, 2:, :, :], axis=1)
-                outs['level_{}'.format(i)] = paddle.concat(
-                    [tr_pred, tcl_pred, reg_res[i]], axis=1)
+                outs["level_{}".format(i)] = paddle.concat([tr_pred, tcl_pred, reg_res[i]], axis=1)
         else:
             preds = [[cls_res[i], reg_res[i]] for i in range(level_num)]
-            outs['levels'] = preds
+            outs["levels"] = preds
         return outs
 
     def forward_single(self, x):

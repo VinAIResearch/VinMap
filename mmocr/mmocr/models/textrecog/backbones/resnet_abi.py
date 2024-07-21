@@ -1,8 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import mmocr.utils as utils
 import torch.nn as nn
 from mmcv.runner import BaseModule, Sequential
-
-import mmocr.utils as utils
 from mmocr.models.builder import BACKBONES
 from mmocr.models.textrecog.layers import BasicBlock
 
@@ -25,18 +24,17 @@ class ResNetABI(BaseModule):
         last_stage_pool (bool): If True, add `MaxPool2d` layer to last stage.
     """
 
-    def __init__(self,
-                 in_channels=3,
-                 stem_channels=32,
-                 base_channels=32,
-                 arch_settings=[3, 4, 6, 6, 3],
-                 strides=[2, 1, 2, 1, 1],
-                 out_indices=None,
-                 last_stage_pool=False,
-                 init_cfg=[
-                     dict(type='Xavier', layer='Conv2d'),
-                     dict(type='Constant', val=1, layer='BatchNorm2d')
-                 ]):
+    def __init__(
+        self,
+        in_channels=3,
+        stem_channels=32,
+        base_channels=32,
+        arch_settings=[3, 4, 6, 6, 3],
+        strides=[2, 1, 2, 1, 1],
+        out_indices=None,
+        last_stage_pool=False,
+        init_cfg=[dict(type="Xavier", layer="Conv2d"), dict(type="Constant", val=1, layer="BatchNorm2d")],
+    ):
         super().__init__(init_cfg=init_cfg)
         assert isinstance(in_channels, int)
         assert isinstance(stem_channels, int)
@@ -58,14 +56,11 @@ class ResNetABI(BaseModule):
         for i, num_blocks in enumerate(arch_settings):
             stride = strides[i]
             res_layer = self._make_layer(
-                block=self.block,
-                inplanes=self.inplanes,
-                planes=planes,
-                blocks=num_blocks,
-                stride=stride)
+                block=self.block, inplanes=self.inplanes, planes=planes, blocks=num_blocks, stride=stride
+            )
             self.inplanes = planes * self.block.expansion
             planes *= 2
-            layer_name = f'layer{i + 1}'
+            layer_name = f"layer{i + 1}"
             self.add_module(layer_name, res_layer)
             self.res_layers.append(layer_name)
 
@@ -77,13 +72,7 @@ class ResNetABI(BaseModule):
                 nn.Conv2d(inplanes, planes, 1, stride, bias=False),
                 nn.BatchNorm2d(planes),
             )
-        layers.append(
-            block(
-                inplanes,
-                planes,
-                use_conv1x1=True,
-                stride=stride,
-                downsample=downsample))
+        layers.append(block(inplanes, planes, use_conv1x1=True, stride=stride, downsample=downsample))
         inplanes = planes
         for _ in range(1, blocks):
             layers.append(block(inplanes, planes, use_conv1x1=True))
@@ -91,8 +80,7 @@ class ResNetABI(BaseModule):
         return Sequential(*layers)
 
     def _make_stem_layer(self, in_channels, stem_channels):
-        self.conv1 = nn.Conv2d(
-            in_channels, stem_channels, kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(in_channels, stem_channels, kernel_size=3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(stem_channels)
         self.relu1 = nn.ReLU(inplace=True)
 

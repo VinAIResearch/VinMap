@@ -14,7 +14,7 @@ def gt_label2entity(gt_infos):
     gt_entities = []
     for gt_info in gt_infos:
         line_entities = []
-        label = gt_info['label']
+        label = gt_info["label"]
         for key, value in label.items():
             for _, places in value.items():
                 for place in places:
@@ -38,8 +38,7 @@ def _compute_f1(origin, found, right):
     """
     recall = 0 if origin == 0 else (right / origin)
     precision = 0 if found == 0 else (right / found)
-    f1 = 0. if recall + precision == 0 else (2 * precision * recall) / (
-        precision + recall)
+    f1 = 0.0 if recall + precision == 0 else (2 * precision * recall) / (precision + recall)
     return recall, precision, f1
 
 
@@ -59,10 +58,7 @@ def compute_f1_all(pred_entities, gt_entities):
     for i, _ in enumerate(pred_entities):
         origins.extend(gt_entities[i])
         founds.extend(pred_entities[i])
-        rights.extend([
-            pre_entity for pre_entity in pred_entities[i]
-            if pre_entity in gt_entities[i]
-        ])
+        rights.extend([pre_entity for pre_entity in pred_entities[i] if pre_entity in gt_entities[i]])
 
     class_info = {}
     origin_counter = Counter([x[0] for x in origins])
@@ -73,20 +69,12 @@ def compute_f1_all(pred_entities, gt_entities):
         found = found_counter.get(type_, 0)
         right = right_counter.get(type_, 0)
         recall, precision, f1 = _compute_f1(origin, found, right)
-        class_info[type_] = {
-            'precision': precision,
-            'recall': recall,
-            'f1-score': f1
-        }
+        class_info[type_] = {"precision": precision, "recall": recall, "f1-score": f1}
     origin = len(origins)
     found = len(founds)
     right = len(rights)
     recall, precision, f1 = _compute_f1(origin, found, right)
-    class_info['all'] = {
-        'precision': precision,
-        'recall': recall,
-        'f1-score': f1
-    }
+    class_info["all"] = {"precision": precision, "recall": recall, "f1-score": f1}
     return class_info
 
 

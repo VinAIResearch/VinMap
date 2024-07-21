@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import torch
-
 import mmocr.utils as utils
+import torch
 from mmocr.models.builder import CONVERTORS
+
 from .base import BaseConvertor
 
 
@@ -24,15 +24,17 @@ class AttnConvertor(BaseConvertor):
             start and end token or not. Default: True.
     """
 
-    def __init__(self,
-                 dict_type='DICT90',
-                 dict_file=None,
-                 dict_list=None,
-                 with_unknown=True,
-                 max_seq_len=40,
-                 lower=False,
-                 start_end_same=True,
-                 **kwargs):
+    def __init__(
+        self,
+        dict_type="DICT90",
+        dict_file=None,
+        dict_list=None,
+        with_unknown=True,
+        max_seq_len=40,
+        lower=False,
+        start_end_same=True,
+        **kwargs
+    ):
         super().__init__(dict_type, dict_file, dict_list)
         assert isinstance(with_unknown, bool)
         assert isinstance(max_seq_len, int)
@@ -46,9 +48,9 @@ class AttnConvertor(BaseConvertor):
         self.update_dict()
 
     def update_dict(self):
-        start_end_token = '<BOS/EOS>'
-        unknown_token = '<UKN>'
-        padding_token = '<PAD>'
+        start_end_token = "<BOS/EOS>"
+        unknown_token = "<UKN>"
+        padding_token = "<PAD>"
 
         # unknown
         self.unknown_idx = None
@@ -95,17 +97,16 @@ class AttnConvertor(BaseConvertor):
             src_target[-1] = self.end_idx
             src_target[0] = self.start_idx
             src_target[1:-1] = tensor
-            padded_target = (torch.ones(self.max_seq_len) *
-                             self.padding_idx).long()
+            padded_target = (torch.ones(self.max_seq_len) * self.padding_idx).long()
             char_num = src_target.size(0)
             if char_num > self.max_seq_len:
-                padded_target = src_target[:self.max_seq_len]
+                padded_target = src_target[: self.max_seq_len]
             else:
                 padded_target[:char_num] = src_target
             padded_targets.append(padded_target)
         padded_targets = torch.stack(padded_targets, 0).long()
 
-        return {'targets': tensors, 'padded_targets': padded_targets}
+        return {"targets": tensors, "padded_targets": padded_targets}
 
     def tensor2idx(self, outputs, img_metas=None):
         """

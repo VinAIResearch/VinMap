@@ -16,28 +16,21 @@ This code is refer from:
 https://github.com/open-mmlab/mmocr/blob/1.x/mmocr/models/textrecog/backbones/shallow_cnn.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import math
+
 import numpy as np
 import paddle
-from paddle import ParamAttr
 import paddle.nn as nn
 import paddle.nn.functional as F
+from paddle import ParamAttr
 from paddle.nn import MaxPool2D
-from paddle.nn.initializer import KaimingNormal, Uniform, Constant
+from paddle.nn.initializer import Constant, KaimingNormal, Uniform
 
 
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 filter_size,
-                 num_filters,
-                 stride,
-                 padding,
-                 num_groups=1):
+    def __init__(self, num_channels, filter_size, num_filters, stride, padding, num_groups=1):
         super(ConvBNLayer, self).__init__()
 
         self.conv = nn.Conv2D(
@@ -48,12 +41,12 @@ class ConvBNLayer(nn.Layer):
             padding=padding,
             groups=num_groups,
             weight_attr=ParamAttr(initializer=KaimingNormal()),
-            bias_attr=False)
+            bias_attr=False,
+        )
 
         self.bn = nn.BatchNorm2D(
-            num_filters,
-            weight_attr=ParamAttr(initializer=Uniform(0, 1)),
-            bias_attr=ParamAttr(initializer=Constant(0)))
+            num_filters, weight_attr=ParamAttr(initializer=Uniform(0, 1)), bias_attr=ParamAttr(initializer=Constant(0))
+        )
         self.relu = nn.ReLU()
 
     def forward(self, inputs):
@@ -69,10 +62,8 @@ class ShallowCNN(nn.Layer):
         assert isinstance(in_channels, int)
         assert isinstance(hidden_dim, int)
 
-        self.conv1 = ConvBNLayer(
-            in_channels, 3, hidden_dim // 2, stride=1, padding=1)
-        self.conv2 = ConvBNLayer(
-            hidden_dim // 2, 3, hidden_dim, stride=1, padding=1)
+        self.conv1 = ConvBNLayer(in_channels, 3, hidden_dim // 2, stride=1, padding=1)
+        self.conv2 = ConvBNLayer(hidden_dim // 2, 3, hidden_dim, stride=1, padding=1)
         self.pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
         self.out_channels = hidden_dim
 

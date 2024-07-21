@@ -35,41 +35,43 @@ class MixerBlock(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 num_tokens,
-                 embed_dims,
-                 tokens_mlp_dims,
-                 channels_mlp_dims,
-                 drop_rate=0.,
-                 drop_path_rate=0.,
-                 num_fcs=2,
-                 act_cfg=dict(type='GELU'),
-                 norm_cfg=dict(type='LN'),
-                 init_cfg=None):
+    def __init__(
+        self,
+        num_tokens,
+        embed_dims,
+        tokens_mlp_dims,
+        channels_mlp_dims,
+        drop_rate=0.0,
+        drop_path_rate=0.0,
+        num_fcs=2,
+        act_cfg=dict(type="GELU"),
+        norm_cfg=dict(type="LN"),
+        init_cfg=None,
+    ):
         super(MixerBlock, self).__init__(init_cfg=init_cfg)
 
-        self.norm1_name, norm1 = build_norm_layer(
-            norm_cfg, embed_dims, postfix=1)
+        self.norm1_name, norm1 = build_norm_layer(norm_cfg, embed_dims, postfix=1)
         self.add_module(self.norm1_name, norm1)
         self.token_mix = FFN(
             embed_dims=num_tokens,
             feedforward_channels=tokens_mlp_dims,
             num_fcs=num_fcs,
             ffn_drop=drop_rate,
-            dropout_layer=dict(type='DropPath', drop_prob=drop_path_rate),
+            dropout_layer=dict(type="DropPath", drop_prob=drop_path_rate),
             act_cfg=act_cfg,
-            add_identity=False)
+            add_identity=False,
+        )
 
-        self.norm2_name, norm2 = build_norm_layer(
-            norm_cfg, embed_dims, postfix=2)
+        self.norm2_name, norm2 = build_norm_layer(norm_cfg, embed_dims, postfix=2)
         self.add_module(self.norm2_name, norm2)
         self.channel_mix = FFN(
             embed_dims=embed_dims,
             feedforward_channels=channels_mlp_dims,
             num_fcs=num_fcs,
             ffn_drop=drop_rate,
-            dropout_layer=dict(type='DropPath', drop_prob=drop_path_rate),
-            act_cfg=act_cfg)
+            dropout_layer=dict(type="DropPath", drop_prob=drop_path_rate),
+            act_cfg=act_cfg,
+        )
 
     @property
     def norm1(self):
@@ -136,67 +138,72 @@ class MlpMixer(BaseBackbone):
 
     arch_zoo = {
         **dict.fromkeys(
-            ['s', 'small'], {
-                'embed_dims': 512,
-                'num_layers': 8,
-                'tokens_mlp_dims': 256,
-                'channels_mlp_dims': 2048,
-            }),
+            ["s", "small"],
+            {
+                "embed_dims": 512,
+                "num_layers": 8,
+                "tokens_mlp_dims": 256,
+                "channels_mlp_dims": 2048,
+            },
+        ),
         **dict.fromkeys(
-            ['b', 'base'], {
-                'embed_dims': 768,
-                'num_layers': 12,
-                'tokens_mlp_dims': 384,
-                'channels_mlp_dims': 3072,
-            }),
+            ["b", "base"],
+            {
+                "embed_dims": 768,
+                "num_layers": 12,
+                "tokens_mlp_dims": 384,
+                "channels_mlp_dims": 3072,
+            },
+        ),
         **dict.fromkeys(
-            ['l', 'large'], {
-                'embed_dims': 1024,
-                'num_layers': 24,
-                'tokens_mlp_dims': 512,
-                'channels_mlp_dims': 4096,
-            }),
+            ["l", "large"],
+            {
+                "embed_dims": 1024,
+                "num_layers": 24,
+                "tokens_mlp_dims": 512,
+                "channels_mlp_dims": 4096,
+            },
+        ),
     }
 
-    def __init__(self,
-                 arch='base',
-                 img_size=224,
-                 patch_size=16,
-                 out_indices=-1,
-                 drop_rate=0.,
-                 drop_path_rate=0.,
-                 norm_cfg=dict(type='LN'),
-                 act_cfg=dict(type='GELU'),
-                 patch_cfg=dict(),
-                 layer_cfgs=dict(),
-                 init_cfg=None):
+    def __init__(
+        self,
+        arch="base",
+        img_size=224,
+        patch_size=16,
+        out_indices=-1,
+        drop_rate=0.0,
+        drop_path_rate=0.0,
+        norm_cfg=dict(type="LN"),
+        act_cfg=dict(type="GELU"),
+        patch_cfg=dict(),
+        layer_cfgs=dict(),
+        init_cfg=None,
+    ):
         super(MlpMixer, self).__init__(init_cfg)
 
         if isinstance(arch, str):
             arch = arch.lower()
-            assert arch in set(self.arch_zoo), \
-                f'Arch {arch} is not in default archs {set(self.arch_zoo)}'
+            assert arch in set(self.arch_zoo), f"Arch {arch} is not in default archs {set(self.arch_zoo)}"
             self.arch_settings = self.arch_zoo[arch]
         else:
-            essential_keys = {
-                'embed_dims', 'num_layers', 'tokens_mlp_dims',
-                'channels_mlp_dims'
-            }
-            assert isinstance(arch, dict) and set(arch) == essential_keys, \
-                f'Custom arch needs a dict with keys {essential_keys}'
+            essential_keys = {"embed_dims", "num_layers", "tokens_mlp_dims", "channels_mlp_dims"}
+            assert (
+                isinstance(arch, dict) and set(arch) == essential_keys
+            ), f"Custom arch needs a dict with keys {essential_keys}"
             self.arch_settings = arch
 
-        self.embed_dims = self.arch_settings['embed_dims']
-        self.num_layers = self.arch_settings['num_layers']
-        self.tokens_mlp_dims = self.arch_settings['tokens_mlp_dims']
-        self.channels_mlp_dims = self.arch_settings['channels_mlp_dims']
+        self.embed_dims = self.arch_settings["embed_dims"]
+        self.num_layers = self.arch_settings["num_layers"]
+        self.tokens_mlp_dims = self.arch_settings["tokens_mlp_dims"]
+        self.channels_mlp_dims = self.arch_settings["channels_mlp_dims"]
 
         self.img_size = to_2tuple(img_size)
 
         _patch_cfg = dict(
             input_size=img_size,
             embed_dims=self.embed_dims,
-            conv_type='Conv2d',
+            conv_type="Conv2d",
             kernel_size=patch_size,
             stride=patch_size,
         )
@@ -207,15 +214,15 @@ class MlpMixer(BaseBackbone):
 
         if isinstance(out_indices, int):
             out_indices = [out_indices]
-        assert isinstance(out_indices, Sequence), \
-            f'"out_indices" must be a sequence or int, ' \
-            f'get {type(out_indices)} instead.'
+        assert isinstance(out_indices, Sequence), (
+            f'"out_indices" must be a sequence or int, ' f"get {type(out_indices)} instead."
+        )
         for i, index in enumerate(out_indices):
             if index < 0:
                 out_indices[i] = self.num_layers + index
-                assert out_indices[i] >= 0, f'Invalid out_indices {index}'
+                assert out_indices[i] >= 0, f"Invalid out_indices {index}"
             else:
-                assert index >= self.num_layers, f'Invalid out_indices {index}'
+                assert index >= self.num_layers, f"Invalid out_indices {index}"
         self.out_indices = out_indices
 
         self.layers = ModuleList()
@@ -235,8 +242,7 @@ class MlpMixer(BaseBackbone):
             _layer_cfg.update(layer_cfgs[i])
             self.layers.append(MixerBlock(**_layer_cfg))
 
-        self.norm1_name, norm1 = build_norm_layer(
-            norm_cfg, self.embed_dims, postfix=1)
+        self.norm1_name, norm1 = build_norm_layer(norm_cfg, self.embed_dims, postfix=1)
         self.add_module(self.norm1_name, norm1)
 
     @property
@@ -244,9 +250,9 @@ class MlpMixer(BaseBackbone):
         return getattr(self, self.norm1_name)
 
     def forward(self, x):
-        assert x.shape[2:] == self.img_size, \
-            "The MLP-Mixer doesn't support dynamic input shape. " \
-            f'Please input images with shape {self.img_size}'
+        assert x.shape[2:] == self.img_size, (
+            "The MLP-Mixer doesn't support dynamic input shape. " f"Please input images with shape {self.img_size}"
+        )
         x, _ = self.patch_embed(x)
 
         outs = []

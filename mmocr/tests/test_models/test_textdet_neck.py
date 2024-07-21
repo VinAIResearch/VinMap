@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pytest
 import torch
-
 from mmocr.models.textdet.necks import FPNC, FPN_UNet
 
 
@@ -11,7 +10,7 @@ def test_fpnc():
     size = [112, 56, 28, 14]
     asf_cfgs = [
         None,
-        dict(attention_type='ScaleChannelSpatial'),
+        dict(attention_type="ScaleChannelSpatial"),
     ]
     for flag in [False, True]:
         for asf_cfg in asf_cfgs:
@@ -22,7 +21,8 @@ def test_fpnc():
                 bias_on_smooth=flag,
                 bn_re_on_smooth=flag,
                 asf_cfg=asf_cfg,
-                conv_after_concat=flag)
+                conv_after_concat=flag,
+            )
         fpnc.init_weights()
         inputs = []
         for i in range(4):
@@ -45,10 +45,7 @@ def test_fpn_unet_neck():
     with pytest.raises(AssertionError):
         FPN_UNet(in_channels, [2, 4])
 
-    feats = [
-        torch.rand(1, in_channels[i], feat_sizes[i], feat_sizes[i])
-        for i in range(len(in_channels))
-    ]
+    feats = [torch.rand(1, in_channels[i], feat_sizes[i], feat_sizes[i]) for i in range(len(in_channels))]
 
     fpn_unet_neck = FPN_UNet(in_channels, out_channels)
     fpn_unet_neck.init_weights()

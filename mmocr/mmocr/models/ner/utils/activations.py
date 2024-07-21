@@ -7,7 +7,6 @@ import math
 
 import torch
 import torch.nn as nn
-
 from mmocr.models.builder import ACTIVATION_LAYERS
 
 
@@ -28,5 +27,4 @@ class GeluNew(nn.Module):
         Returns:
             torch.Tensor: Activated tensor.
         """
-        return 0.5 * x * (1 + torch.tanh(
-            math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
+        return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))

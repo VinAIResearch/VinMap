@@ -25,20 +25,9 @@ class PatchEmbed(nn.Module):
         norm_layer (module): Normalization module. Defaults to None (not use).
     """
 
-    def __init__(self,
-                 patch_size=16,
-                 stride=16,
-                 padding=0,
-                 in_chans=3,
-                 embed_dim=768,
-                 norm_layer=None):
+    def __init__(self, patch_size=16, stride=16, padding=0, in_chans=3, embed_dim=768, norm_layer=None):
         super().__init__()
-        self.proj = nn.Conv2d(
-            in_chans,
-            embed_dim,
-            kernel_size=patch_size,
-            stride=stride,
-            padding=padding)
+        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=stride, padding=padding)
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
@@ -56,11 +45,7 @@ class Pooling(nn.Module):
 
     def __init__(self, pool_size=3):
         super().__init__()
-        self.pool = nn.AvgPool2d(
-            pool_size,
-            stride=1,
-            padding=pool_size // 2,
-            count_include_pad=False)
+        self.pool = nn.AvgPool2d(pool_size, stride=1, padding=pool_size // 2, count_include_pad=False)
 
     def forward(self, x):
         return self.pool(x) - x
@@ -80,12 +65,7 @@ class Mlp(nn.Module):
         drop (float): Dropout rate. Defaults to 0.0.
     """
 
-    def __init__(self,
-                 in_features,
-                 hidden_features=None,
-                 out_features=None,
-                 act_cfg=dict(type='GELU'),
-                 drop=0.):
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_cfg=dict(type="GELU"), drop=0.0):
         super().__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
@@ -120,15 +100,17 @@ class PoolFormerBlock(BaseModule):
             Defaults to 1e-5.
     """
 
-    def __init__(self,
-                 dim,
-                 pool_size=3,
-                 mlp_ratio=4.,
-                 norm_cfg=dict(type='GN', num_groups=1),
-                 act_cfg=dict(type='GELU'),
-                 drop=0.,
-                 drop_path=0.,
-                 layer_scale_init_value=1e-5):
+    def __init__(
+        self,
+        dim,
+        pool_size=3,
+        mlp_ratio=4.0,
+        norm_cfg=dict(type="GN", num_groups=1),
+        act_cfg=dict(type="GELU"),
+        drop=0.0,
+        drop_path=0.0,
+        layer_scale_init_value=1e-5,
+    ):
 
         super().__init__()
 
@@ -136,48 +118,38 @@ class PoolFormerBlock(BaseModule):
         self.token_mixer = Pooling(pool_size=pool_size)
         self.norm2 = build_norm_layer(norm_cfg, dim)[1]
         mlp_hidden_dim = int(dim * mlp_ratio)
-        self.mlp = Mlp(
-            in_features=dim,
-            hidden_features=mlp_hidden_dim,
-            act_cfg=act_cfg,
-            drop=drop)
+        self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_cfg=act_cfg, drop=drop)
 
         # The following two techniques are useful to train deep PoolFormers.
-        self.drop_path = DropPath(drop_path) if drop_path > 0. \
-            else nn.Identity()
-        self.layer_scale_1 = nn.Parameter(
-            layer_scale_init_value * torch.ones((dim)), requires_grad=True)
-        self.layer_scale_2 = nn.Parameter(
-            layer_scale_init_value * torch.ones((dim)), requires_grad=True)
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        self.layer_scale_1 = nn.Parameter(layer_scale_init_value * torch.ones((dim)), requires_grad=True)
+        self.layer_scale_2 = nn.Parameter(layer_scale_init_value * torch.ones((dim)), requires_grad=True)
 
     def forward(self, x):
-        x = x + self.drop_path(
-            self.layer_scale_1.unsqueeze(-1).unsqueeze(-1) *
-            self.token_mixer(self.norm1(x)))
-        x = x + self.drop_path(
-            self.layer_scale_2.unsqueeze(-1).unsqueeze(-1) *
-            self.mlp(self.norm2(x)))
+        x = x + self.drop_path(self.layer_scale_1.unsqueeze(-1).unsqueeze(-1) * self.token_mixer(self.norm1(x)))
+        x = x + self.drop_path(self.layer_scale_2.unsqueeze(-1).unsqueeze(-1) * self.mlp(self.norm2(x)))
         return x
 
 
-def basic_blocks(dim,
-                 index,
-                 layers,
-                 pool_size=3,
-                 mlp_ratio=4.,
-                 norm_cfg=dict(type='GN', num_groups=1),
-                 act_cfg=dict(type='GELU'),
-                 drop_rate=.0,
-                 drop_path_rate=0.,
-                 layer_scale_init_value=1e-5):
+def basic_blocks(
+    dim,
+    index,
+    layers,
+    pool_size=3,
+    mlp_ratio=4.0,
+    norm_cfg=dict(type="GN", num_groups=1),
+    act_cfg=dict(type="GELU"),
+    drop_rate=0.0,
+    drop_path_rate=0.0,
+    layer_scale_init_value=1e-5,
+):
     """
     generate PoolFormer blocks for a stage
     return: PoolFormer blocks
     """
     blocks = []
     for block_idx in range(layers[index]):
-        block_dpr = drop_path_rate * (block_idx + sum(layers[:index])) / (
-            sum(layers) - 1)
+        block_dpr = drop_path_rate * (block_idx + sum(layers[:index])) / (sum(layers) - 1)
         blocks.append(
             PoolFormerBlock(
                 dim,
@@ -188,7 +160,8 @@ def basic_blocks(dim,
                 drop=drop_rate,
                 drop_path=block_dpr,
                 layer_scale_init_value=layer_scale_init_value,
-            ))
+            )
+        )
     blocks = nn.Sequential(*blocks)
 
     return blocks
@@ -248,80 +221,77 @@ class PoolFormer(BaseBackbone):
     #     embedding dims and mlp ratios for the four stages
     # --downsamples: flags to apply downsampling or not in four blocks
     arch_settings = {
-        's12': {
-            'layers': [2, 2, 6, 2],
-            'embed_dims': [64, 128, 320, 512],
-            'mlp_ratios': [4, 4, 4, 4],
-            'layer_scale_init_value': 1e-5,
+        "s12": {
+            "layers": [2, 2, 6, 2],
+            "embed_dims": [64, 128, 320, 512],
+            "mlp_ratios": [4, 4, 4, 4],
+            "layer_scale_init_value": 1e-5,
         },
-        's24': {
-            'layers': [4, 4, 12, 4],
-            'embed_dims': [64, 128, 320, 512],
-            'mlp_ratios': [4, 4, 4, 4],
-            'layer_scale_init_value': 1e-5,
+        "s24": {
+            "layers": [4, 4, 12, 4],
+            "embed_dims": [64, 128, 320, 512],
+            "mlp_ratios": [4, 4, 4, 4],
+            "layer_scale_init_value": 1e-5,
         },
-        's36': {
-            'layers': [6, 6, 18, 6],
-            'embed_dims': [64, 128, 320, 512],
-            'mlp_ratios': [4, 4, 4, 4],
-            'layer_scale_init_value': 1e-6,
+        "s36": {
+            "layers": [6, 6, 18, 6],
+            "embed_dims": [64, 128, 320, 512],
+            "mlp_ratios": [4, 4, 4, 4],
+            "layer_scale_init_value": 1e-6,
         },
-        'm36': {
-            'layers': [6, 6, 18, 6],
-            'embed_dims': [96, 192, 384, 768],
-            'mlp_ratios': [4, 4, 4, 4],
-            'layer_scale_init_value': 1e-6,
+        "m36": {
+            "layers": [6, 6, 18, 6],
+            "embed_dims": [96, 192, 384, 768],
+            "mlp_ratios": [4, 4, 4, 4],
+            "layer_scale_init_value": 1e-6,
         },
-        'm48': {
-            'layers': [8, 8, 24, 8],
-            'embed_dims': [96, 192, 384, 768],
-            'mlp_ratios': [4, 4, 4, 4],
-            'layer_scale_init_value': 1e-6,
+        "m48": {
+            "layers": [8, 8, 24, 8],
+            "embed_dims": [96, 192, 384, 768],
+            "mlp_ratios": [4, 4, 4, 4],
+            "layer_scale_init_value": 1e-6,
         },
     }
 
-    def __init__(self,
-                 arch='s12',
-                 pool_size=3,
-                 norm_cfg=dict(type='GN', num_groups=1),
-                 act_cfg=dict(type='GELU'),
-                 in_patch_size=7,
-                 in_stride=4,
-                 in_pad=2,
-                 down_patch_size=3,
-                 down_stride=2,
-                 down_pad=1,
-                 drop_rate=0.,
-                 drop_path_rate=0.,
-                 out_indices=-1,
-                 frozen_stages=0,
-                 init_cfg=None):
+    def __init__(
+        self,
+        arch="s12",
+        pool_size=3,
+        norm_cfg=dict(type="GN", num_groups=1),
+        act_cfg=dict(type="GELU"),
+        in_patch_size=7,
+        in_stride=4,
+        in_pad=2,
+        down_patch_size=3,
+        down_stride=2,
+        down_pad=1,
+        drop_rate=0.0,
+        drop_path_rate=0.0,
+        out_indices=-1,
+        frozen_stages=0,
+        init_cfg=None,
+    ):
 
         super().__init__(init_cfg=init_cfg)
 
         if isinstance(arch, str):
-            assert arch in self.arch_settings, \
-                f'Unavailable arch, please choose from ' \
-                f'({set(self.arch_settings)}) or pass a dict.'
+            assert arch in self.arch_settings, (
+                f"Unavailable arch, please choose from " f"({set(self.arch_settings)}) or pass a dict."
+            )
             arch = self.arch_settings[arch]
         elif isinstance(arch, dict):
-            assert 'layers' in arch and 'embed_dims' in arch, \
-                f'The arch dict must have "layers" and "embed_dims", ' \
-                f'but got {list(arch.keys())}.'
+            assert "layers" in arch and "embed_dims" in arch, (
+                f'The arch dict must have "layers" and "embed_dims", ' f"but got {list(arch.keys())}."
+            )
 
-        layers = arch['layers']
-        embed_dims = arch['embed_dims']
-        mlp_ratios = arch['mlp_ratios'] \
-            if 'mlp_ratios' in arch else [4, 4, 4, 4]
-        layer_scale_init_value = arch['layer_scale_init_value'] \
-            if 'layer_scale_init_value' in arch else 1e-5
+        layers = arch["layers"]
+        embed_dims = arch["embed_dims"]
+        mlp_ratios = arch["mlp_ratios"] if "mlp_ratios" in arch else [4, 4, 4, 4]
+        layer_scale_init_value = arch["layer_scale_init_value"] if "layer_scale_init_value" in arch else 1e-5
 
         self.patch_embed = PatchEmbed(
-            patch_size=in_patch_size,
-            stride=in_stride,
-            padding=in_pad,
-            in_chans=3,
-            embed_dim=embed_dims[0])
+            patch_size=in_patch_size, stride=in_stride, padding=in_pad, in_chans=3, embed_dim=embed_dims[0]
+        )
 
         # set the main block in network
         network = []
@@ -336,7 +306,8 @@ class PoolFormer(BaseBackbone):
                 act_cfg=act_cfg,
                 drop_rate=drop_rate,
                 drop_path_rate=drop_path_rate,
-                layer_scale_init_value=layer_scale_init_value)
+                layer_scale_init_value=layer_scale_init_value,
+            )
             network.append(stage)
             if i >= len(layers) - 1:
                 break
@@ -348,25 +319,26 @@ class PoolFormer(BaseBackbone):
                         stride=down_stride,
                         padding=down_pad,
                         in_chans=embed_dims[i],
-                        embed_dim=embed_dims[i + 1]))
+                        embed_dim=embed_dims[i + 1],
+                    )
+                )
 
         self.network = nn.ModuleList(network)
 
         if isinstance(out_indices, int):
             out_indices = [out_indices]
-        assert isinstance(out_indices, Sequence), \
-            f'"out_indices" must by a sequence or int, ' \
-            f'get {type(out_indices)} instead.'
+        assert isinstance(out_indices, Sequence), (
+            f'"out_indices" must by a sequence or int, ' f"get {type(out_indices)} instead."
+        )
         for i, index in enumerate(out_indices):
             if index < 0:
                 out_indices[i] = 7 + index
-                assert out_indices[i] >= 0, f'Invalid out_indices {index}'
+                assert out_indices[i] >= 0, f"Invalid out_indices {index}"
         self.out_indices = out_indices
         if self.out_indices:
             for i_layer in self.out_indices:
-                layer = build_norm_layer(norm_cfg,
-                                         embed_dims[(i_layer + 1) // 2])[1]
-                layer_name = f'norm{i_layer}'
+                layer = build_norm_layer(norm_cfg, embed_dims[(i_layer + 1) // 2])[1]
+                layer_name = f"norm{i_layer}"
                 self.add_module(layer_name, layer)
 
         self.frozen_stages = frozen_stages
@@ -381,7 +353,7 @@ class PoolFormer(BaseBackbone):
         for idx, block in enumerate(self.network):
             x = block(x)
             if idx in self.out_indices:
-                norm_layer = getattr(self, f'norm{idx}')
+                norm_layer = getattr(self, f"norm{idx}")
                 x_out = norm_layer(x)
                 outs.append(x_out)
         return tuple(outs)
@@ -406,7 +378,7 @@ class PoolFormer(BaseBackbone):
             for param in module.parameters():
                 param.requires_grad = False
             if i in self.out_indices:
-                norm_layer = getattr(self, f'norm{i}')
+                norm_layer = getattr(self, f"norm{i}")
                 norm_layer.eval()
                 for param in norm_layer.parameters():
                     param.requires_grad = False

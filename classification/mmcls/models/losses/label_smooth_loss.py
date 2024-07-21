@@ -52,37 +52,30 @@ class LabelSmoothLoss(nn.Module):
             (1-2\epsilon)\delta_{k, y} + \epsilon
     """
 
-    def __init__(self,
-                 label_smooth_val,
-                 num_classes=None,
-                 mode='original',
-                 reduction='mean',
-                 loss_weight=1.0):
+    def __init__(self, label_smooth_val, num_classes=None, mode="original", reduction="mean", loss_weight=1.0):
         super().__init__()
         self.num_classes = num_classes
         self.loss_weight = loss_weight
 
-        assert (isinstance(label_smooth_val, float)
-                and 0 <= label_smooth_val < 1), \
-            f'LabelSmoothLoss accepts a float label_smooth_val ' \
-            f'over [0, 1), but gets {label_smooth_val}'
+        assert isinstance(label_smooth_val, float) and 0 <= label_smooth_val < 1, (
+            f"LabelSmoothLoss accepts a float label_smooth_val " f"over [0, 1), but gets {label_smooth_val}"
+        )
         self.label_smooth_val = label_smooth_val
 
-        accept_reduction = {'none', 'mean', 'sum'}
-        assert reduction in accept_reduction, \
-            f'LabelSmoothLoss supports reduction {accept_reduction}, ' \
-            f'but gets {mode}.'
+        accept_reduction = {"none", "mean", "sum"}
+        assert reduction in accept_reduction, (
+            f"LabelSmoothLoss supports reduction {accept_reduction}, " f"but gets {mode}."
+        )
         self.reduction = reduction
 
-        accept_mode = {'original', 'classy_vision', 'multi_label'}
-        assert mode in accept_mode, \
-            f'LabelSmoothLoss supports mode {accept_mode}, but gets {mode}.'
+        accept_mode = {"original", "classy_vision", "multi_label"}
+        assert mode in accept_mode, f"LabelSmoothLoss supports mode {accept_mode}, but gets {mode}."
         self.mode = mode
 
         self._eps = label_smooth_val
-        if mode == 'classy_vision':
+        if mode == "classy_vision":
             self._eps = label_smooth_val / (1 + label_smooth_val)
-        if mode == 'multi_label':
+        if mode == "multi_label":
             self.ce = CrossEntropyLoss(use_sigmoid=True)
             self.smooth_label = self.multilabel_smooth_label
         else:
@@ -109,13 +102,7 @@ class LabelSmoothLoss(nn.Module):
         smooth_label.masked_fill_(one_hot_like_label > 0, 1 - self._eps)
         return smooth_label
 
-    def forward(self,
-                cls_score,
-                label,
-                weight=None,
-                avg_factor=None,
-                reduction_override=None,
-                **kwargs):
+    def forward(self, cls_score, label, weight=None, avg_factor=None, reduction_override=None, **kwargs):
         r"""Label smooth loss.
 
         Args:
@@ -134,18 +121,20 @@ class LabelSmoothLoss(nn.Module):
             torch.Tensor: Loss.
         """
         if self.num_classes is not None:
-            assert self.num_classes == cls_score.shape[1], \
-                f'num_classes should equal to cls_score.shape[1], ' \
-                f'but got num_classes: {self.num_classes} and ' \
-                f'cls_score.shape[1]: {cls_score.shape[1]}'
+            assert self.num_classes == cls_score.shape[1], (
+                f"num_classes should equal to cls_score.shape[1], "
+                f"but got num_classes: {self.num_classes} and "
+                f"cls_score.shape[1]: {cls_score.shape[1]}"
+            )
         else:
             self.num_classes = cls_score.shape[1]
 
         one_hot_like_label = self.generate_one_hot_like_label(label=label)
-        assert one_hot_like_label.shape == cls_score.shape, \
-            f'LabelSmoothLoss requires output and target ' \
-            f'to be same shape, but got output.shape: {cls_score.shape} ' \
-            f'and target.shape: {one_hot_like_label.shape}'
+        assert one_hot_like_label.shape == cls_score.shape, (
+            f"LabelSmoothLoss requires output and target "
+            f"to be same shape, but got output.shape: {cls_score.shape} "
+            f"and target.shape: {one_hot_like_label.shape}"
+        )
 
         smoothed_label = self.smooth_label(one_hot_like_label)
         return self.ce.forward(
@@ -154,4 +143,5 @@ class LabelSmoothLoss(nn.Module):
             weight=weight,
             avg_factor=avg_factor,
             reduction_override=reduction_override,
-            **kwargs)
+            **kwargs,
+        )

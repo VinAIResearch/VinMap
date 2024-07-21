@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
 from mmdet.datasets.builder import DATASETS
-
 from mmocr.core.evaluation.hmean import eval_hmean
 from mmocr.datasets.base_dataset import BaseDataset
 
@@ -24,13 +23,13 @@ class TextDetDataset(BaseDataset):
         gt_masks, gt_masks_ignore = [], []
         gt_labels = []
         for ann in annotations:
-            if ann.get('iscrowd', False):
-                gt_bboxes_ignore.append(ann['bbox'])
-                gt_masks_ignore.append(ann.get('segmentation', None))
+            if ann.get("iscrowd", False):
+                gt_bboxes_ignore.append(ann["bbox"])
+                gt_masks_ignore.append(ann.get("segmentation", None))
             else:
-                gt_bboxes.append(ann['bbox'])
-                gt_labels.append(ann['category_id'])
-                gt_masks.append(ann.get('segmentation', None))
+                gt_bboxes.append(ann["bbox"])
+                gt_labels.append(ann["category_id"])
+                gt_masks.append(ann.get("segmentation", None))
         if gt_bboxes:
             gt_bboxes = np.array(gt_bboxes, dtype=np.float32)
             gt_labels = np.array(gt_labels, dtype=np.int64)
@@ -48,7 +47,8 @@ class TextDetDataset(BaseDataset):
             labels=gt_labels,
             bboxes_ignore=gt_bboxes_ignore,
             masks_ignore=gt_masks_ignore,
-            masks=gt_masks)
+            masks=gt_masks,
+        )
 
         return ann
 
@@ -64,29 +64,31 @@ class TextDetDataset(BaseDataset):
         """
         img_ann_info = self.data_infos[index]
         img_info = {
-            'filename': img_ann_info['file_name'],
-            'height': img_ann_info['height'],
-            'width': img_ann_info['width']
+            "filename": img_ann_info["file_name"],
+            "height": img_ann_info["height"],
+            "width": img_ann_info["width"],
         }
-        ann_info = self._parse_anno_info(img_ann_info['annotations'])
+        ann_info = self._parse_anno_info(img_ann_info["annotations"])
         results = dict(img_info=img_info, ann_info=ann_info)
-        results['bbox_fields'] = []
-        results['mask_fields'] = []
-        results['seg_fields'] = []
+        results["bbox_fields"] = []
+        results["mask_fields"] = []
+        results["seg_fields"] = []
         self.pre_pipeline(results)
 
         return self.pipeline(results)
 
-    def evaluate(self,
-                 results,
-                 metric='hmean-iou',
-                 score_thr=None,
-                 min_score_thr=0.3,
-                 max_score_thr=0.9,
-                 step=0.1,
-                 rank_list=None,
-                 logger=None,
-                 **kwargs):
+    def evaluate(
+        self,
+        results,
+        metric="hmean-iou",
+        score_thr=None,
+        min_score_thr=0.3,
+        max_score_thr=0.9,
+        step=0.1,
+        rank_list=None,
+        logger=None,
+        **kwargs
+    ):
         """Evaluate the dataset.
 
         Args:
@@ -104,15 +106,15 @@ class TextDetDataset(BaseDataset):
             dict[str: float]
         """
         metrics = metric if isinstance(metric, list) else [metric]
-        allowed_metrics = ['hmean-iou', 'hmean-ic13']
+        allowed_metrics = ["hmean-iou", "hmean-ic13"]
         metrics = set(metrics) & set(allowed_metrics)
 
         img_infos = []
         ann_infos = []
         for i in range(len(self)):
             img_ann_info = self.data_infos[i]
-            img_info = {'filename': img_ann_info['file_name']}
-            ann_info = self._parse_anno_info(img_ann_info['annotations'])
+            img_info = {"filename": img_ann_info["file_name"]}
+            ann_info = self._parse_anno_info(img_ann_info["annotations"])
             img_infos.append(img_info)
             ann_infos.append(ann_info)
 
@@ -126,6 +128,7 @@ class TextDetDataset(BaseDataset):
             max_score_thr=max_score_thr,
             step=step,
             logger=logger,
-            rank_list=rank_list)
+            rank_list=rank_list,
+        )
 
         return eval_results

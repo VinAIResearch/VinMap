@@ -1,5 +1,5 @@
-import PIL.Image
 import numpy as np
+import PIL.Image
 
 
 def rgb2hsv(rgb):

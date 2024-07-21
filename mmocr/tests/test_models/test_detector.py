@@ -8,12 +8,10 @@ from os.path import dirname, exists, join
 import numpy as np
 import pytest
 import torch
-
 from mmocr.utils import revert_sync_batchnorm
 
 
-def _demo_mm_inputs(num_kernels=0, input_shape=(1, 3, 300, 300),
-                    num_items=None, num_classes=1):  # yapf: disable
+def _demo_mm_inputs(num_kernels=0, input_shape=(1, 3, 300, 300), num_items=None, num_classes=1):  # yapf: disable
     """Create a superset of inputs needed to run test or train batches.
 
     Args:
@@ -32,14 +30,17 @@ def _demo_mm_inputs(num_kernels=0, input_shape=(1, 3, 300, 300),
 
     imgs = rng.rand(*input_shape)
 
-    img_metas = [{
-        'img_shape': (H, W, C),
-        'ori_shape': (H, W, C),
-        'pad_shape': (H, W, C),
-        'filename': '<demo>.png',
-        'scale_factor': np.array([1, 1, 1, 1]),
-        'flip': False,
-    } for _ in range(N)]
+    img_metas = [
+        {
+            "img_shape": (H, W, C),
+            "ori_shape": (H, W, C),
+            "pad_shape": (H, W, C),
+            "filename": "<demo>.png",
+            "scale_factor": np.array([1, 1, 1, 1]),
+            "flip": False,
+        }
+        for _ in range(N)
+    ]
 
     gt_bboxes = []
     gt_labels = []
@@ -76,20 +77,20 @@ def _demo_mm_inputs(num_kernels=0, input_shape=(1, 3, 300, 300),
     gt_masks.append(BitmapMasks(mask, H, W))
 
     mm_inputs = {
-        'imgs': torch.FloatTensor(imgs).requires_grad_(True),
-        'img_metas': img_metas,
-        'gt_bboxes': gt_bboxes,
-        'gt_labels': gt_labels,
-        'gt_bboxes_ignore': None,
-        'gt_masks': gt_masks,
-        'gt_kernels': gt_kernels,
-        'gt_mask': gt_effective_mask,
-        'gt_thr_mask': gt_effective_mask,
-        'gt_text_mask': gt_effective_mask,
-        'gt_center_region_mask': gt_effective_mask,
-        'gt_radius_map': gt_kernels,
-        'gt_sin_map': gt_kernels,
-        'gt_cos_map': gt_kernels,
+        "imgs": torch.FloatTensor(imgs).requires_grad_(True),
+        "img_metas": img_metas,
+        "gt_bboxes": gt_bboxes,
+        "gt_labels": gt_labels,
+        "gt_bboxes_ignore": None,
+        "gt_masks": gt_masks,
+        "gt_kernels": gt_kernels,
+        "gt_mask": gt_effective_mask,
+        "gt_thr_mask": gt_effective_mask,
+        "gt_text_mask": gt_effective_mask,
+        "gt_center_region_mask": gt_effective_mask,
+        "gt_radius_map": gt_kernels,
+        "gt_sin_map": gt_kernels,
+        "gt_cos_map": gt_kernels,
     }
     return mm_inputs
 
@@ -102,16 +103,18 @@ def _get_config_directory():
     except NameError:
         # For IPython development when this __file__ is not defined
         import mmocr
+
         repo_dpath = dirname(dirname(mmocr.__file__))
-    config_dpath = join(repo_dpath, 'configs')
+    config_dpath = join(repo_dpath, "configs")
     if not exists(config_dpath):
-        raise Exception('Cannot find config path')
+        raise Exception("Cannot find config path")
     return config_dpath
 
 
 def _get_config_module(fname):
     """Load a configuration as a python module."""
     from mmcv import Config
+
     config_dpath = _get_config_directory()
     config_fpath = join(config_dpath, fname)
     config_mod = Config.fromfile(config_fpath)
@@ -129,34 +132,33 @@ def _get_detector_cfg(fname):
     return model
 
 
-@pytest.mark.parametrize('cfg_file', [
-    'textdet/maskrcnn/mask_rcnn_r50_fpn_160e_ctw1500.py',
-    'textdet/maskrcnn/mask_rcnn_r50_fpn_160e_icdar2015.py',
-    'textdet/maskrcnn/mask_rcnn_r50_fpn_160e_icdar2017.py'
-])
+@pytest.mark.parametrize(
+    "cfg_file",
+    [
+        "textdet/maskrcnn/mask_rcnn_r50_fpn_160e_ctw1500.py",
+        "textdet/maskrcnn/mask_rcnn_r50_fpn_160e_icdar2015.py",
+        "textdet/maskrcnn/mask_rcnn_r50_fpn_160e_icdar2017.py",
+    ],
+)
 def test_ocr_mask_rcnn(cfg_file):
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model["pretrained"] = None
 
     from mmocr.models import build_detector
+
     detector = build_detector(model)
 
     input_shape = (1, 3, 224, 224)
     mm_inputs = _demo_mm_inputs(0, input_shape)
 
-    imgs = mm_inputs.pop('imgs')
-    img_metas = mm_inputs.pop('img_metas')
-    gt_labels = mm_inputs.pop('gt_labels')
-    gt_masks = mm_inputs.pop('gt_masks')
+    imgs = mm_inputs.pop("imgs")
+    img_metas = mm_inputs.pop("img_metas")
+    gt_labels = mm_inputs.pop("gt_labels")
+    gt_masks = mm_inputs.pop("gt_masks")
 
     # Test forward train
-    gt_bboxes = mm_inputs['gt_bboxes']
-    losses = detector.forward(
-        imgs,
-        img_metas,
-        gt_bboxes=gt_bboxes,
-        gt_labels=gt_labels,
-        gt_masks=gt_masks)
+    gt_bboxes = mm_inputs["gt_bboxes"]
+    losses = detector.forward(imgs, img_metas, gt_bboxes=gt_bboxes, gt_labels=gt_labels, gt_masks=gt_masks)
     assert isinstance(losses, dict)
 
     # Test forward test
@@ -164,27 +166,30 @@ def test_ocr_mask_rcnn(cfg_file):
         img_list = [g[None, :] for g in imgs]
         batch_results = []
         for one_img, one_meta in zip(img_list, img_metas):
-            result = detector.forward([one_img], [[one_meta]],
-                                      return_loss=False)
+            result = detector.forward([one_img], [[one_meta]], return_loss=False)
             batch_results.append(result)
 
     # Test show_result
 
-    results = {'boundary_result': [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
+    results = {"boundary_result": [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
     img = np.random.rand(5, 5)
     detector.show_result(img, results)
 
 
-@pytest.mark.parametrize('cfg_file', [
-    'textdet/panet/panet_r18_fpem_ffm_600e_ctw1500.py',
-    'textdet/panet/panet_r18_fpem_ffm_600e_icdar2015.py',
-    'textdet/panet/panet_r50_fpem_ffm_600e_icdar2017.py'
-])
+@pytest.mark.parametrize(
+    "cfg_file",
+    [
+        "textdet/panet/panet_r18_fpem_ffm_600e_ctw1500.py",
+        "textdet/panet/panet_r18_fpem_ffm_600e_icdar2015.py",
+        "textdet/panet/panet_r50_fpem_ffm_600e_icdar2017.py",
+    ],
+)
 def test_panet(cfg_file):
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model["pretrained"] = None
 
     from mmocr.models import build_detector
+
     detector = build_detector(model)
     detector = revert_sync_batchnorm(detector)
 
@@ -192,14 +197,13 @@ def test_panet(cfg_file):
     num_kernels = 2
     mm_inputs = _demo_mm_inputs(num_kernels, input_shape)
 
-    imgs = mm_inputs.pop('imgs')
-    img_metas = mm_inputs.pop('img_metas')
-    gt_kernels = mm_inputs.pop('gt_kernels')
-    gt_mask = mm_inputs.pop('gt_mask')
+    imgs = mm_inputs.pop("imgs")
+    img_metas = mm_inputs.pop("img_metas")
+    gt_kernels = mm_inputs.pop("gt_kernels")
+    gt_mask = mm_inputs.pop("gt_mask")
 
     # Test forward train
-    losses = detector.forward(
-        imgs, img_metas, gt_kernels=gt_kernels, gt_mask=gt_mask)
+    losses = detector.forward(imgs, img_metas, gt_kernels=gt_kernels, gt_mask=gt_mask)
     assert isinstance(losses, dict)
 
     # Test forward test
@@ -207,39 +211,43 @@ def test_panet(cfg_file):
         img_list = [g[None, :] for g in imgs]
         batch_results = []
         for one_img, one_meta in zip(img_list, img_metas):
-            result = detector.forward([one_img], [[one_meta]],
-                                      return_loss=False)
+            result = detector.forward([one_img], [[one_meta]], return_loss=False)
             batch_results.append(result)
 
         # Test onnx export
-        detector.forward = partial(
-            detector.simple_test, img_metas=img_metas, rescale=True)
+        detector.forward = partial(detector.simple_test, img_metas=img_metas, rescale=True)
         with tempfile.TemporaryDirectory() as tmpdirname:
-            onnx_path = f'{tmpdirname}/tmp.onnx'
+            onnx_path = f"{tmpdirname}/tmp.onnx"
             torch.onnx.export(
-                detector, (img_list[0], ),
+                detector,
+                (img_list[0],),
                 onnx_path,
-                input_names=['input'],
-                output_names=['output'],
+                input_names=["input"],
+                output_names=["output"],
                 export_params=True,
-                keep_initializers_as_inputs=False)
+                keep_initializers_as_inputs=False,
+            )
 
     # Test show result
-    results = {'boundary_result': [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
+    results = {"boundary_result": [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
     img = np.random.rand(5, 5)
     detector.show_result(img, results)
 
 
-@pytest.mark.parametrize('cfg_file', [
-    'textdet/psenet/psenet_r50_fpnf_600e_icdar2015.py',
-    'textdet/psenet/psenet_r50_fpnf_600e_icdar2017.py',
-    'textdet/psenet/psenet_r50_fpnf_600e_ctw1500.py'
-])
+@pytest.mark.parametrize(
+    "cfg_file",
+    [
+        "textdet/psenet/psenet_r50_fpnf_600e_icdar2015.py",
+        "textdet/psenet/psenet_r50_fpnf_600e_icdar2017.py",
+        "textdet/psenet/psenet_r50_fpnf_600e_ctw1500.py",
+    ],
+)
 def test_psenet(cfg_file):
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model["pretrained"] = None
 
     from mmocr.models import build_detector
+
     detector = build_detector(model)
     detector = revert_sync_batchnorm(detector)
 
@@ -247,14 +255,13 @@ def test_psenet(cfg_file):
     num_kernels = 7
     mm_inputs = _demo_mm_inputs(num_kernels, input_shape)
 
-    imgs = mm_inputs.pop('imgs')
-    img_metas = mm_inputs.pop('img_metas')
-    gt_kernels = mm_inputs.pop('gt_kernels')
-    gt_mask = mm_inputs.pop('gt_mask')
+    imgs = mm_inputs.pop("imgs")
+    img_metas = mm_inputs.pop("img_metas")
+    gt_kernels = mm_inputs.pop("gt_kernels")
+    gt_mask = mm_inputs.pop("gt_mask")
 
     # Test forward train
-    losses = detector.forward(
-        imgs, img_metas, gt_kernels=gt_kernels, gt_mask=gt_mask)
+    losses = detector.forward(imgs, img_metas, gt_kernels=gt_kernels, gt_mask=gt_mask)
     assert isinstance(losses, dict)
 
     # Test forward test
@@ -262,26 +269,26 @@ def test_psenet(cfg_file):
         img_list = [g[None, :] for g in imgs]
         batch_results = []
         for one_img, one_meta in zip(img_list, img_metas):
-            result = detector.forward([one_img], [[one_meta]],
-                                      return_loss=False)
+            result = detector.forward([one_img], [[one_meta]], return_loss=False)
             batch_results.append(result)
 
     # Test show result
-    results = {'boundary_result': [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
+    results = {"boundary_result": [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
     img = np.random.rand(5, 5)
     detector.show_result(img, results)
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason='requires cuda')
-@pytest.mark.parametrize('cfg_file', [
-    'textdet/dbnet/dbnet_r18_fpnc_1200e_icdar2015.py',
-    'textdet/dbnet/dbnet_r50dcnv2_fpnc_1200e_icdar2015.py'
-])
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
+@pytest.mark.parametrize(
+    "cfg_file",
+    ["textdet/dbnet/dbnet_r18_fpnc_1200e_icdar2015.py", "textdet/dbnet/dbnet_r50dcnv2_fpnc_1200e_icdar2015.py"],
+)
 def test_dbnet(cfg_file):
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model["pretrained"] = None
 
     from mmocr.models import build_detector
+
     detector = build_detector(model)
     detector = revert_sync_batchnorm(detector)
     detector = detector.cuda()
@@ -289,22 +296,18 @@ def test_dbnet(cfg_file):
     num_kernels = 7
     mm_inputs = _demo_mm_inputs(num_kernels, input_shape)
 
-    imgs = mm_inputs.pop('imgs')
+    imgs = mm_inputs.pop("imgs")
     imgs = imgs.cuda()
-    img_metas = mm_inputs.pop('img_metas')
-    gt_shrink = mm_inputs.pop('gt_kernels')
-    gt_shrink_mask = mm_inputs.pop('gt_mask')
-    gt_thr = mm_inputs.pop('gt_masks')
-    gt_thr_mask = mm_inputs.pop('gt_thr_mask')
+    img_metas = mm_inputs.pop("img_metas")
+    gt_shrink = mm_inputs.pop("gt_kernels")
+    gt_shrink_mask = mm_inputs.pop("gt_mask")
+    gt_thr = mm_inputs.pop("gt_masks")
+    gt_thr_mask = mm_inputs.pop("gt_thr_mask")
 
     # Test forward train
     losses = detector.forward(
-        imgs,
-        img_metas,
-        gt_shrink=gt_shrink,
-        gt_shrink_mask=gt_shrink_mask,
-        gt_thr=gt_thr,
-        gt_thr_mask=gt_thr_mask)
+        imgs, img_metas, gt_shrink=gt_shrink, gt_shrink_mask=gt_shrink_mask, gt_thr=gt_thr, gt_thr_mask=gt_thr_mask
+    )
     assert isinstance(losses, dict)
 
     # Test forward test
@@ -312,39 +315,36 @@ def test_dbnet(cfg_file):
         img_list = [g[None, :] for g in imgs]
         batch_results = []
         for one_img, one_meta in zip(img_list, img_metas):
-            result = detector.forward([one_img], [[one_meta]],
-                                      return_loss=False)
+            result = detector.forward([one_img], [[one_meta]], return_loss=False)
             batch_results.append(result)
 
     # Test show result
-    results = {'boundary_result': [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
+    results = {"boundary_result": [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
     img = np.random.rand(5, 5)
     detector.show_result(img, results)
 
 
-@pytest.mark.parametrize(
-    'cfg_file',
-    ['textdet/textsnake/'
-     'textsnake_r50_fpn_unet_1200e_ctw1500.py'])
+@pytest.mark.parametrize("cfg_file", ["textdet/textsnake/" "textsnake_r50_fpn_unet_1200e_ctw1500.py"])
 def test_textsnake(cfg_file):
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model["pretrained"] = None
 
     from mmocr.models import build_detector
+
     detector = build_detector(model)
     detector = revert_sync_batchnorm(detector)
     input_shape = (1, 3, 224, 224)
     num_kernels = 1
     mm_inputs = _demo_mm_inputs(num_kernels, input_shape)
 
-    imgs = mm_inputs.pop('imgs')
-    img_metas = mm_inputs.pop('img_metas')
-    gt_text_mask = mm_inputs.pop('gt_text_mask')
-    gt_center_region_mask = mm_inputs.pop('gt_center_region_mask')
-    gt_mask = mm_inputs.pop('gt_mask')
-    gt_radius_map = mm_inputs.pop('gt_radius_map')
-    gt_sin_map = mm_inputs.pop('gt_sin_map')
-    gt_cos_map = mm_inputs.pop('gt_cos_map')
+    imgs = mm_inputs.pop("imgs")
+    img_metas = mm_inputs.pop("img_metas")
+    gt_text_mask = mm_inputs.pop("gt_text_mask")
+    gt_center_region_mask = mm_inputs.pop("gt_center_region_mask")
+    gt_mask = mm_inputs.pop("gt_mask")
+    gt_radius_map = mm_inputs.pop("gt_radius_map")
+    gt_sin_map = mm_inputs.pop("gt_sin_map")
+    gt_cos_map = mm_inputs.pop("gt_cos_map")
 
     # Test forward train
     losses = detector.forward(
@@ -355,39 +355,41 @@ def test_textsnake(cfg_file):
         gt_mask=gt_mask,
         gt_radius_map=gt_radius_map,
         gt_sin_map=gt_sin_map,
-        gt_cos_map=gt_cos_map)
+        gt_cos_map=gt_cos_map,
+    )
     assert isinstance(losses, dict)
 
     # Test forward test get_boundary
     maps = torch.zeros((1, 5, 224, 224), dtype=torch.float)
-    maps[:, 0:2, :, :] = -10.
-    maps[:, 0, 60:100, 12:212] = 10.
-    maps[:, 1, 70:90, 22:202] = 10.
-    maps[:, 2, 70:90, 22:202] = 0.
-    maps[:, 3, 70:90, 22:202] = 1.
-    maps[:, 4, 70:90, 22:202] = 10.
+    maps[:, 0:2, :, :] = -10.0
+    maps[:, 0, 60:100, 12:212] = 10.0
+    maps[:, 1, 70:90, 22:202] = 10.0
+    maps[:, 2, 70:90, 22:202] = 0.0
+    maps[:, 3, 70:90, 22:202] = 1.0
+    maps[:, 4, 70:90, 22:202] = 10.0
 
     one_meta = img_metas[0]
     result = detector.bbox_head.get_boundary(maps, [one_meta], False)
-    assert 'boundary_result' in result
-    assert 'filename' in result
+    assert "boundary_result" in result
+    assert "filename" in result
 
     # Test show result
-    results = {'boundary_result': [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
+    results = {"boundary_result": [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
     img = np.random.rand(5, 5)
     detector.show_result(img, results)
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason='requires cuda')
-@pytest.mark.parametrize('cfg_file', [
-    'textdet/fcenet/fcenet_r50dcnv2_fpn_1500e_ctw1500.py',
-    'textdet/fcenet/fcenet_r50_fpn_1500e_icdar2015.py'
-])
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
+@pytest.mark.parametrize(
+    "cfg_file",
+    ["textdet/fcenet/fcenet_r50dcnv2_fpn_1500e_ctw1500.py", "textdet/fcenet/fcenet_r50_fpn_1500e_icdar2015.py"],
+)
 def test_fcenet(cfg_file):
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model["pretrained"] = None
 
     from mmocr.models import build_detector
+
     detector = build_detector(model)
     detector = revert_sync_batchnorm(detector)
     detector = detector.cuda()
@@ -397,29 +399,28 @@ def test_fcenet(cfg_file):
     (n, c, h, w) = input_shape
 
     imgs = torch.randn(n, c, h, w).float().cuda()
-    img_metas = [{
-        'img_shape': (h, w, c),
-        'ori_shape': (h, w, c),
-        'pad_shape': (h, w, c),
-        'filename': '<demo>.png',
-        'scale_factor': np.array([1, 1, 1, 1]),
-        'flip': False,
-    } for _ in range(n)]
+    img_metas = [
+        {
+            "img_shape": (h, w, c),
+            "ori_shape": (h, w, c),
+            "pad_shape": (h, w, c),
+            "filename": "<demo>.png",
+            "scale_factor": np.array([1, 1, 1, 1]),
+            "flip": False,
+        }
+        for _ in range(n)
+    ]
 
     p3_maps = []
     p4_maps = []
     p5_maps = []
     for _ in range(n):
-        p3_maps.append(
-            np.random.random((5 + 4 * fourier_degree, h // 8, w // 8)))
-        p4_maps.append(
-            np.random.random((5 + 4 * fourier_degree, h // 16, w // 16)))
-        p5_maps.append(
-            np.random.random((5 + 4 * fourier_degree, h // 32, w // 32)))
+        p3_maps.append(np.random.random((5 + 4 * fourier_degree, h // 8, w // 8)))
+        p4_maps.append(np.random.random((5 + 4 * fourier_degree, h // 16, w // 16)))
+        p5_maps.append(np.random.random((5 + 4 * fourier_degree, h // 32, w // 32)))
 
     # Test forward train
-    losses = detector.forward(
-        imgs, img_metas, p3_maps=p3_maps, p4_maps=p4_maps, p5_maps=p5_maps)
+    losses = detector.forward(imgs, img_metas, p3_maps=p3_maps, p4_maps=p4_maps, p5_maps=p5_maps)
     assert isinstance(losses, dict)
 
     # Test forward test
@@ -427,24 +428,22 @@ def test_fcenet(cfg_file):
         img_list = [g[None, :] for g in imgs]
         batch_results = []
         for one_img, one_meta in zip(img_list, img_metas):
-            result = detector.forward([one_img], [[one_meta]],
-                                      return_loss=False)
+            result = detector.forward([one_img], [[one_meta]], return_loss=False)
             batch_results.append(result)
 
     # Test show result
-    results = {'boundary_result': [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
+    results = {"boundary_result": [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
     img = np.random.rand(5, 5)
     detector.show_result(img, results)
 
 
-@pytest.mark.parametrize(
-    'cfg_file', ['textdet/drrg/'
-                 'drrg_r50_fpn_unet_1200e_ctw1500.py'])
+@pytest.mark.parametrize("cfg_file", ["textdet/drrg/" "drrg_r50_fpn_unet_1200e_ctw1500.py"])
 def test_drrg(cfg_file):
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model["pretrained"] = None
 
     from mmocr.models import build_detector
+
     detector = build_detector(model)
     detector = revert_sync_batchnorm(detector)
 
@@ -452,15 +451,15 @@ def test_drrg(cfg_file):
     num_kernels = 1
     mm_inputs = _demo_mm_inputs(num_kernels, input_shape)
 
-    imgs = mm_inputs.pop('imgs')
-    img_metas = mm_inputs.pop('img_metas')
-    gt_text_mask = mm_inputs.pop('gt_text_mask')
-    gt_center_region_mask = mm_inputs.pop('gt_center_region_mask')
-    gt_mask = mm_inputs.pop('gt_mask')
-    gt_top_height_map = mm_inputs.pop('gt_radius_map')
+    imgs = mm_inputs.pop("imgs")
+    img_metas = mm_inputs.pop("img_metas")
+    gt_text_mask = mm_inputs.pop("gt_text_mask")
+    gt_center_region_mask = mm_inputs.pop("gt_center_region_mask")
+    gt_mask = mm_inputs.pop("gt_mask")
+    gt_top_height_map = mm_inputs.pop("gt_radius_map")
     gt_bot_height_map = gt_top_height_map.copy()
-    gt_sin_map = mm_inputs.pop('gt_sin_map')
-    gt_cos_map = mm_inputs.pop('gt_cos_map')
+    gt_sin_map = mm_inputs.pop("gt_sin_map")
+    gt_cos_map = mm_inputs.pop("gt_cos_map")
     num_rois = 32
     x = np.random.randint(4, 224, (num_rois, 1))
     y = np.random.randint(4, 224, (num_rois, 1))
@@ -484,34 +483,35 @@ def test_drrg(cfg_file):
         gt_bot_height_map=gt_bot_height_map,
         gt_sin_map=gt_sin_map,
         gt_cos_map=gt_cos_map,
-        gt_comp_attribs=gt_comp_attribs)
+        gt_comp_attribs=gt_comp_attribs,
+    )
     assert isinstance(losses, dict)
 
     # Test forward test
-    model['bbox_head']['in_channels'] = 6
-    model['bbox_head']['text_region_thr'] = 0.8
-    model['bbox_head']['center_region_thr'] = 0.8
+    model["bbox_head"]["in_channels"] = 6
+    model["bbox_head"]["text_region_thr"] = 0.8
+    model["bbox_head"]["center_region_thr"] = 0.8
     detector = build_detector(model)
     maps = torch.zeros((1, 6, 224, 224), dtype=torch.float)
-    maps[:, 0:2, :, :] = -10.
-    maps[:, 0, 60:100, 50:170] = 10.
-    maps[:, 1, 75:85, 60:160] = 10.
-    maps[:, 2, 75:85, 60:160] = 0.
-    maps[:, 3, 75:85, 60:160] = 1.
-    maps[:, 4, 75:85, 60:160] = 10.
-    maps[:, 5, 75:85, 60:160] = 10.
+    maps[:, 0:2, :, :] = -10.0
+    maps[:, 0, 60:100, 50:170] = 10.0
+    maps[:, 1, 75:85, 60:160] = 10.0
+    maps[:, 2, 75:85, 60:160] = 0.0
+    maps[:, 3, 75:85, 60:160] = 1.0
+    maps[:, 4, 75:85, 60:160] = 10.0
+    maps[:, 5, 75:85, 60:160] = 10.0
 
     with torch.no_grad():
         full_pass_weight = torch.zeros((6, 6, 1, 1))
         for i in range(6):
             full_pass_weight[i, i, 0, 0] = 1
         detector.bbox_head.out_conv.weight.data = full_pass_weight
-        detector.bbox_head.out_conv.bias.data.fill_(0.)
+        detector.bbox_head.out_conv.bias.data.fill_(0.0)
         outs = detector.bbox_head.single_test(maps)
         boundaries = detector.bbox_head.get_boundary(*outs, img_metas, True)
     assert len(boundaries) == 1
 
     # Test show result
-    results = {'boundary_result': [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
+    results = {"boundary_result": [[0, 0, 1, 0, 1, 1, 0, 1, 0.9]]}
     img = np.random.rand(5, 5)
     detector.show_result(img, results)

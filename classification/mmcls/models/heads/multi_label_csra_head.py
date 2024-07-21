@@ -27,37 +27,33 @@ class CSRAClsHead(MultiLabelClsHead):
         init_cfg (dict | optional): The extra init config of layers.
             Defaults to use dict(type='Normal', layer='Linear', std=0.01).
     """
+
     temperature_settings = {  # softmax temperature settings
         1: [1],
         2: [1, 99],
         4: [1, 2, 4, 99],
         6: [1, 2, 3, 4, 5, 99],
-        8: [1, 2, 3, 4, 5, 6, 7, 99]
+        8: [1, 2, 3, 4, 5, 6, 7, 99],
     }
 
-    def __init__(self,
-                 num_classes,
-                 in_channels,
-                 num_heads,
-                 lam,
-                 loss=dict(
-                     type='CrossEntropyLoss',
-                     use_sigmoid=True,
-                     reduction='mean',
-                     loss_weight=1.0),
-                 init_cfg=dict(type='Normal', layer='Linear', std=0.01),
-                 *args,
-                 **kwargs):
-        assert num_heads in self.temperature_settings.keys(
-        ), 'The num of heads is not in temperature setting.'
-        assert lam > 0, 'Lambda should be between 0 and 1.'
-        super(CSRAClsHead, self).__init__(
-            init_cfg=init_cfg, loss=loss, *args, **kwargs)
+    def __init__(
+        self,
+        num_classes,
+        in_channels,
+        num_heads,
+        lam,
+        loss=dict(type="CrossEntropyLoss", use_sigmoid=True, reduction="mean", loss_weight=1.0),
+        init_cfg=dict(type="Normal", layer="Linear", std=0.01),
+        *args,
+        **kwargs
+    ):
+        assert num_heads in self.temperature_settings.keys(), "The num of heads is not in temperature setting."
+        assert lam > 0, "Lambda should be between 0 and 1."
+        super(CSRAClsHead, self).__init__(init_cfg=init_cfg, loss=loss, *args, **kwargs)
         self.temp_list = self.temperature_settings[num_heads]
-        self.csra_heads = ModuleList([
-            CSRAModule(num_classes, in_channels, self.temp_list[i], lam)
-            for i in range(num_heads)
-        ])
+        self.csra_heads = ModuleList(
+            [CSRAModule(num_classes, in_channels, self.temp_list[i], lam) for i in range(num_heads)]
+        )
 
     def pre_logits(self, x):
         if isinstance(x, tuple):
@@ -65,7 +61,7 @@ class CSRAClsHead(MultiLabelClsHead):
         return x
 
     def simple_test(self, x, post_process=True, **kwargs):
-        logit = 0.
+        logit = 0.0
         x = self.pre_logits(x)
         for head in self.csra_heads:
             logit += head(x)
@@ -75,7 +71,7 @@ class CSRAClsHead(MultiLabelClsHead):
             return logit
 
     def forward_train(self, x, gt_label, **kwargs):
-        logit = 0.
+        logit = 0.0
         x = self.pre_logits(x)
         for head in self.csra_heads:
             logit += head(x)
@@ -107,8 +103,7 @@ class CSRAModule(BaseModule):
         self.softmax = nn.Softmax(dim=2)
 
     def forward(self, x):
-        score = self.head(x) / torch.norm(
-            self.head.weight, dim=1, keepdim=True).transpose(0, 1)
+        score = self.head(x) / torch.norm(self.head.weight, dim=1, keepdim=True).transpose(0, 1)
         score = score.flatten(2)
         base_logit = torch.mean(score, dim=2)
 

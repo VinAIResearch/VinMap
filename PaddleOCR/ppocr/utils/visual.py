@@ -11,28 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import cv2
 import os
+
+import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 
-def draw_ser_results(image,
-                     ocr_results,
-                     font_path="doc/fonts/simfang.ttf",
-                     font_size=14):
+def draw_ser_results(image, ocr_results, font_path="doc/fonts/simfang.ttf", font_size=14):
     np.random.seed(2021)
-    color = (np.random.permutation(range(255)),
-             np.random.permutation(range(255)),
-             np.random.permutation(range(255)))
-    color_map = {
-        idx: (color[0][idx], color[1][idx], color[2][idx])
-        for idx in range(1, 255)
-    }
+    color = (np.random.permutation(range(255)), np.random.permutation(range(255)), np.random.permutation(range(255)))
+    color_map = {idx: (color[0][idx], color[1][idx], color[2][idx]) for idx in range(1, 255)}
     if isinstance(image, np.ndarray):
         image = Image.fromarray(image)
     elif isinstance(image, str) and os.path.isfile(image):
-        image = Image.open(image).convert('RGB')
+        image = Image.open(image).convert("RGB")
     img_new = image.copy()
     draw = ImageDraw.Draw(img_new)
 
@@ -65,9 +58,7 @@ def draw_box_txt(bbox, text, draw, font, font_size, color):
     left, top, right, bottom = font.getbbox(text)
     tw, th = right - left, bottom - top
     start_y = max(0, bbox[0][1] - th)
-    draw.rectangle(
-        [(bbox[0][0] + 1, start_y), (bbox[0][0] + tw + 1, start_y + th)],
-        fill=(0, 0, 255))
+    draw.rectangle([(bbox[0][0] + 1, start_y), (bbox[0][0] + tw + 1, start_y + th)], fill=(0, 0, 255))
     draw.text((bbox[0][0] + 1, start_y), text, fill=(255, 255, 255), font=font)
 
 
@@ -79,15 +70,12 @@ def trans_poly_to_bbox(poly):
     return [x1, y1, x2, y2]
 
 
-def draw_re_results(image,
-                    result,
-                    font_path="doc/fonts/simfang.ttf",
-                    font_size=18):
+def draw_re_results(image, result, font_path="doc/fonts/simfang.ttf", font_size=18):
     np.random.seed(0)
     if isinstance(image, np.ndarray):
         image = Image.fromarray(image)
     elif isinstance(image, str) and os.path.isfile(image):
-        image = Image.open(image).convert('RGB')
+        image = Image.open(image).convert("RGB")
     img_new = image.copy()
     draw = ImageDraw.Draw(img_new)
 
@@ -97,17 +85,17 @@ def draw_re_results(image,
     color_line = (0, 255, 0)
 
     for ocr_info_head, ocr_info_tail in result:
-        draw_box_txt(ocr_info_head["bbox"], ocr_info_head["transcription"],
-                     draw, font, font_size, color_head)
-        draw_box_txt(ocr_info_tail["bbox"], ocr_info_tail["transcription"],
-                     draw, font, font_size, color_tail)
+        draw_box_txt(ocr_info_head["bbox"], ocr_info_head["transcription"], draw, font, font_size, color_head)
+        draw_box_txt(ocr_info_tail["bbox"], ocr_info_tail["transcription"], draw, font, font_size, color_tail)
 
         center_head = (
-            (ocr_info_head['bbox'][0] + ocr_info_head['bbox'][2]) // 2,
-            (ocr_info_head['bbox'][1] + ocr_info_head['bbox'][3]) // 2)
+            (ocr_info_head["bbox"][0] + ocr_info_head["bbox"][2]) // 2,
+            (ocr_info_head["bbox"][1] + ocr_info_head["bbox"][3]) // 2,
+        )
         center_tail = (
-            (ocr_info_tail['bbox'][0] + ocr_info_tail['bbox'][2]) // 2,
-            (ocr_info_tail['bbox'][1] + ocr_info_tail['bbox'][3]) // 2)
+            (ocr_info_tail["bbox"][0] + ocr_info_tail["bbox"][2]) // 2,
+            (ocr_info_tail["bbox"][1] + ocr_info_tail["bbox"][3]) // 2,
+        )
 
         draw.line([center_head, center_tail], fill=color_line, width=5)
 

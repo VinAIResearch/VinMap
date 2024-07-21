@@ -2,12 +2,11 @@
 import numpy as np
 import pytest
 import torch
+from mmocr.apis.utils import tensor2grayimgs
 from numpy.testing import assert_array_equal
 
-from mmocr.apis.utils import tensor2grayimgs
 
-
-@pytest.mark.skipif(not torch.cuda.is_available(), reason='requires cuda')
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
 def test_tensor2grayimgs():
 
     # test tensor obj
@@ -37,6 +36,6 @@ def test_tensor2grayimgs():
 
     tensor = torch.randn(2, 1, 5, 5)
     gts = [t.squeeze(0).cpu().numpy().astype(np.uint8) for t in tensor]
-    outputs = tensor2grayimgs(tensor, mean=(0, ), std=(1, ))
+    outputs = tensor2grayimgs(tensor, mean=(0,), std=(1,))
     for gt, output in zip(gts, outputs):
         assert_array_equal(gt, output)

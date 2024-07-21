@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import torch
-
 import mmocr.utils as utils
+import torch
 from mmocr.models.builder import CONVERTORS
+
 from .attn import AttnConvertor
 
 
@@ -48,21 +48,19 @@ class ABIConvertor(AttnConvertor):
         tensors, padded_targets = [], []
         indexes = self.str2idx(strings)
         for index in indexes:
-            tensor = torch.LongTensor(index[:self.max_seq_len - 1] +
-                                      [self.end_idx])
+            tensor = torch.LongTensor(index[: self.max_seq_len - 1] + [self.end_idx])
             tensors.append(tensor)
             # target tensor for loss
             src_target = torch.LongTensor(tensor.size(0) + 1).fill_(0)
             src_target[0] = self.start_idx
             src_target[1:] = tensor
-            padded_target = (torch.ones(self.max_seq_len) *
-                             self.padding_idx).long()
+            padded_target = (torch.ones(self.max_seq_len) * self.padding_idx).long()
             char_num = src_target.size(0)
             if char_num > self.max_seq_len:
-                padded_target = src_target[:self.max_seq_len]
+                padded_target = src_target[: self.max_seq_len]
             else:
                 padded_target[:char_num] = src_target
             padded_targets.append(padded_target)
         padded_targets = torch.stack(padded_targets, 0).long()
 
-        return {'targets': tensors, 'padded_targets': padded_targets}
+        return {"targets": tensors, "padded_targets": padded_targets}

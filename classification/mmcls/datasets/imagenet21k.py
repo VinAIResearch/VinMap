@@ -53,38 +53,44 @@ class ImageNet21k(CustomDataset):
             Defaults to None.
     """
 
-    IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif')
+    IMG_EXTENSIONS = (".jpg", ".jpeg", ".png", ".ppm", ".bmp", ".pgm", ".tif")
     CLASSES = None
 
-    def __init__(self,
-                 data_prefix: str,
-                 pipeline: Sequence = (),
-                 classes: Union[str, Sequence[str], None] = None,
-                 ann_file: Optional[str] = None,
-                 serialize_data: bool = True,
-                 multi_label: bool = False,
-                 recursion_subdir: bool = True,
-                 test_mode=False,
-                 file_client_args: Optional[dict] = None):
-        assert recursion_subdir, 'The `recursion_subdir` option is ' \
-            'deprecated. Now the dataset will recursively get all images.'
+    def __init__(
+        self,
+        data_prefix: str,
+        pipeline: Sequence = (),
+        classes: Union[str, Sequence[str], None] = None,
+        ann_file: Optional[str] = None,
+        serialize_data: bool = True,
+        multi_label: bool = False,
+        recursion_subdir: bool = True,
+        test_mode=False,
+        file_client_args: Optional[dict] = None,
+    ):
+        assert recursion_subdir, (
+            "The `recursion_subdir` option is " "deprecated. Now the dataset will recursively get all images."
+        )
         if multi_label:
-            raise NotImplementedError(
-                'The `multi_label` option is not supported by now.')
+            raise NotImplementedError("The `multi_label` option is not supported by now.")
         self.multi_label = multi_label
         self.serialize_data = serialize_data
 
         if ann_file is None:
             warnings.warn(
-                'The ImageNet21k dataset is large, and scanning directory may '
-                'consume long time. Considering to specify the `ann_file` to '
-                'accelerate the initialization.', UserWarning)
+                "The ImageNet21k dataset is large, and scanning directory may "
+                "consume long time. Considering to specify the `ann_file` to "
+                "accelerate the initialization.",
+                UserWarning,
+            )
 
         if classes is None:
             warnings.warn(
-                'The CLASSES is not stored in the `ImageNet21k` class. '
-                'Considering to specify the `classes` argument if you need '
-                'do inference on the ImageNet-21k dataset', UserWarning)
+                "The CLASSES is not stored in the `ImageNet21k` class. "
+                "Considering to specify the `classes` argument if you need "
+                "do inference on the ImageNet-21k dataset",
+                UserWarning,
+            )
 
         super().__init__(
             data_prefix=data_prefix,
@@ -93,7 +99,8 @@ class ImageNet21k(CustomDataset):
             ann_file=ann_file,
             extensions=self.IMG_EXTENSIONS,
             test_mode=test_mode,
-            file_client_args=file_client_args)
+            file_client_args=file_client_args,
+        )
 
         if self.serialize_data:
             self.data_infos_bytes, self.data_address = self._serialize_data()
@@ -112,7 +119,7 @@ class ImageNet21k(CustomDataset):
             cat_ids (List[int]): Image category of specified index.
         """
 
-        return [int(self.get_data_info(idx)['gt_label'])]
+        return [int(self.get_data_info(idx)["gt_label"])]
 
     def get_data_info(self, idx: int) -> dict:
         """Get annotation by index.
@@ -154,8 +161,7 @@ class ImageNet21k(CustomDataset):
             return np.frombuffer(buffer, dtype=np.uint8)
 
         serialized_data_infos_list = [_serialize(x) for x in self.data_infos]
-        address_list = np.asarray([len(x) for x in serialized_data_infos_list],
-                                  dtype=np.int64)
+        address_list = np.asarray([len(x) for x in serialized_data_infos_list], dtype=np.int64)
         data_address: np.ndarray = np.cumsum(address_list)
         serialized_data_infos = np.concatenate(serialized_data_infos_list)
 

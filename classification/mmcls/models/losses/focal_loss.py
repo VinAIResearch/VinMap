@@ -6,13 +6,7 @@ from ..builder import LOSSES
 from .utils import convert_to_one_hot, weight_reduce_loss
 
 
-def sigmoid_focal_loss(pred,
-                       target,
-                       weight=None,
-                       gamma=2.0,
-                       alpha=0.25,
-                       reduction='mean',
-                       avg_factor=None):
+def sigmoid_focal_loss(pred, target, weight=None, gamma=2.0, alpha=0.25, reduction="mean", avg_factor=None):
     r"""Sigmoid focal loss.
 
     Args:
@@ -33,15 +27,12 @@ def sigmoid_focal_loss(pred,
     Returns:
         torch.Tensor: Loss.
     """
-    assert pred.shape == \
-        target.shape, 'pred and target should be in the same shape.'
+    assert pred.shape == target.shape, "pred and target should be in the same shape."
     pred_sigmoid = pred.sigmoid()
     target = target.type_as(pred)
     pt = (1 - pred_sigmoid) * target + pred_sigmoid * (1 - target)
-    focal_weight = (alpha * target + (1 - alpha) *
-                    (1 - target)) * pt.pow(gamma)
-    loss = F.binary_cross_entropy_with_logits(
-        pred, target, reduction='none') * focal_weight
+    focal_weight = (alpha * target + (1 - alpha) * (1 - target)) * pt.pow(gamma)
+    loss = F.binary_cross_entropy_with_logits(pred, target, reduction="none") * focal_weight
     if weight is not None:
         assert weight.dim() == 1
         weight = weight.float()
@@ -65,11 +56,7 @@ class FocalLoss(nn.Module):
         loss_weight (float): Weight of loss. Defaults to 1.0.
     """
 
-    def __init__(self,
-                 gamma=2.0,
-                 alpha=0.25,
-                 reduction='mean',
-                 loss_weight=1.0):
+    def __init__(self, gamma=2.0, alpha=0.25, reduction="mean", loss_weight=1.0):
 
         super(FocalLoss, self).__init__()
         self.gamma = gamma
@@ -77,12 +64,7 @@ class FocalLoss(nn.Module):
         self.reduction = reduction
         self.loss_weight = loss_weight
 
-    def forward(self,
-                pred,
-                target,
-                weight=None,
-                avg_factor=None,
-                reduction_override=None):
+    def forward(self, pred, target, weight=None, avg_factor=None, reduction_override=None):
         r"""Sigmoid focal loss.
 
         Args:
@@ -100,17 +82,11 @@ class FocalLoss(nn.Module):
         Returns:
             torch.Tensor: Loss.
         """
-        assert reduction_override in (None, 'none', 'mean', 'sum')
-        reduction = (
-            reduction_override if reduction_override else self.reduction)
+        assert reduction_override in (None, "none", "mean", "sum")
+        reduction = reduction_override if reduction_override else self.reduction
         if target.dim() == 1 or (target.dim() == 2 and target.shape[1] == 1):
             target = convert_to_one_hot(target.view(-1, 1), pred.shape[-1])
         loss_cls = self.loss_weight * sigmoid_focal_loss(
-            pred,
-            target,
-            weight,
-            gamma=self.gamma,
-            alpha=self.alpha,
-            reduction=reduction,
-            avg_factor=avg_factor)
+            pred, target, weight, gamma=self.gamma, alpha=self.alpha, reduction=reduction, avg_factor=avg_factor
+        )
         return loss_cls

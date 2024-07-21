@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 from mmcv.runner import BaseModule
-
 from mmocr.models.builder import FUSERS
 
 
@@ -18,12 +17,7 @@ class ABIFuser(BaseModule):
         init_cfg (dict): Specifies the initialization method for model layers.
     """
 
-    def __init__(self,
-                 d_model=512,
-                 max_seq_len=40,
-                 num_chars=90,
-                 init_cfg=None,
-                 **kwargs):
+    def __init__(self, d_model=512, max_seq_len=40, num_chars=90, init_cfg=None, **kwargs):
         super().__init__(init_cfg=init_cfg)
 
         self.max_seq_len = max_seq_len + 1  # additional stop token
@@ -48,4 +42,4 @@ class ABIFuser(BaseModule):
 
         logits = self.cls(output)  # (N, T, C)
 
-        return {'logits': logits}
+        return {"logits": logits}

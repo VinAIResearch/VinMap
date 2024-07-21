@@ -3,7 +3,6 @@ import argparse
 import os.path as osp
 
 import mmcv
-
 from mmocr.utils import convert_annotations
 
 
@@ -29,8 +28,7 @@ def collect_files(img_dir, gt_dir, split_info):
     for group in split_info:
         for img in split_info[group]:
             image_path = osp.join(img_dir, img)
-            anno_path = osp.join(gt_dir, 'groups', group,
-                                 img.replace('jpg', 'json'))
+            anno_path = osp.join(gt_dir, "groups", group, img.replace("jpg", "json"))
 
             # Filtering out the missing images
             if not osp.exists(image_path) or not osp.exists(anno_path):
@@ -40,8 +38,8 @@ def collect_files(img_dir, gt_dir, split_info):
             ann_list.append(anno_path)
 
     files = list(zip(imgs_list, ann_list))
-    assert len(files), f'No images found in {img_dir}'
-    print(f'Loaded {len(files)} images from {img_dir}')
+    assert len(files), f"No images found in {img_dir}"
+    print(f"Loaded {len(files)} images from {img_dir}")
 
     return files
 
@@ -60,8 +58,7 @@ def collect_annotations(files, nproc=1):
     assert isinstance(nproc, int)
 
     if nproc > 1:
-        images = mmcv.track_parallel_progress(
-            load_img_info, files, nproc=nproc)
+        images = mmcv.track_parallel_progress(load_img_info, files, nproc=nproc)
     else:
         images = mmcv.track_progress(load_img_info, files)
 
@@ -80,18 +77,18 @@ def load_img_info(files):
     assert isinstance(files, tuple)
 
     img_file, gt_file = files
-    assert osp.basename(gt_file).split('.')[0] == osp.basename(img_file).split(
-        '.')[0]
+    assert osp.basename(gt_file).split(".")[0] == osp.basename(img_file).split(".")[0]
     # Read imgs while ignoring orientations
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
 
     img_info = dict(
         file_name=osp.join(osp.basename(img_file)),
         height=img.shape[0],
         width=img.shape[1],
-        segm_file=osp.join(osp.basename(gt_file)))
+        segm_file=osp.join(osp.basename(gt_file)),
+    )
 
-    if osp.splitext(gt_file)[1] == '.json':
+    if osp.splitext(gt_file)[1] == ".json":
         img_info = load_json_info(gt_file, img_info)
     else:
         raise NotImplementedError
@@ -132,15 +129,15 @@ def load_json_info(gt_file, img_info):
 
     # 'textBBs' contains the printed texts of the table while 'fieldBBs'
     #  contains the text filled by human.
-    for box_type in ['textBBs', 'fieldBBs']:
+    for box_type in ["textBBs", "fieldBBs"]:
         for anno in annotation[box_type]:
             # Skip blanks
-            if box_type == 'fieldBBs':
-                if anno['type'] == 'blank':
+            if box_type == "fieldBBs":
+                if anno["type"] == "blank":
                     continue
 
             xs, ys, segmentation = [], [], []
-            for p in anno['poly_points']:
+            for p in anno["poly_points"]:
                 xs.append(p[0])
                 ys.append(p[1])
                 segmentation.append(p[0])
@@ -149,12 +146,7 @@ def load_json_info(gt_file, img_info):
             w, h = max(xs) - x, max(ys) - y
             bbox = [x, y, w, h]
 
-            anno = dict(
-                iscrowd=0,
-                category_id=1,
-                bbox=bbox,
-                area=w * h,
-                segmentation=[segmentation])
+            anno = dict(iscrowd=0, category_id=1, bbox=bbox, area=w * h, segmentation=[segmentation])
             anno_info.append(anno)
 
     img_info.update(anno_info=anno_info)
@@ -163,11 +155,9 @@ def load_json_info(gt_file, img_info):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training, val, and test set of NAF ')
-    parser.add_argument('root_path', help='Root dir path of NAF')
-    parser.add_argument(
-        '--nproc', default=1, type=int, help='Number of process')
+    parser = argparse.ArgumentParser(description="Generate training, val, and test set of NAF ")
+    parser.add_argument("root_path", help="Root dir path of NAF")
+    parser.add_argument("--nproc", default=1, type=int, help="Number of process")
     args = parser.parse_args()
     return args
 
@@ -175,21 +165,16 @@ def parse_args():
 def main():
     args = parse_args()
     root_path = args.root_path
-    split_info = mmcv.load(
-        osp.join(root_path, 'annotations', 'train_valid_test_split.json'))
-    split_info['training'] = split_info.pop('train')
-    split_info['val'] = split_info.pop('valid')
-    for split in ['training', 'val', 'test']:
-        print(f'Processing {split} set...')
-        with mmcv.Timer(print_tmpl='It takes {}s to convert NAF annotation'):
-            files = collect_files(
-                osp.join(root_path, 'imgs'),
-                osp.join(root_path, 'annotations'), split_info[split])
+    split_info = mmcv.load(osp.join(root_path, "annotations", "train_valid_test_split.json"))
+    split_info["training"] = split_info.pop("train")
+    split_info["val"] = split_info.pop("valid")
+    for split in ["training", "val", "test"]:
+        print(f"Processing {split} set...")
+        with mmcv.Timer(print_tmpl="It takes {}s to convert NAF annotation"):
+            files = collect_files(osp.join(root_path, "imgs"), osp.join(root_path, "annotations"), split_info[split])
             image_infos = collect_annotations(files, nproc=args.nproc)
-            convert_annotations(
-                image_infos, osp.join(root_path,
-                                      'instances_' + split + '.json'))
+            convert_annotations(image_infos, osp.join(root_path, "instances_" + split + ".json"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -13,25 +13,28 @@
 # limitations under the License.
 
 import argparse
+import math
 import os
-import sys
 import platform
+import random
+import sys
+import time
+
 import cv2
 import numpy as np
 import paddle
-from PIL import Image, ImageDraw, ImageFont
-import math
 from paddle import inference
-import time
-import random
+from PIL import Image, ImageDraw, ImageFont
 from ppocr.utils.logging import get_logger
 
 
 def str2bool(v):
     return v.lower() in ("true", "yes", "t", "y", "1")
 
+
 def str2int_tuple(v):
     return tuple([int(i.strip()) for i in v.split(",")])
+
 
 def init_args():
     parser = argparse.ArgumentParser()
@@ -49,11 +52,11 @@ def init_args():
     # params for text detector
     parser.add_argument("--image_dir", type=str)
     parser.add_argument("--page_num", type=int, default=0)
-    parser.add_argument("--det_algorithm", type=str, default='DB')
+    parser.add_argument("--det_algorithm", type=str, default="DB")
     parser.add_argument("--det_model_dir", type=str)
     parser.add_argument("--det_limit_side_len", type=float, default=960)
-    parser.add_argument("--det_limit_type", type=str, default='max')
-    parser.add_argument("--det_box_type", type=str, default='quad')
+    parser.add_argument("--det_limit_type", type=str, default="max")
+    parser.add_argument("--det_box_type", type=str, default="quad")
 
     # DB parmas
     parser.add_argument("--det_db_thresh", type=float, default=0.3)
@@ -85,39 +88,34 @@ def init_args():
     parser.add_argument("--fourier_degree", type=int, default=5)
 
     # params for text recognizer
-    parser.add_argument("--rec_algorithm", type=str, default='SVTR_LCNet')
+    parser.add_argument("--rec_algorithm", type=str, default="SVTR_LCNet")
     parser.add_argument("--rec_model_dir", type=str)
     parser.add_argument("--rec_image_inverse", type=str2bool, default=True)
     parser.add_argument("--rec_image_shape", type=str, default="3, 48, 320")
     parser.add_argument("--rec_batch_num", type=int, default=6)
     parser.add_argument("--max_text_length", type=int, default=25)
-    parser.add_argument(
-        "--rec_char_dict_path",
-        type=str,
-        default="./ppocr/utils/ppocr_keys_v1.txt")
+    parser.add_argument("--rec_char_dict_path", type=str, default="./ppocr/utils/ppocr_keys_v1.txt")
     parser.add_argument("--use_space_char", type=str2bool, default=True)
-    parser.add_argument(
-        "--vis_font_path", type=str, default="./doc/fonts/simfang.ttf")
+    parser.add_argument("--vis_font_path", type=str, default="./doc/fonts/simfang.ttf")
     parser.add_argument("--drop_score", type=float, default=0.5)
 
     # params for e2e
-    parser.add_argument("--e2e_algorithm", type=str, default='PGNet')
+    parser.add_argument("--e2e_algorithm", type=str, default="PGNet")
     parser.add_argument("--e2e_model_dir", type=str)
     parser.add_argument("--e2e_limit_side_len", type=float, default=768)
-    parser.add_argument("--e2e_limit_type", type=str, default='max')
+    parser.add_argument("--e2e_limit_type", type=str, default="max")
 
     # PGNet parmas
     parser.add_argument("--e2e_pgnet_score_thresh", type=float, default=0.5)
-    parser.add_argument(
-        "--e2e_char_dict_path", type=str, default="./ppocr/utils/ic15_dict.txt")
-    parser.add_argument("--e2e_pgnet_valid_set", type=str, default='totaltext')
-    parser.add_argument("--e2e_pgnet_mode", type=str, default='fast')
+    parser.add_argument("--e2e_char_dict_path", type=str, default="./ppocr/utils/ic15_dict.txt")
+    parser.add_argument("--e2e_pgnet_valid_set", type=str, default="totaltext")
+    parser.add_argument("--e2e_pgnet_mode", type=str, default="fast")
 
     # params for text classifier
     parser.add_argument("--use_angle_cls", type=str2bool, default=False)
     parser.add_argument("--cls_model_dir", type=str)
     parser.add_argument("--cls_image_shape", type=str, default="3, 48, 192")
-    parser.add_argument("--label_list", type=list, default=['0', '180'])
+    parser.add_argument("--label_list", type=list, default=["0", "180"])
     parser.add_argument("--cls_batch_num", type=int, default=6)
     parser.add_argument("--cls_thresh", type=float, default=0.9)
 
@@ -132,8 +130,7 @@ def init_args():
     parser.add_argument("--sr_batch_num", type=int, default=1)
 
     #
-    parser.add_argument(
-        "--draw_img_save_dir", type=str, default="./inference_results")
+    parser.add_argument("--draw_img_save_dir", type=str, default="./inference_results")
     parser.add_argument("--save_crop_res", type=str2bool, default=False)
     parser.add_argument("--crop_res_save_dir", type=str, default="./output")
 
@@ -149,23 +146,36 @@ def init_args():
     parser.add_argument("--use_onnx", type=str2bool, default=False)
 
     # ADD-ons
-    parser.add_argument('-configCls','--configCls', default = 'classification/configs/efficientnet/efficientnet-b4_8xb32_in1k.py', help='Map Classification Configuration')
+    parser.add_argument(
+        "-configCls",
+        "--configCls",
+        default="classification/configs/efficientnet/efficientnet-b4_8xb32_in1k.py",
+        help="Map Classification Configuration",
+    )
 
-    parser.add_argument('-cls_weights','--cls_weights', default = '../weight/effnetb4_vnmap.pth', help='Map Classification Weight')
-    parser.add_argument('-rec_weights','--rec_weights', default = '../weight/transformerocr_btc.pth', help='Text Recognition Weight')
+    parser.add_argument(
+        "-cls_weights", "--cls_weights", default="../weight/effnetb4_vnmap.pth", help="Map Classification Weight"
+    )
+    parser.add_argument(
+        "-rec_weights", "--rec_weights", default="../weight/transformerocr_btc.pth", help="Text Recognition Weight"
+    )
 
-    parser.add_argument('--root','--root', default = 'None', help='Root Workdirectory')
-    parser.add_argument('-input_images','--input_images',default = 'None', help='Input images path')
-    parser.add_argument('-output_destination','--output_destination',default = 'None', help='Output path')
+    parser.add_argument("--root", "--root", default="None", help="Root Workdirectory")
+    parser.add_argument("-input_images", "--input_images", default="None", help="Input images path")
+    parser.add_argument("-output_destination", "--output_destination", default="None", help="Output path")
 
-    parser.add_argument('-single_infer','--single_infer',default = 'True', help='Type of single infering')    
-    parser.add_argument('-single_infer_image','--single_infer_image',default = 'None', help='Input path of single image')    
-    parser.add_argument('-single_infer_path','--single_infer_path',default = 'None', help='Output path of single infer')
-    
-    parser.add_argument('-mass_dir','--mass_dir',default = 'None', help='Input path of mass image directory')    
-    parser.add_argument('-output_json','--output_json',default = 'None', help='Output path')
-    parser.add_argument('-infer_path','--infer_path',default = '../temp', help='Output path of image infer')        
-    
+    parser.add_argument("-single_infer", "--single_infer", default="True", help="Type of single infering")
+    parser.add_argument(
+        "-single_infer_image", "--single_infer_image", default="None", help="Input path of single image"
+    )
+    parser.add_argument(
+        "-single_infer_path", "--single_infer_path", default="None", help="Output path of single infer"
+    )
+
+    parser.add_argument("-mass_dir", "--mass_dir", default="None", help="Input path of mass image directory")
+    parser.add_argument("-output_json", "--output_json", default="None", help="Output path")
+    parser.add_argument("-infer_path", "--infer_path", default="../temp", help="Output path of image infer")
+
     return parser
 
 
@@ -173,26 +183,28 @@ def parse_args():
     parser = init_args()
     return parser.parse_args()
 
+
 def parse_argss():
     parser = init_args()
     return parser
 
+
 def create_predictor(args, mode, logger):
     if mode == "det":
         model_dir = args.det_model_dir
-    elif mode == 'cls':
+    elif mode == "cls":
         model_dir = args.cls_model_dir
-    elif mode == 'rec':
+    elif mode == "rec":
         model_dir = args.rec_model_dir
-    elif mode == 'table':
+    elif mode == "table":
         model_dir = args.table_model_dir
-    elif mode == 'ser':
+    elif mode == "ser":
         model_dir = args.ser_model_dir
-    elif mode == 're':
+    elif mode == "re":
         model_dir = args.re_model_dir
     elif mode == "sr":
         model_dir = args.sr_model_dir
-    elif mode == 'layout':
+    elif mode == "layout":
         model_dir = args.layout_model_dir
     else:
         model_dir = args.e2e_model_dir
@@ -202,33 +214,28 @@ def create_predictor(args, mode, logger):
         sys.exit(0)
     if args.use_onnx:
         import onnxruntime as ort
+
         model_file_path = model_dir
         if not os.path.exists(model_file_path):
-            raise ValueError("not find model file path {}".format(
-                model_file_path))
+            raise ValueError("not find model file path {}".format(model_file_path))
         sess = ort.InferenceSession(model_file_path)
         return sess, sess.get_inputs()[0], None, None
 
     else:
-        file_names = ['model', 'inference']
+        file_names = ["model", "inference"]
         for file_name in file_names:
-            model_file_path = '{}/{}.pdmodel'.format(model_dir, file_name)
-            params_file_path = '{}/{}.pdiparams'.format(model_dir, file_name)
-            if os.path.exists(model_file_path) and os.path.exists(
-                    params_file_path):
+            model_file_path = "{}/{}.pdmodel".format(model_dir, file_name)
+            params_file_path = "{}/{}.pdiparams".format(model_dir, file_name)
+            if os.path.exists(model_file_path) and os.path.exists(params_file_path):
                 break
         if not os.path.exists(model_file_path):
-            raise ValueError(
-                "not find model.pdmodel or inference.pdmodel in {}".format(
-                    model_dir))
+            raise ValueError("not find model.pdmodel or inference.pdmodel in {}".format(model_dir))
         if not os.path.exists(params_file_path):
-            raise ValueError(
-                "not find model.pdiparams or inference.pdiparams in {}".format(
-                    model_dir))
+            raise ValueError("not find model.pdiparams or inference.pdiparams in {}".format(model_dir))
 
         config = inference.Config(model_file_path, params_file_path)
 
-        if hasattr(args, 'precision'):
+        if hasattr(args, "precision"):
             if args.precision == "fp16" and args.use_tensorrt:
                 precision = inference.PrecisionType.Half
             elif args.precision == "int8":
@@ -250,21 +257,18 @@ def create_predictor(args, mode, logger):
                     workspace_size=1 << 30,
                     precision_mode=precision,
                     max_batch_size=args.max_batch_size,
-                    min_subgraph_size=args.
-                    min_subgraph_size,  # skip the minmum trt subgraph
-                    use_calib_mode=False)
+                    min_subgraph_size=args.min_subgraph_size,  # skip the minmum trt subgraph
+                    use_calib_mode=False,
+                )
 
                 # collect shape
-                trt_shape_f = os.path.join(model_dir,
-                                           f"{mode}_trt_dynamic_shape.txt")
+                trt_shape_f = os.path.join(model_dir, f"{mode}_trt_dynamic_shape.txt")
 
                 if not os.path.exists(trt_shape_f):
                     config.collect_shape_range_info(trt_shape_f)
-                    logger.info(
-                        f"collect dynamic shape info into : {trt_shape_f}")
+                    logger.info(f"collect dynamic shape info into : {trt_shape_f}")
                 try:
-                    config.enable_tuned_tensorrt_dynamic_shape(trt_shape_f,
-                                                               True)
+                    config.enable_tuned_tensorrt_dynamic_shape(trt_shape_f, True)
                 except Exception as E:
                     logger.info(E)
                     logger.info("Please keep your paddlepaddle-gpu >= 2.3.0!")
@@ -291,9 +295,9 @@ def create_predictor(args, mode, logger):
         config.disable_glog_info()
         config.delete_pass("conv_transpose_eltwiseadd_bn_fuse_pass")
         config.delete_pass("matmul_transpose_reshape_fuse_pass")
-        if mode == 're':
+        if mode == "re":
             config.delete_pass("simplify_with_basic_ops_pass")
-        if mode == 'table':
+        if mode == "table":
             config.delete_pass("fc_fuse_pass")  # not supported for table
         config.switch_use_feed_fetch_ops(False)
         config.switch_ir_optim(True)
@@ -301,7 +305,7 @@ def create_predictor(args, mode, logger):
         # create predictor
         predictor = inference.create_predictor(config)
         input_names = predictor.get_input_names()
-        if mode in ['ser', 're']:
+        if mode in ["ser", "re"]:
             input_tensor = []
             for name in input_names:
                 input_tensor.append(predictor.get_input_handle(name))
@@ -315,10 +319,8 @@ def create_predictor(args, mode, logger):
 def get_output_tensors(args, mode, predictor):
     output_names = predictor.get_output_names()
     output_tensors = []
-    if mode == "rec" and args.rec_algorithm in [
-            "CRNN", "SVTR_LCNet", "SVTR_HGNet"
-    ]:
-        output_name = 'softmax_0.tmp_0'
+    if mode == "rec" and args.rec_algorithm in ["CRNN", "SVTR_LCNet", "SVTR_HGNet"]:
+        output_name = "softmax_0.tmp_0"
         if output_name in output_names:
             return [predictor.get_output_handle(output_name)]
         else:
@@ -361,7 +363,8 @@ def draw_e2e_res(dt_boxes, strs, img_path):
             fontFace=cv2.FONT_HERSHEY_COMPLEX,
             fontScale=0.7,
             color=(0, 255, 0),
-            thickness=1)
+            thickness=1,
+        )
     return src_im
 
 
@@ -384,12 +387,7 @@ def resize_img(img, input_size=600):
     return img
 
 
-def draw_ocr(image,
-             boxes,
-             txts=None,
-             scores=None,
-             drop_score=0.5,
-             font_path="./doc/fonts/simfang.ttf"):
+def draw_ocr(image, boxes, txts=None, scores=None, drop_score=0.5, font_path="./doc/fonts/simfang.ttf"):
     """
     Visualize the results of OCR detection and recognition
     args:
@@ -406,31 +404,19 @@ def draw_ocr(image,
         scores = [1] * len(boxes)
     box_num = len(boxes)
     for i in range(box_num):
-        if scores is not None and (scores[i] < drop_score or
-                                   math.isnan(scores[i])):
+        if scores is not None and (scores[i] < drop_score or math.isnan(scores[i])):
             continue
         box = np.reshape(np.array(boxes[i]), [-1, 1, 2]).astype(np.int64)
         image = cv2.polylines(np.array(image), [box], True, (255, 0, 0), 2)
     if txts is not None:
         img = np.array(resize_img(image, input_size=600))
-        txt_img = text_visual(
-            txts,
-            scores,
-            img_h=img.shape[0],
-            img_w=600,
-            threshold=drop_score,
-            font_path=font_path)
+        txt_img = text_visual(txts, scores, img_h=img.shape[0], img_w=600, threshold=drop_score, font_path=font_path)
         img = np.concatenate([np.array(img), np.array(txt_img)], axis=1)
         return img
     return image
 
 
-def draw_ocr_box_txt(image,
-                     boxes,
-                     txts=None,
-                     scores=None,
-                     drop_score=0.5,
-                     font_path="./doc/fonts/simfang.ttf"):
+def draw_ocr_box_txt(image, boxes, txts=None, scores=None, drop_score=0.5, font_path="./doc/fonts/simfang.ttf"):
     h, w = image.height, image.width
     img_left = image.copy()
     img_right = np.ones((h, w, 3), dtype=np.uint8) * 255
@@ -442,53 +428,45 @@ def draw_ocr_box_txt(image,
     for idx, (box, txt) in enumerate(zip(boxes, txts)):
         if scores is not None and scores[idx] < drop_score:
             continue
-        color = (random.randint(0, 255), random.randint(0, 255),
-                 random.randint(0, 255))
+        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         draw_left.polygon(box, fill=color)
         img_right_text = draw_box_txt_fine((w, h), box, txt, font_path)
         pts = np.array(box, np.int32).reshape((-1, 1, 2))
         cv2.polylines(img_right_text, [pts], True, color, 1)
         img_right = cv2.bitwise_and(img_right, img_right_text)
     img_left = Image.blend(image, img_left, 0.5)
-    img_show = Image.new('RGB', (w * 2, h), (255, 255, 255))
+    img_show = Image.new("RGB", (w * 2, h), (255, 255, 255))
     img_show.paste(img_left, (0, 0, w, h))
     img_show.paste(Image.fromarray(img_right), (w, 0, w * 2, h))
     return np.array(img_show)
 
 
 def draw_box_txt_fine(img_size, box, txt, font_path="./doc/fonts/simfang.ttf"):
-    box_height = int(
-        math.sqrt((box[0][0] - box[3][0])**2 + (box[0][1] - box[3][1])**2))
-    box_width = int(
-        math.sqrt((box[0][0] - box[1][0])**2 + (box[0][1] - box[1][1])**2))
+    box_height = int(math.sqrt((box[0][0] - box[3][0]) ** 2 + (box[0][1] - box[3][1]) ** 2))
+    box_width = int(math.sqrt((box[0][0] - box[1][0]) ** 2 + (box[0][1] - box[1][1]) ** 2))
 
     if box_height > 2 * box_width and box_height > 30:
-        img_text = Image.new('RGB', (box_height, box_width), (255, 255, 255))
+        img_text = Image.new("RGB", (box_height, box_width), (255, 255, 255))
         draw_text = ImageDraw.Draw(img_text)
         if txt:
             font = create_font(txt, (box_height, box_width), font_path)
             draw_text.text([0, 0], txt, fill=(0, 0, 0), font=font)
         img_text = img_text.transpose(Image.ROTATE_270)
     else:
-        img_text = Image.new('RGB', (box_width, box_height), (255, 255, 255))
+        img_text = Image.new("RGB", (box_width, box_height), (255, 255, 255))
         draw_text = ImageDraw.Draw(img_text)
         if txt:
             font = create_font(txt, (box_width, box_height), font_path)
             draw_text.text([0, 0], txt, fill=(0, 0, 0), font=font)
 
-    pts1 = np.float32(
-        [[0, 0], [box_width, 0], [box_width, box_height], [0, box_height]])
+    pts1 = np.float32([[0, 0], [box_width, 0], [box_width, box_height], [0, box_height]])
     pts2 = np.array(box, dtype=np.float32)
     M = cv2.getPerspectiveTransform(pts1, pts2)
 
     img_text = np.array(img_text, dtype=np.uint8)
     img_right_text = cv2.warpPerspective(
-        img_text,
-        M,
-        img_size,
-        flags=cv2.INTER_NEAREST,
-        borderMode=cv2.BORDER_CONSTANT,
-        borderValue=(255, 255, 255))
+        img_text, M, img_size, flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255)
+    )
     return img_right_text
 
 
@@ -513,6 +491,7 @@ def str_count(s):
         the number of Chinese characters
     """
     import string
+
     count_zh = count_pu = 0
     s_len = len(s)
     en_dg_count = 0
@@ -526,12 +505,7 @@ def str_count(s):
     return s_len - math.ceil(en_dg_count / 2)
 
 
-def text_visual(texts,
-                scores,
-                img_h=400,
-                img_w=600,
-                threshold=0.,
-                font_path="./doc/simfang.ttf"):
+def text_visual(texts, scores, img_h=400, img_w=600, threshold=0.0, font_path="./doc/simfang.ttf"):
     """
     create new blank img and draw txt on it
     args:
@@ -543,12 +517,11 @@ def text_visual(texts,
     return(array):
     """
     if scores is not None:
-        assert len(texts) == len(
-            scores), "The number of txts and corresponding scores must match"
+        assert len(texts) == len(scores), "The number of txts and corresponding scores must match"
 
     def create_blank_img():
         blank_img = np.ones(shape=[img_h, img_w], dtype=np.int8) * 255
-        blank_img[:, img_w - 1:] = 0
+        blank_img[:, img_w - 1 :] = 0
         blank_img = Image.fromarray(blank_img).convert("RGB")
         draw_txt = ImageDraw.Draw(blank_img)
         return blank_img, draw_txt
@@ -570,23 +543,23 @@ def text_visual(texts,
         first_line = True
         while str_count(txt) >= img_w // font_size - 4:
             tmp = txt
-            txt = tmp[:img_w // font_size - 4]
+            txt = tmp[: img_w // font_size - 4]
             if first_line:
-                new_txt = str(index) + ': ' + txt
+                new_txt = str(index) + ": " + txt
                 first_line = False
             else:
-                new_txt = '    ' + txt
+                new_txt = "    " + txt
             draw_txt.text((0, gap * count), new_txt, txt_color, font=font)
-            txt = tmp[img_w // font_size - 4:]
+            txt = tmp[img_w // font_size - 4 :]
             if count >= img_h // gap - 1:
                 txt_img_list.append(np.array(blank_img))
                 blank_img, draw_txt = create_blank_img()
                 count = 0
             count += 1
         if first_line:
-            new_txt = str(index) + ': ' + txt + '   ' + '%.3f' % (scores[idx])
+            new_txt = str(index) + ": " + txt + "   " + "%.3f" % (scores[idx])
         else:
-            new_txt = "  " + txt + "  " + '%.3f' % (scores[idx])
+            new_txt = "  " + txt + "  " + "%.3f" % (scores[idx])
         draw_txt.text((0, gap * count), new_txt, txt_color, font=font)
         # whether add new blank img or not
         if count >= img_h // gap - 1 and idx + 1 < len(texts):
@@ -604,7 +577,8 @@ def text_visual(texts,
 
 def base64_to_cv2(b64str):
     import base64
-    data = base64.b64decode(b64str.encode('utf8'))
+
+    data = base64.b64decode(b64str.encode("utf8"))
     data = np.frombuffer(data, np.uint8)
     data = cv2.imdecode(data, cv2.IMREAD_COLOR)
     return data
@@ -613,7 +587,7 @@ def base64_to_cv2(b64str):
 def draw_boxes(image, boxes, scores=None, drop_score=0.5):
     if scores is None:
         scores = [1] * len(boxes)
-    for (box, score) in zip(boxes, scores):
+    for box, score in zip(boxes, scores):
         if score < drop_score:
             continue
         box = np.reshape(np.array(box), [-1, 1, 2]).astype(np.int64)
@@ -622,7 +596,7 @@ def draw_boxes(image, boxes, scores=None, drop_score=0.5):
 
 
 def get_rotate_crop_image(img, points):
-    '''
+    """
     img_height, img_width = img.shape[0:2]
     left = int(np.min(points[:, 0]))
     right = int(np.max(points[:, 0]))
@@ -631,25 +605,15 @@ def get_rotate_crop_image(img, points):
     img_crop = img[top:bottom, left:right, :].copy()
     points[:, 0] = points[:, 0] - left
     points[:, 1] = points[:, 1] - top
-    '''
+    """
     assert len(points) == 4, "shape of points must be 4*2"
-    img_crop_width = int(
-        max(
-            np.linalg.norm(points[0] - points[1]),
-            np.linalg.norm(points[2] - points[3])))
-    img_crop_height = int(
-        max(
-            np.linalg.norm(points[0] - points[3]),
-            np.linalg.norm(points[1] - points[2])))
-    pts_std = np.float32([[0, 0], [img_crop_width, 0],
-                          [img_crop_width, img_crop_height],
-                          [0, img_crop_height]])
+    img_crop_width = int(max(np.linalg.norm(points[0] - points[1]), np.linalg.norm(points[2] - points[3])))
+    img_crop_height = int(max(np.linalg.norm(points[0] - points[3]), np.linalg.norm(points[1] - points[2])))
+    pts_std = np.float32([[0, 0], [img_crop_width, 0], [img_crop_width, img_crop_height], [0, img_crop_height]])
     M = cv2.getPerspectiveTransform(points, pts_std)
     dst_img = cv2.warpPerspective(
-        img,
-        M, (img_crop_width, img_crop_height),
-        borderMode=cv2.BORDER_REPLICATE,
-        flags=cv2.INTER_CUBIC)
+        img, M, (img_crop_width, img_crop_height), borderMode=cv2.BORDER_REPLICATE, flags=cv2.INTER_CUBIC
+    )
     dst_img_height, dst_img_width = dst_img.shape[0:2]
     if dst_img_height * 1.0 / dst_img_width >= 1.5:
         dst_img = np.rot90(dst_img)
@@ -685,5 +649,5 @@ def check_gpu(use_gpu):
     return use_gpu
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

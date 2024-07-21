@@ -79,20 +79,21 @@ class MMClsWandbHook(WandbLoggerHook):
             If zero, the evaluation won't be logged. Defaults to 100.
     """
 
-    def __init__(self,
-                 init_kwargs=None,
-                 interval=10,
-                 log_checkpoint=False,
-                 log_checkpoint_metadata=False,
-                 num_eval_images=100,
-                 **kwargs):
+    def __init__(
+        self,
+        init_kwargs=None,
+        interval=10,
+        log_checkpoint=False,
+        log_checkpoint_metadata=False,
+        num_eval_images=100,
+        **kwargs,
+    ):
         super(MMClsWandbHook, self).__init__(init_kwargs, interval, **kwargs)
 
         self.log_checkpoint = log_checkpoint
-        self.log_checkpoint_metadata = (
-            log_checkpoint and log_checkpoint_metadata)
+        self.log_checkpoint_metadata = log_checkpoint and log_checkpoint_metadata
         self.num_eval_images = num_eval_images
-        self.log_evaluation = (num_eval_images > 0)
+        self.log_evaluation = num_eval_images > 0
         self.ckpt_hook: CheckpointHook = None
         self.eval_hook: EvalHook = None
 
@@ -113,8 +114,9 @@ class MMClsWandbHook(WandbLoggerHook):
                 self.log_checkpoint = False
                 self.log_checkpoint_metadata = False
                 runner.logger.warning(
-                    'To log checkpoint in MMClsWandbHook, `CheckpointHook` is'
-                    'required, please check hooks in the runner.')
+                    "To log checkpoint in MMClsWandbHook, `CheckpointHook` is"
+                    "required, please check hooks in the runner."
+                )
             else:
                 self.ckpt_interval = self.ckpt_hook.interval
 
@@ -124,29 +126,31 @@ class MMClsWandbHook(WandbLoggerHook):
                 self.log_evaluation = False
                 self.log_checkpoint_metadata = False
                 runner.logger.warning(
-                    'To log evaluation or checkpoint metadata in '
-                    'MMClsWandbHook, `EvalHook` or `DistEvalHook` in mmcls '
-                    'is required, please check whether the validation '
-                    'is enabled.')
+                    "To log evaluation or checkpoint metadata in "
+                    "MMClsWandbHook, `EvalHook` or `DistEvalHook` in mmcls "
+                    "is required, please check whether the validation "
+                    "is enabled."
+                )
             else:
                 self.eval_interval = self.eval_hook.interval
             self.val_dataset = self.eval_hook.dataloader.dataset
-            if (self.log_evaluation
-                    and self.num_eval_images > len(self.val_dataset)):
+            if self.log_evaluation and self.num_eval_images > len(self.val_dataset):
                 self.num_eval_images = len(self.val_dataset)
                 runner.logger.warning(
-                    f'The num_eval_images ({self.num_eval_images}) is '
-                    'greater than the total number of validation samples '
-                    f'({len(self.val_dataset)}). The complete validation '
-                    'dataset will be logged.')
+                    f"The num_eval_images ({self.num_eval_images}) is "
+                    "greater than the total number of validation samples "
+                    f"({len(self.val_dataset)}). The complete validation "
+                    "dataset will be logged."
+                )
 
         # Check conditions to log checkpoint metadata
         if self.log_checkpoint_metadata:
-            assert self.ckpt_interval % self.eval_interval == 0, \
-                'To log checkpoint metadata in MMClsWandbHook, the interval ' \
-                f'of checkpoint saving ({self.ckpt_interval}) should be ' \
-                'divisible by the interval of evaluation ' \
-                f'({self.eval_interval}).'
+            assert self.ckpt_interval % self.eval_interval == 0, (
+                "To log checkpoint metadata in MMClsWandbHook, the interval "
+                f"of checkpoint saving ({self.ckpt_interval}) should be "
+                "divisible by the interval of evaluation "
+                f"({self.eval_interval})."
+            )
 
         # Initialize evaluation table
         if self.log_evaluation:
@@ -165,19 +169,17 @@ class MMClsWandbHook(WandbLoggerHook):
             return
 
         # Save checkpoint and metadata
-        if (self.log_checkpoint
-                and self.every_n_epochs(runner, self.ckpt_interval)
-                or (self.ckpt_hook.save_last and self.is_last_epoch(runner))):
+        if (
+            self.log_checkpoint
+            and self.every_n_epochs(runner, self.ckpt_interval)
+            or (self.ckpt_hook.save_last and self.is_last_epoch(runner))
+        ):
             if self.log_checkpoint_metadata and self.eval_hook:
-                metadata = {
-                    'epoch': runner.epoch + 1,
-                    **self._get_eval_results()
-                }
+                metadata = {"epoch": runner.epoch + 1, **self._get_eval_results()}
             else:
                 metadata = None
-            aliases = [f'epoch_{runner.epoch+1}', 'latest']
-            model_path = osp.join(self.ckpt_hook.out_dir,
-                                  f'epoch_{runner.epoch+1}.pth')
+            aliases = [f"epoch_{runner.epoch+1}", "latest"]
+            model_path = osp.join(self.ckpt_hook.out_dir, f"epoch_{runner.epoch+1}.pth")
             self._log_ckpt_as_artifact(model_path, aliases, metadata)
 
         # Save prediction table
@@ -191,7 +193,7 @@ class MMClsWandbHook(WandbLoggerHook):
             self._log_eval_table(runner.epoch + 1)
 
     def after_train_iter(self, runner):
-        if self.get_mode(runner) == 'train':
+        if self.get_mode(runner) == "train":
             # An ugly patch. The iter-based eval hook will call the
             # `after_train_iter` method of all logger hooks before evaluation.
             # Use this trick to skip that call.
@@ -208,19 +210,17 @@ class MMClsWandbHook(WandbLoggerHook):
             return
 
         # Save checkpoint and metadata
-        if (self.log_checkpoint
-                and self.every_n_iters(runner, self.ckpt_interval)
-                or (self.ckpt_hook.save_last and self.is_last_iter(runner))):
+        if (
+            self.log_checkpoint
+            and self.every_n_iters(runner, self.ckpt_interval)
+            or (self.ckpt_hook.save_last and self.is_last_iter(runner))
+        ):
             if self.log_checkpoint_metadata and self.eval_hook:
-                metadata = {
-                    'iter': runner.iter + 1,
-                    **self._get_eval_results()
-                }
+                metadata = {"iter": runner.iter + 1, **self._get_eval_results()}
             else:
                 metadata = None
-            aliases = [f'iter_{runner.iter+1}', 'latest']
-            model_path = osp.join(self.ckpt_hook.out_dir,
-                                  f'iter_{runner.iter+1}.pth')
+            aliases = [f"iter_{runner.iter+1}", "latest"]
+            model_path = osp.join(self.ckpt_hook.out_dir, f"iter_{runner.iter+1}.pth")
             self._log_ckpt_as_artifact(model_path, aliases, metadata)
 
         # Save prediction table
@@ -245,33 +245,31 @@ class MMClsWandbHook(WandbLoggerHook):
             aliases (list): List of the aliases associated with this artifact.
             metadata (dict, optional): Metadata associated with this artifact.
         """
-        model_artifact = self.wandb.Artifact(
-            f'run_{self.wandb.run.id}_model', type='model', metadata=metadata)
+        model_artifact = self.wandb.Artifact(f"run_{self.wandb.run.id}_model", type="model", metadata=metadata)
         model_artifact.add_file(model_path)
         self.wandb.log_artifact(model_artifact, aliases=aliases)
 
     def _get_eval_results(self):
         """Get model evaluation results."""
         results = self.eval_hook.latest_results
-        eval_results = self.val_dataset.evaluate(
-            results, logger='silent', **self.eval_hook.eval_kwargs)
+        eval_results = self.val_dataset.evaluate(results, logger="silent", **self.eval_hook.eval_kwargs)
         return eval_results
 
     def _init_data_table(self):
         """Initialize the W&B Tables for validation data."""
-        columns = ['image_name', 'image', 'ground_truth']
+        columns = ["image_name", "image", "ground_truth"]
         self.data_table = self.wandb.Table(columns=columns)
 
     def _init_pred_table(self):
         """Initialize the W&B Tables for model evaluation."""
-        columns = ['epoch'] if self.by_epoch else ['iter']
-        columns += ['image_name', 'image', 'ground_truth', 'prediction'
-                    ] + list(self.val_dataset.CLASSES)
+        columns = ["epoch"] if self.by_epoch else ["iter"]
+        columns += ["image_name", "image", "ground_truth", "prediction"] + list(self.val_dataset.CLASSES)
         self.eval_table = self.wandb.Table(columns=columns)
 
     def _add_ground_truth(self):
         # Get image loading pipeline
         from mmcls.datasets.pipelines import LoadImageFromFile
+
         img_loader = None
         for t in self.val_dataset.pipeline.transforms:
             if isinstance(t, LoadImageFromFile):
@@ -282,22 +280,21 @@ class MMClsWandbHook(WandbLoggerHook):
         # Set seed so that same validation set is logged each time.
         np.random.seed(42)
         np.random.shuffle(self.eval_image_indexs)
-        self.eval_image_indexs = self.eval_image_indexs[:self.num_eval_images]
+        self.eval_image_indexs = self.eval_image_indexs[: self.num_eval_images]
 
         for idx in self.eval_image_indexs:
             img_info = self.val_dataset.data_infos[idx]
             if img_loader is not None:
                 img_info = img_loader(img_info)
                 # Get image and convert from BGR to RGB
-                image = img_info['img'][..., ::-1]
+                image = img_info["img"][..., ::-1]
             else:
                 # For CIFAR dataset.
-                image = img_info['img']
-            image_name = img_info.get('filename', f'img_{idx}')
-            gt_label = img_info.get('gt_label').item()
+                image = img_info["img"]
+            image_name = img_info.get("filename", f"img_{idx}")
+            gt_label = img_info.get("gt_label").item()
 
-            self.data_table.add_data(image_name, self.wandb.Image(image),
-                                     CLASSES[gt_label])
+            self.data_table.add_data(image_name, self.wandb.Image(image), CLASSES[gt_label])
 
     def _add_predictions(self, results, idx):
         table_idxs = self.data_table_ref.get_index()
@@ -307,10 +304,13 @@ class MMClsWandbHook(WandbLoggerHook):
             result = results[eval_image_index]
 
             self.eval_table.add_data(
-                idx, self.data_table_ref.data[ndx][0],
+                idx,
+                self.data_table_ref.data[ndx][0],
                 self.data_table_ref.data[ndx][1],
                 self.data_table_ref.data[ndx][2],
-                self.val_dataset.CLASSES[np.argmax(result)], *tuple(result))
+                self.val_dataset.CLASSES[np.argmax(result)],
+                *tuple(result),
+            )
 
     def _log_data_table(self):
         """Log the W&B Tables for validation data as artifact and calls
@@ -319,13 +319,13 @@ class MMClsWandbHook(WandbLoggerHook):
 
         This allows the data to be uploaded just once.
         """
-        data_artifact = self.wandb.Artifact('val', type='dataset')
-        data_artifact.add(self.data_table, 'val_data')
+        data_artifact = self.wandb.Artifact("val", type="dataset")
+        data_artifact.add(self.data_table, "val_data")
 
         self.wandb.run.use_artifact(data_artifact)
         data_artifact.wait()
 
-        self.data_table_ref = data_artifact.get('val_data')
+        self.data_table_ref = data_artifact.get("val_data")
 
     def _log_eval_table(self, idx):
         """Log the W&B Tables for model evaluation.
@@ -333,11 +333,10 @@ class MMClsWandbHook(WandbLoggerHook):
         The table will be logged multiple times creating new version. Use this
         to compare models at different intervals interactively.
         """
-        pred_artifact = self.wandb.Artifact(
-            f'run_{self.wandb.run.id}_pred', type='evaluation')
-        pred_artifact.add(self.eval_table, 'eval_data')
+        pred_artifact = self.wandb.Artifact(f"run_{self.wandb.run.id}_pred", type="evaluation")
+        pred_artifact.add(self.eval_table, "eval_data")
         if self.by_epoch:
-            aliases = ['latest', f'epoch_{idx}']
+            aliases = ["latest", f"epoch_{idx}"]
         else:
-            aliases = ['latest', f'iter_{idx}']
+            aliases = ["latest", f"iter_{idx}"]
         self.wandb.run.log_artifact(pred_artifact, aliases=aliases)

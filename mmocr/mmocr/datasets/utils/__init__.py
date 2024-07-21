@@ -2,7 +2,5 @@
 from .loader import AnnFileLoader, HardDiskLoader, LmdbLoader
 from .parser import LineJsonParser, LineStrParser
 
-__all__ = [
-    'HardDiskLoader', 'LmdbLoader', 'AnnFileLoader', 'LineStrParser',
-    'LineJsonParser'
-]
+
+__all__ = ["HardDiskLoader", "LmdbLoader", "AnnFileLoader", "LineStrParser", "LineJsonParser"]

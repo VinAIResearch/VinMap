@@ -11,45 +11,51 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from .iaa_augment import IaaAugment
-from .make_border_map import MakeBorderMap
-from .make_shrink_map import MakeShrinkMap
-from .random_crop_data import EastRandomCropData, RandomCropImgMask
-from .make_pse_gt import MakePseGt
-
-
-
-from .rec_img_aug import BaseDataAugmentation, RecAug, RecConAug, RecResizeImg, ClsResizeImg, \
-    SRNRecResizeImg, GrayRecResizeImg, SARRecResizeImg, PRENResizeImg, \
-    ABINetRecResizeImg, SVTRRecResizeImg, ABINetRecAug, VLRecResizeImg, SPINRecResizeImg, RobustScannerRecResizeImg, \
-    RFLRecResizeImg, SVTRRecAug
-from .ssl_img_aug import SSLRotateResize
-from .randaugment import RandAugment
-from .copy_paste import CopyPaste
 from .ColorJitter import ColorJitter
-from .operators import *
-from .label_ops import *
-
-from .east_process import *
-from .sast_process import *
-from .pg_process import *
-from .table_ops import *
-
-from .vqa import *
-
-from .fce_aug import *
-from .fce_targets import FCENetTargets
+from .copy_paste import CopyPaste
 from .ct_process import *
 from .drrg_targets import DRRGTargets
+from .east_process import *
+from .fce_aug import *
+from .fce_targets import FCENetTargets
+from .iaa_augment import IaaAugment
+from .label_ops import *
+from .make_border_map import MakeBorderMap
+from .make_pse_gt import MakePseGt
+from .make_shrink_map import MakeShrinkMap
+from .operators import *
+from .pg_process import *
+from .randaugment import RandAugment
+from .random_crop_data import EastRandomCropData, RandomCropImgMask
+from .rec_img_aug import (
+    ABINetRecAug,
+    ABINetRecResizeImg,
+    BaseDataAugmentation,
+    ClsResizeImg,
+    GrayRecResizeImg,
+    PRENResizeImg,
+    RecAug,
+    RecConAug,
+    RecResizeImg,
+    RFLRecResizeImg,
+    RobustScannerRecResizeImg,
+    SARRecResizeImg,
+    SPINRecResizeImg,
+    SRNRecResizeImg,
+    SVTRRecAug,
+    SVTRRecResizeImg,
+    VLRecResizeImg,
+)
+from .sast_process import *
+from .ssl_img_aug import SSLRotateResize
+from .table_ops import *
+from .vqa import *
 
 
 def transform(data, ops=None):
-    """ transform """
+    """transform"""
     if ops is None:
         ops = []
     for op in ops:
@@ -66,11 +72,10 @@ def create_operators(op_param_list, global_config=None):
     Args:
         params(list): a dict list, used to create some operators
     """
-    assert isinstance(op_param_list, list), ('operator config should be a list')
+    assert isinstance(op_param_list, list), "operator config should be a list"
     ops = []
     for operator in op_param_list:
-        assert isinstance(operator,
-                          dict) and len(operator) == 1, "yaml format error"
+        assert isinstance(operator, dict) and len(operator) == 1, "yaml format error"
         op_name = list(operator)[0]
         param = {} if operator[op_name] is None else operator[op_name]
         if global_config is not None:

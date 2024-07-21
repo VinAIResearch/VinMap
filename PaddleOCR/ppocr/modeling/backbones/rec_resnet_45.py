@@ -16,17 +16,17 @@ This code is refer from:
 https://github.com/FangShancheng/ABINet/tree/main/modules
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import math
+
+import numpy as np
 import paddle
-from paddle import ParamAttr
-from paddle.nn.initializer import KaimingNormal
 import paddle.nn as nn
 import paddle.nn.functional as F
-import numpy as np
-import math
+from paddle import ParamAttr
+from paddle.nn.initializer import KaimingNormal
+
 
 __all__ = ["ResNet45"]
 
@@ -38,7 +38,8 @@ def conv1x1(in_planes, out_planes, stride=1):
         kernel_size=1,
         stride=1,
         weight_attr=ParamAttr(initializer=KaimingNormal()),
-        bias_attr=False)
+        bias_attr=False,
+    )
 
 
 def conv3x3(in_channel, out_channel, stride=1):
@@ -49,7 +50,8 @@ def conv3x3(in_channel, out_channel, stride=1):
         stride=stride,
         padding=1,
         weight_attr=ParamAttr(initializer=KaimingNormal()),
-        bias_attr=False)
+        bias_attr=False,
+    )
 
 
 class BasicBlock(nn.Layer):
@@ -84,11 +86,7 @@ class BasicBlock(nn.Layer):
 
 
 class ResNet45(nn.Layer):
-    def __init__(self,
-                 in_channels=3,
-                 block=BasicBlock,
-                 layers=[3, 4, 6, 6, 3],
-                 strides=[2, 1, 2, 1, 1]):
+    def __init__(self, in_channels=3, block=BasicBlock, layers=[3, 4, 6, 6, 3], strides=[2, 1, 2, 1, 1]):
         self.inplanes = 32
         super(ResNet45, self).__init__()
         self.conv1 = nn.Conv2D(
@@ -98,7 +96,8 @@ class ResNet45(nn.Layer):
             stride=1,
             padding=1,
             weight_attr=ParamAttr(initializer=KaimingNormal()),
-            bias_attr=False)
+            bias_attr=False,
+        )
         self.bn1 = nn.BatchNorm2D(32)
         self.relu = nn.ReLU()
 
@@ -120,8 +119,10 @@ class ResNet45(nn.Layer):
                     kernel_size=1,
                     stride=stride,
                     weight_attr=ParamAttr(initializer=KaimingNormal()),
-                    bias_attr=False),
-                nn.BatchNorm2D(planes * block.expansion), )
+                    bias_attr=False,
+                ),
+                nn.BatchNorm2D(planes * block.expansion),
+            )
 
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample))

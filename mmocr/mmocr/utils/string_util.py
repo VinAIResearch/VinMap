@@ -14,9 +14,9 @@ class StringStrip:
             are removed from the string. Default: None.
     """
 
-    def __init__(self, strip=True, strip_pos='both', strip_str=None):
+    def __init__(self, strip=True, strip_pos="both", strip_str=None):
         assert isinstance(strip, bool)
-        assert strip_pos in ('both', 'left', 'right')
+        assert strip_pos in ("both", "left", "right")
         assert strip_str is None or isinstance(strip_str, str)
 
         self.strip = strip
@@ -28,9 +28,9 @@ class StringStrip:
         if not self.strip:
             return in_str
 
-        if self.strip_pos == 'left':
+        if self.strip_pos == "left":
             return in_str.lstrip(self.strip_str)
-        elif self.strip_pos == 'right':
+        elif self.strip_pos == "right":
             return in_str.rstrip(self.strip_str)
         else:
             return in_str.strip(self.strip_str)

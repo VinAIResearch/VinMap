@@ -1,9 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import mmocr.models.textdet.losses as losses
 import numpy as np
 import torch
 from mmdet.core import BitmapMasks
-
-import mmocr.models.textdet.losses as losses
 
 
 def test_panloss():
@@ -11,15 +10,13 @@ def test_panloss():
 
     # test bitmasks2tensor
     mask = [[1, 0, 1], [1, 1, 1], [0, 0, 1]]
-    target = [[1, 0, 1, 0, 0], [1, 1, 1, 0, 0], [0, 0, 1, 0, 0],
-              [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+    target = [[1, 0, 1, 0, 0], [1, 1, 1, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
     masks = [np.array(mask)]
     bitmasks = BitmapMasks(masks, 3, 3)
     target_sz = (6, 5)
     results = panloss.bitmasks2tensor([bitmasks], target_sz)
     assert len(results) == 1
-    assert torch.sum(torch.abs(results[0].float() -
-                               torch.Tensor(target))).item() == 0
+    assert torch.sum(torch.abs(results[0].float() - torch.Tensor(target))).item() == 0
 
 
 def test_textsnakeloss():
@@ -92,46 +89,46 @@ def test_drrgloss():
     assert np.allclose(bce_loss, 0)
 
     # test gcn_loss
-    gcn_preds = torch.tensor([[0., 1.], [1., 0.]])
+    gcn_preds = torch.tensor([[0.0, 1.0], [1.0, 0.0]])
     labels = torch.tensor([1, 0], dtype=torch.long)
     gcn_loss = drrgloss.gcn_loss((gcn_preds, labels))
     assert gcn_loss.item()
 
     # test bitmasks2tensor
     mask = [[1, 0, 1], [1, 1, 1], [0, 0, 1]]
-    target = [[1, 0, 1, 0, 0], [1, 1, 1, 0, 0], [0, 0, 1, 0, 0],
-              [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+    target = [[1, 0, 1, 0, 0], [1, 1, 1, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
     masks = [np.array(mask)]
     bitmasks = BitmapMasks(masks, 3, 3)
     target_sz = (6, 5)
     results = drrgloss.bitmasks2tensor([bitmasks], target_sz)
     assert len(results) == 1
-    assert torch.sum(torch.abs(results[0].float() -
-                               torch.Tensor(target))).item() == 0
+    assert torch.sum(torch.abs(results[0].float() - torch.Tensor(target))).item() == 0
 
     # test forward
     target_maps = [BitmapMasks([np.random.randn(20, 20)], 20, 20)]
     target_masks = [BitmapMasks([np.ones((20, 20))], 20, 20)]
     gt_masks = [BitmapMasks([np.ones((20, 20))], 20, 20)]
     preds = (torch.randn((1, 6, 20, 20)), (gcn_preds, labels))
-    loss_dict = drrgloss(preds, 1., target_masks, target_masks, gt_masks,
-                         target_maps, target_maps, target_maps, target_maps)
+    loss_dict = drrgloss(
+        preds, 1.0, target_masks, target_masks, gt_masks, target_maps, target_maps, target_maps, target_maps
+    )
 
     assert isinstance(loss_dict, dict)
-    assert 'loss_text' in loss_dict.keys()
-    assert 'loss_center' in loss_dict.keys()
-    assert 'loss_height' in loss_dict.keys()
-    assert 'loss_sin' in loss_dict.keys()
-    assert 'loss_cos' in loss_dict.keys()
-    assert 'loss_gcn' in loss_dict.keys()
+    assert "loss_text" in loss_dict.keys()
+    assert "loss_center" in loss_dict.keys()
+    assert "loss_height" in loss_dict.keys()
+    assert "loss_sin" in loss_dict.keys()
+    assert "loss_cos" in loss_dict.keys()
+    assert "loss_gcn" in loss_dict.keys()
 
     # test forward with downsample_ratio less than 1.
     target_maps = [BitmapMasks([np.random.randn(40, 40)], 40, 40)]
     target_masks = [BitmapMasks([np.ones((40, 40))], 40, 40)]
     gt_masks = [BitmapMasks([np.ones((40, 40))], 40, 40)]
     preds = (torch.randn((1, 6, 20, 20)), (gcn_preds, labels))
-    loss_dict = drrgloss(preds, 0.5, target_masks, target_masks, gt_masks,
-                         target_maps, target_maps, target_maps, target_maps)
+    loss_dict = drrgloss(
+        preds, 0.5, target_masks, target_masks, gt_masks, target_maps, target_maps, target_maps, target_maps
+    )
 
     assert isinstance(loss_dict, dict)
 
@@ -140,15 +137,15 @@ def test_drrgloss():
     target_masks = [BitmapMasks([np.ones((20, 20))], 20, 20)]
     gt_masks = [BitmapMasks([np.zeros((20, 20))], 20, 20)]
     preds = (torch.randn((1, 6, 20, 20)), (gcn_preds, labels))
-    loss_dict = drrgloss(preds, 1., target_masks, target_masks, gt_masks,
-                         target_maps, target_maps, target_maps, target_maps)
+    loss_dict = drrgloss(
+        preds, 1.0, target_masks, target_masks, gt_masks, target_maps, target_maps, target_maps, target_maps
+    )
 
     assert isinstance(loss_dict, dict)
 
 
 def test_dice_loss():
-    pred = torch.Tensor([[[-1000, -1000, -1000], [-1000, -1000, -1000],
-                          [-1000, -1000, -1000]]])
+    pred = torch.Tensor([[[-1000, -1000, -1000], [-1000, -1000, -1000], [-1000, -1000, -1000]]])
     target = torch.Tensor([[[0, 0, 0], [0, 0, 0], [0, 0, 0]]])
     mask = torch.Tensor([[[1, 1, 1], [1, 1, 1], [1, 1, 1]]])
 

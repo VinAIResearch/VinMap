@@ -1,9 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch.nn as nn
 from mmcv.runner import Sequential
-
 from mmocr.models.builder import DECODERS
 from mmocr.models.textrecog.layers import BidirectionalLSTM
+
 from .base_decoder import BaseDecoder
 
 
@@ -18,23 +18,24 @@ class CRNNDecoder(BaseDecoder):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 in_channels=None,
-                 num_classes=None,
-                 rnn_flag=False,
-                 init_cfg=dict(type='Xavier', layer='Conv2d'),
-                 **kwargs):
+    def __init__(
+        self,
+        in_channels=None,
+        num_classes=None,
+        rnn_flag=False,
+        init_cfg=dict(type="Xavier", layer="Conv2d"),
+        **kwargs
+    ):
         super().__init__(init_cfg=init_cfg)
         self.num_classes = num_classes
         self.rnn_flag = rnn_flag
 
         if rnn_flag:
             self.decoder = Sequential(
-                BidirectionalLSTM(in_channels, 256, 256),
-                BidirectionalLSTM(256, 256, num_classes))
+                BidirectionalLSTM(in_channels, 256, 256), BidirectionalLSTM(256, 256, num_classes)
+            )
         else:
-            self.decoder = nn.Conv2d(
-                in_channels, num_classes, kernel_size=1, stride=1)
+            self.decoder = nn.Conv2d(in_channels, num_classes, kernel_size=1, stride=1)
 
     def forward_train(self, feat, out_enc, targets_dict, img_metas):
         """
@@ -45,7 +46,7 @@ class CRNNDecoder(BaseDecoder):
             Tensor: The raw logit tensor. Shape :math:`(N, W, C)` where
             :math:`C` is ``num_classes``.
         """
-        assert feat.size(2) == 1, 'feature height must be 1'
+        assert feat.size(2) == 1, "feature height must be 1"
         if self.rnn_flag:
             x = feat.squeeze(2)  # [N, C, W]
             x = x.permute(2, 0, 1)  # [W, N, C]

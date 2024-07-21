@@ -1,12 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
 
+import mmocr.utils as utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-import mmocr.utils as utils
 from mmocr.models.builder import DECODERS
+
 from .base_decoder import BaseDecoder
 
 
@@ -42,23 +42,25 @@ class ParallelSARDecoder(BaseDecoder):
         :obj:`mmocr.models.textrecog.recognizer.EncodeDecodeRecognizer`.
     """
 
-    def __init__(self,
-                 num_classes=37,
-                 enc_bi_rnn=False,
-                 dec_bi_rnn=False,
-                 dec_do_rnn=0.0,
-                 dec_gru=False,
-                 d_model=512,
-                 d_enc=512,
-                 d_k=64,
-                 pred_dropout=0.0,
-                 max_seq_len=40,
-                 mask=True,
-                 start_idx=0,
-                 padding_idx=92,
-                 pred_concat=False,
-                 init_cfg=None,
-                 **kwargs):
+    def __init__(
+        self,
+        num_classes=37,
+        enc_bi_rnn=False,
+        dec_bi_rnn=False,
+        dec_do_rnn=0.0,
+        dec_gru=False,
+        d_model=512,
+        d_enc=512,
+        d_k=64,
+        pred_dropout=0.0,
+        max_seq_len=40,
+        mask=True,
+        start_idx=0,
+        padding_idx=92,
+        pred_concat=False,
+        init_cfg=None,
+        **kwargs
+    ):
         super().__init__(init_cfg=init_cfg)
 
         self.num_classes = num_classes
@@ -73,8 +75,7 @@ class ParallelSARDecoder(BaseDecoder):
         decoder_rnn_out_size = encoder_rnn_out_size * (int(dec_bi_rnn) + 1)
         # 2D attention layer
         self.conv1x1_1 = nn.Linear(decoder_rnn_out_size, d_k)
-        self.conv3x3_1 = nn.Conv2d(
-            d_model, d_k, kernel_size=3, stride=1, padding=1)
+        self.conv3x3_1 = nn.Conv2d(d_model, d_k, kernel_size=3, stride=1, padding=1)
         self.conv1x1_2 = nn.Linear(d_k, 1)
 
         # Decoder RNN layer
@@ -84,31 +85,26 @@ class ParallelSARDecoder(BaseDecoder):
             num_layers=2,
             batch_first=True,
             dropout=dec_do_rnn,
-            bidirectional=dec_bi_rnn)
+            bidirectional=dec_bi_rnn,
+        )
         if dec_gru:
             self.rnn_decoder = nn.GRU(**kwargs)
         else:
             self.rnn_decoder = nn.LSTM(**kwargs)
 
         # Decoder input embedding
-        self.embedding = nn.Embedding(
-            self.num_classes, encoder_rnn_out_size, padding_idx=padding_idx)
+        self.embedding = nn.Embedding(self.num_classes, encoder_rnn_out_size, padding_idx=padding_idx)
 
         # Prediction layer
         self.pred_dropout = nn.Dropout(pred_dropout)
         pred_num_classes = num_classes - 1  # ignore padding_idx in prediction
         if pred_concat:
-            fc_in_channel = decoder_rnn_out_size + d_model + \
-                            encoder_rnn_out_size
+            fc_in_channel = decoder_rnn_out_size + d_model + encoder_rnn_out_size
         else:
             fc_in_channel = d_model
         self.prediction = nn.Linear(fc_in_channel, pred_num_classes)
 
-    def _2d_attention(self,
-                      decoder_input,
-                      feat,
-                      holistic_feat,
-                      valid_ratios=None):
+    def _2d_attention(self, decoder_input, feat, holistic_feat, valid_ratios=None):
         y = self.rnn_decoder(decoder_input)[0]
         # y: bsz * (seq_len + 1) * hidden_size
 
@@ -136,16 +132,13 @@ class ParallelSARDecoder(BaseDecoder):
             for i, valid_ratio in enumerate(valid_ratios):
                 valid_width = min(w, math.ceil(w * valid_ratio))
                 attn_mask[i, :, :, valid_width:, :] = 1
-            attn_weight = attn_weight.masked_fill(attn_mask.bool(),
-                                                  float('-inf'))
+            attn_weight = attn_weight.masked_fill(attn_mask.bool(), float("-inf"))
 
         attn_weight = attn_weight.view(bsz, T, -1)
         attn_weight = F.softmax(attn_weight, dim=-1)
-        attn_weight = attn_weight.view(bsz, T, h, w,
-                                       c).permute(0, 1, 4, 2, 3).contiguous()
+        attn_weight = attn_weight.view(bsz, T, h, w, c).permute(0, 1, 4, 2, 3).contiguous()
 
-        attn_feat = torch.sum(
-            torch.mul(feat.unsqueeze(1), attn_weight), (3, 4), keepdim=False)
+        attn_feat = torch.sum(torch.mul(feat.unsqueeze(1), attn_weight), (3, 4), keepdim=False)
         # bsz * (seq_len + 1) * C
 
         # linear transformation
@@ -182,19 +175,16 @@ class ParallelSARDecoder(BaseDecoder):
 
         valid_ratios = None
         if img_metas is not None:
-            valid_ratios = [
-                img_meta.get('valid_ratio', 1.0) for img_meta in img_metas
-            ] if self.mask else None
+            valid_ratios = [img_meta.get("valid_ratio", 1.0) for img_meta in img_metas] if self.mask else None
 
-        targets = targets_dict['padded_targets'].to(feat.device)
+        targets = targets_dict["padded_targets"].to(feat.device)
         tgt_embedding = self.embedding(targets)
         # bsz * seq_len * emb_dim
         out_enc = out_enc.unsqueeze(1)
         # bsz * 1 * emb_dim
         in_dec = torch.cat((out_enc, tgt_embedding), dim=1)
         # bsz * (seq_len + 1) * C
-        out_dec = self._2d_attention(
-            in_dec, feat, out_enc, valid_ratios=valid_ratios)
+        out_dec = self._2d_attention(in_dec, feat, out_enc, valid_ratios=valid_ratios)
         # bsz * (seq_len + 1) * num_classes
 
         return out_dec[:, 1:, :]  # bsz * seq_len * num_classes
@@ -217,17 +207,12 @@ class ParallelSARDecoder(BaseDecoder):
 
         valid_ratios = None
         if img_metas is not None:
-            valid_ratios = [
-                img_meta.get('valid_ratio', 1.0) for img_meta in img_metas
-            ] if self.mask else None
+            valid_ratios = [img_meta.get("valid_ratio", 1.0) for img_meta in img_metas] if self.mask else None
 
         seq_len = self.max_seq_len
 
         bsz = feat.size(0)
-        start_token = torch.full((bsz, ),
-                                 self.start_idx,
-                                 device=feat.device,
-                                 dtype=torch.long)
+        start_token = torch.full((bsz,), self.start_idx, device=feat.device, dtype=torch.long)
         # bsz
         start_token = self.embedding(start_token)
         # bsz * emb_dim
@@ -240,8 +225,7 @@ class ParallelSARDecoder(BaseDecoder):
 
         outputs = []
         for i in range(1, seq_len + 1):
-            decoder_output = self._2d_attention(
-                decoder_input, feat, out_enc, valid_ratios=valid_ratios)
+            decoder_output = self._2d_attention(decoder_input, feat, out_enc, valid_ratios=valid_ratios)
             char_output = decoder_output[:, i, :]  # bsz * num_classes
             char_output = F.softmax(char_output, -1)
             outputs.append(char_output)
@@ -279,22 +263,24 @@ class SequentialSARDecoder(BaseDecoder):
             attention with holistic feature and hidden state.
     """
 
-    def __init__(self,
-                 num_classes=37,
-                 enc_bi_rnn=False,
-                 dec_bi_rnn=False,
-                 dec_gru=False,
-                 d_k=64,
-                 d_model=512,
-                 d_enc=512,
-                 pred_dropout=0.0,
-                 mask=True,
-                 max_seq_len=40,
-                 start_idx=0,
-                 padding_idx=92,
-                 pred_concat=False,
-                 init_cfg=None,
-                 **kwargs):
+    def __init__(
+        self,
+        num_classes=37,
+        enc_bi_rnn=False,
+        dec_bi_rnn=False,
+        dec_gru=False,
+        d_k=64,
+        d_model=512,
+        d_enc=512,
+        pred_dropout=0.0,
+        mask=True,
+        max_seq_len=40,
+        start_idx=0,
+        padding_idx=92,
+        pred_concat=False,
+        init_cfg=None,
+        **kwargs
+    ):
         super().__init__(init_cfg=init_cfg)
 
         self.num_classes = num_classes
@@ -309,27 +295,20 @@ class SequentialSARDecoder(BaseDecoder):
         encoder_rnn_out_size = d_enc * (int(enc_bi_rnn) + 1)
         decoder_rnn_out_size = encoder_rnn_out_size * (int(dec_bi_rnn) + 1)
         # 2D attention layer
-        self.conv1x1_1 = nn.Conv2d(
-            decoder_rnn_out_size, d_k, kernel_size=1, stride=1)
-        self.conv3x3_1 = nn.Conv2d(
-            d_model, d_k, kernel_size=3, stride=1, padding=1)
+        self.conv1x1_1 = nn.Conv2d(decoder_rnn_out_size, d_k, kernel_size=1, stride=1)
+        self.conv3x3_1 = nn.Conv2d(d_model, d_k, kernel_size=3, stride=1, padding=1)
         self.conv1x1_2 = nn.Conv2d(d_k, 1, kernel_size=1, stride=1)
 
         # Decoder rnn layer
         if dec_gru:
-            self.rnn_decoder_layer1 = nn.GRUCell(encoder_rnn_out_size,
-                                                 encoder_rnn_out_size)
-            self.rnn_decoder_layer2 = nn.GRUCell(encoder_rnn_out_size,
-                                                 encoder_rnn_out_size)
+            self.rnn_decoder_layer1 = nn.GRUCell(encoder_rnn_out_size, encoder_rnn_out_size)
+            self.rnn_decoder_layer2 = nn.GRUCell(encoder_rnn_out_size, encoder_rnn_out_size)
         else:
-            self.rnn_decoder_layer1 = nn.LSTMCell(encoder_rnn_out_size,
-                                                  encoder_rnn_out_size)
-            self.rnn_decoder_layer2 = nn.LSTMCell(encoder_rnn_out_size,
-                                                  encoder_rnn_out_size)
+            self.rnn_decoder_layer1 = nn.LSTMCell(encoder_rnn_out_size, encoder_rnn_out_size)
+            self.rnn_decoder_layer2 = nn.LSTMCell(encoder_rnn_out_size, encoder_rnn_out_size)
 
         # Decoder input embedding
-        self.embedding = nn.Embedding(
-            self.num_classes, encoder_rnn_out_size, padding_idx=padding_idx)
+        self.embedding = nn.Embedding(self.num_classes, encoder_rnn_out_size, padding_idx=padding_idx)
 
         # Prediction layer
         self.pred_dropout = nn.Dropout(pred_dropout)
@@ -340,15 +319,7 @@ class SequentialSARDecoder(BaseDecoder):
             fc_in_channel = d_model
         self.prediction = nn.Linear(fc_in_channel, pred_num_class)
 
-    def _2d_attention(self,
-                      y_prev,
-                      feat,
-                      holistic_feat,
-                      hx1,
-                      cx1,
-                      hx2,
-                      cx2,
-                      valid_ratios=None):
+    def _2d_attention(self, y_prev, feat, holistic_feat, hx1, cx1, hx2, cx2, valid_ratios=None):
         _, _, h_feat, w_feat = feat.size()
         if self.dec_gru:
             hx1 = cx1 = self.rnn_decoder_layer1(y_prev, hx1)
@@ -372,14 +343,12 @@ class SequentialSARDecoder(BaseDecoder):
             for i, valid_ratio in enumerate(valid_ratios):
                 valid_width = min(w, math.ceil(w * valid_ratio))
                 attn_mask[i, :, :, valid_width:] = 1
-            attn_weight = attn_weight.masked_fill(attn_mask.bool(),
-                                                  float('-inf'))
+            attn_weight = attn_weight.masked_fill(attn_mask.bool(), float("-inf"))
 
         attn_weight = F.softmax(attn_weight.view(bsz, -1), dim=-1)
         attn_weight = attn_weight.view(bsz, c, h, w)
 
-        attn_feat = torch.sum(
-            torch.mul(feat, attn_weight), (2, 3), keepdim=False)  # n * c
+        attn_feat = torch.sum(torch.mul(feat, attn_weight), (2, 3), keepdim=False)  # n * c
 
         # linear transformation
         if self.pred_concat:
@@ -410,19 +379,14 @@ class SequentialSARDecoder(BaseDecoder):
 
         valid_ratios = None
         if img_metas is not None:
-            valid_ratios = [
-                img_meta.get('valid_ratio', 1.0) for img_meta in img_metas
-            ] if self.mask else None
+            valid_ratios = [img_meta.get("valid_ratio", 1.0) for img_meta in img_metas] if self.mask else None
 
         if self.train_mode:
-            targets = targets_dict['padded_targets'].to(feat.device)
+            targets = targets_dict["padded_targets"].to(feat.device)
             tgt_embedding = self.embedding(targets)
 
         outputs = []
-        start_token = torch.full((feat.size(0), ),
-                                 self.start_idx,
-                                 device=feat.device,
-                                 dtype=torch.long)
+        start_token = torch.full((feat.size(0),), self.start_idx, device=feat.device, dtype=torch.long)
         start_token = self.embedding(start_token)
         for i in range(-1, self.max_seq_len):
             if i == -1:
@@ -438,14 +402,8 @@ class SequentialSARDecoder(BaseDecoder):
                 if self.train_mode:
                     y_prev = tgt_embedding[:, i, :]
                 y, hx1, cx1, hx2, cx2 = self._2d_attention(
-                    y_prev,
-                    feat,
-                    out_enc,
-                    hx1,
-                    cx1,
-                    hx2,
-                    cx2,
-                    valid_ratios=valid_ratios)
+                    y_prev, feat, out_enc, hx1, cx1, hx2, cx2, valid_ratios=valid_ratios
+                )
                 if self.train_mode:
                     y = self.pred_dropout(y)
                 else:

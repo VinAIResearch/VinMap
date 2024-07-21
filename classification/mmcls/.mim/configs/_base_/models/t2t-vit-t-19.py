@@ -3,9 +3,9 @@ embed_dims = 448
 num_classes = 1000
 
 model = dict(
-    type='ImageClassifier',
+    type="ImageClassifier",
     backbone=dict(
-        type='T2T_ViT',
+        type="T2T_ViT",
         img_size=224,
         in_channels=3,
         embed_dims=embed_dims,
@@ -20,22 +20,27 @@ model = dict(
         ),
         drop_path_rate=0.1,
         init_cfg=[
-            dict(type='TruncNormal', layer='Linear', std=.02),
-            dict(type='Constant', layer='LayerNorm', val=1., bias=0.),
-        ]),
+            dict(type="TruncNormal", layer="Linear", std=0.02),
+            dict(type="Constant", layer="LayerNorm", val=1.0, bias=0.0),
+        ],
+    ),
     neck=None,
     head=dict(
-        type='VisionTransformerClsHead',
+        type="VisionTransformerClsHead",
         num_classes=num_classes,
         in_channels=embed_dims,
         loss=dict(
-            type='LabelSmoothLoss',
+            type="LabelSmoothLoss",
             label_smooth_val=0.1,
-            mode='original',
+            mode="original",
         ),
         topk=(1, 5),
-        init_cfg=dict(type='TruncNormal', layer='Linear', std=.02)),
-    train_cfg=dict(augments=[
-        dict(type='BatchMixup', alpha=0.8, prob=0.5, num_classes=num_classes),
-        dict(type='BatchCutMix', alpha=1.0, prob=0.5, num_classes=num_classes),
-    ]))
+        init_cfg=dict(type="TruncNormal", layer="Linear", std=0.02),
+    ),
+    train_cfg=dict(
+        augments=[
+            dict(type="BatchMixup", alpha=0.8, prob=0.5, num_classes=num_classes),
+            dict(type="BatchCutMix", alpha=1.0, prob=0.5, num_classes=num_classes),
+        ]
+    ),
+)

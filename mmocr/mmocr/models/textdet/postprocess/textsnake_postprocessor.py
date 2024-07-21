@@ -3,9 +3,9 @@
 import cv2
 import numpy as np
 import torch
+from mmocr.models.builder import POSTPROCESSOR
 from skimage.morphology import skeletonize
 
-from mmocr.models.builder import POSTPROCESSOR
 from .base_postprocessor import BasePostprocessor
 from .utils import centralize, fill_hole, merge_disks
 
@@ -27,16 +27,18 @@ class TextSnakePostprocessor(BasePostprocessor):
         radius_shrink_ratio (float): The shrink ratio of ordered disks radii.
     """
 
-    def __init__(self,
-                 text_repr_type='poly',
-                 min_text_region_confidence=0.6,
-                 min_center_region_confidence=0.2,
-                 min_center_area=30,
-                 disk_overlap_thr=0.03,
-                 radius_shrink_ratio=1.03,
-                 **kwargs):
+    def __init__(
+        self,
+        text_repr_type="poly",
+        min_text_region_confidence=0.6,
+        min_center_region_confidence=0.2,
+        min_center_area=30,
+        disk_overlap_thr=0.03,
+        radius_shrink_ratio=1.03,
+        **kwargs
+    ):
         super().__init__(text_repr_type)
-        assert text_repr_type == 'poly'
+        assert text_repr_type == "poly"
         self.min_text_region_confidence = min_text_region_confidence
         self.min_center_region_confidence = min_center_region_confidence
         self.min_center_area = min_center_area
@@ -59,8 +61,7 @@ class TextSnakePostprocessor(BasePostprocessor):
         pred_text_score = preds[0]
         pred_text_mask = pred_text_score > self.min_text_region_confidence
         pred_center_score = preds[1] * pred_text_score
-        pred_center_mask = \
-            pred_center_score > self.min_center_region_confidence
+        pred_center_mask = pred_center_score > self.min_center_region_confidence
         pred_sin = preds[2]
         pred_cos = preds[3]
         pred_radius = preds[4]
@@ -71,8 +72,7 @@ class TextSnakePostprocessor(BasePostprocessor):
         pred_cos = pred_cos * scale
 
         pred_center_mask = fill_hole(pred_center_mask).astype(np.uint8)
-        center_contours, _ = cv2.findContours(pred_center_mask, cv2.RETR_TREE,
-                                              cv2.CHAIN_APPROX_SIMPLE)
+        center_contours, _ = cv2.findContours(pred_center_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         boundaries = []
         for contour in center_contours:
@@ -87,28 +87,21 @@ class TextSnakePostprocessor(BasePostprocessor):
             sin = pred_sin[y, x].reshape((-1, 1))
             radius = pred_radius[y, x].reshape((-1, 1))
 
-            center_line_yx = centralize(skeleton_yx, cos, -sin, radius,
-                                        instance_center_mask)
+            center_line_yx = centralize(skeleton_yx, cos, -sin, radius, instance_center_mask)
             y, x = center_line_yx[:, 0], center_line_yx[:, 1]
-            radius = (pred_radius[y, x] * self.radius_shrink_ratio).reshape(
-                (-1, 1))
+            radius = (pred_radius[y, x] * self.radius_shrink_ratio).reshape((-1, 1))
             score = pred_center_score[y, x].reshape((-1, 1))
-            instance_disks = np.hstack(
-                [np.fliplr(center_line_yx), radius, score])
+            instance_disks = np.hstack([np.fliplr(center_line_yx), radius, score])
             instance_disks = merge_disks(instance_disks, self.disk_overlap_thr)
 
             instance_mask = np.zeros(mask_sz, dtype=np.uint8)
             for x, y, radius, score in instance_disks:
                 if radius > 1:
-                    cv2.circle(instance_mask, (int(x), int(y)), int(radius), 1,
-                               -1)
-            contours, _ = cv2.findContours(instance_mask, cv2.RETR_TREE,
-                                           cv2.CHAIN_APPROX_SIMPLE)
+                    cv2.circle(instance_mask, (int(x), int(y)), int(radius), 1, -1)
+            contours, _ = cv2.findContours(instance_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-            score = np.sum(instance_mask * pred_text_score) / (
-                np.sum(instance_mask) + 1e-8)
-            if (len(contours) > 0 and cv2.contourArea(contours[0]) > 0
-                    and contours[0].size > 8):
+            score = np.sum(instance_mask * pred_text_score) / (np.sum(instance_mask) + 1e-8)
+            if len(contours) > 0 and cv2.contourArea(contours[0]) > 0 and contours[0].size > 8:
                 boundary = contours[0].flatten().tolist()
                 boundaries.append(boundary + [score])
 

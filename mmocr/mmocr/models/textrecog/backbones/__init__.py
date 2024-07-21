@@ -6,7 +6,5 @@ from .resnet_abi import ResNetABI
 from .shallow_cnn import ShallowCNN
 from .very_deep_vgg import VeryDeepVgg
 
-__all__ = [
-    'ResNet31OCR', 'VeryDeepVgg', 'NRTRModalityTransform', 'ShallowCNN',
-    'ResNetABI', 'ResNet'
-]
+
+__all__ = ["ResNet31OCR", "VeryDeepVgg", "NRTRModalityTransform", "ShallowCNN", "ResNetABI", "ResNet"]

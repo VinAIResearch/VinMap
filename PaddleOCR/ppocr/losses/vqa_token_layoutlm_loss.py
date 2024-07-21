@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 from paddle import nn
 from ppocr.losses.basic_loss import DMLLoss
@@ -34,13 +32,28 @@ class VQASerTokenLayoutLMLoss(nn.Layer):
         labels = batch[5]
         attention_mask = batch[2]
         if attention_mask is not None:
-            active_loss = attention_mask.reshape([-1, ]) == 1
-            active_output = predicts.reshape(
-                [-1, self.num_classes])[active_loss]
-            active_label = labels.reshape([-1, ])[active_loss]
+            active_loss = (
+                attention_mask.reshape(
+                    [
+                        -1,
+                    ]
+                )
+                == 1
+            )
+            active_output = predicts.reshape([-1, self.num_classes])[active_loss]
+            active_label = labels.reshape(
+                [
+                    -1,
+                ]
+            )[active_loss]
             loss = self.loss_class(active_output, active_label)
         else:
             loss = self.loss_class(
                 predicts.reshape([-1, self.num_classes]),
-                labels.reshape([-1, ]))
-        return {'loss': loss}
+                labels.reshape(
+                    [
+                        -1,
+                    ]
+                ),
+            )
+        return {"loss": loss}

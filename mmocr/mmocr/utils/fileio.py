@@ -12,12 +12,12 @@ def list_to_file(filename, lines):
         lines (list(str)): Data to be written.
     """
     mmcv.mkdir_or_exist(os.path.dirname(filename))
-    with open(filename, 'w', encoding='utf-8') as fw:
+    with open(filename, "w", encoding="utf-8") as fw:
         for line in lines:
-            fw.write(f'{line}\n')
+            fw.write(f"{line}\n")
 
 
-def list_from_file(filename, encoding='utf-8'):
+def list_from_file(filename, encoding="utf-8"):
     """Load a text file and parse the content as a list of strings. The
     trailing "\\r" and "\\n" of each line will be removed.
 
@@ -32,7 +32,7 @@ def list_from_file(filename, encoding='utf-8'):
         list[str]: A list of strings.
     """
     item_list = []
-    with open(filename, 'r', encoding=encoding) as f:
+    with open(filename, "r", encoding=encoding) as f:
         for line in f:
-            item_list.append(line.rstrip('\n\r'))
+            item_list.append(line.rstrip("\n\r"))
     return item_list

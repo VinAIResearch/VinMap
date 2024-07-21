@@ -11,14 +11,15 @@
 # CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 try:
-    from PyQt5.QtGui import *
     from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
     from PyQt5.QtWidgets import *
 except ImportError:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
 
-from libs.utils import newIcon, labelValidator
+from libs.utils import labelValidator, newIcon
+
 
 BB = QDialogButtonBox
 
@@ -43,8 +44,8 @@ class LabelDialog(QDialog):
         layout = QVBoxLayout()
         layout.addWidget(self.edit)
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
-        bb.button(BB.Ok).setIcon(newIcon('done'))
-        bb.button(BB.Cancel).setIcon(newIcon('undo'))
+        bb.button(BB.Ok).setIcon(newIcon("done"))
+        bb.button(BB.Cancel).setIcon(newIcon("undo"))
         bb.accepted.connect(self.validate)
         bb.rejected.connect(self.reject)
         layout.addWidget(bb)
@@ -77,7 +78,7 @@ class LabelDialog(QDialog):
             self.edit.setText(self.edit.text())
             print(self.edit.text())
 
-    def popUp(self, text='', move=True):
+    def popUp(self, text="", move=True):
         self.edit.setText(text)
         self.edit.setSelection(0, len(text))
         self.edit.setFocus(Qt.PopupFocusReason)

@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
 
-def wrap_non_distributed_model(model, device='cuda', dim=0, *args, **kwargs):
+def wrap_non_distributed_model(model, device="cuda", dim=0, *args, **kwargs):
     """Wrap module in non-distributed environment by device type.
 
     - For CUDA, wrap as :obj:`mmcv.parallel.MMDataParallel`.
@@ -16,29 +16,33 @@ def wrap_non_distributed_model(model, device='cuda', dim=0, *args, **kwargs):
     Returns:
         model(nn.Module): the model to be parallelized.
     """
-    if device == 'npu':
+    if device == "npu":
         from mmcv.device.npu import NPUDataParallel
+
         model = NPUDataParallel(model.npu(), dim=dim, *args, **kwargs)
-    elif device == 'mlu':
+    elif device == "mlu":
         from mmcv.device.mlu import MLUDataParallel
+
         model = MLUDataParallel(model.mlu(), dim=dim, *args, **kwargs)
-    elif device == 'cuda':
+    elif device == "cuda":
         from mmcv.parallel import MMDataParallel
+
         model = MMDataParallel(model.cuda(), dim=dim, *args, **kwargs)
-    elif device == 'cpu':
+    elif device == "cpu":
         model = model.cpu()
-    elif device == 'ipu':
+    elif device == "ipu":
         model = model.cpu()
-    elif device == 'mps':
+    elif device == "mps":
         from mmcv.device import mps
-        model = mps.MPSDataParallel(model.to('mps'), dim=dim, *args, **kwargs)
+
+        model = mps.MPSDataParallel(model.to("mps"), dim=dim, *args, **kwargs)
     else:
         raise RuntimeError(f'Unavailable device "{device}"')
 
     return model
 
 
-def wrap_distributed_model(model, device='cuda', *args, **kwargs):
+def wrap_distributed_model(model, device="cuda", *args, **kwargs):
     """Build DistributedDataParallel module by device type.
 
     - For CUDA, wrap as :obj:`mmcv.parallel.MMDistributedDataParallel`.
@@ -55,25 +59,22 @@ def wrap_distributed_model(model, device='cuda', *args, **kwargs):
         .. [1] https://pytorch.org/docs/stable/generated/torch.nn.parallel.
                DistributedDataParallel.html
     """
-    if device == 'npu':
+    if device == "npu":
         from mmcv.device.npu import NPUDistributedDataParallel
         from torch.npu import current_device
-        model = NPUDistributedDataParallel(
-            model.npu(), *args, device_ids=[current_device()], **kwargs)
-    elif device == 'mlu':
+
+        model = NPUDistributedDataParallel(model.npu(), *args, device_ids=[current_device()], **kwargs)
+    elif device == "mlu":
         import os
 
         from mmcv.device.mlu import MLUDistributedDataParallel
-        model = MLUDistributedDataParallel(
-            model.mlu(),
-            *args,
-            device_ids=[int(os.environ['LOCAL_RANK'])],
-            **kwargs)
-    elif device == 'cuda':
+
+        model = MLUDistributedDataParallel(model.mlu(), *args, device_ids=[int(os.environ["LOCAL_RANK"])], **kwargs)
+    elif device == "cuda":
         from mmcv.parallel import MMDistributedDataParallel
         from torch.cuda import current_device
-        model = MMDistributedDataParallel(
-            model.cuda(), *args, device_ids=[current_device()], **kwargs)
+
+        model = MMDistributedDataParallel(model.cuda(), *args, device_ids=[current_device()], **kwargs)
     else:
         raise RuntimeError(f'Unavailable device "{device}"')
 

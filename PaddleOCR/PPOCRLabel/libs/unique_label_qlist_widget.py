@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 
-from PyQt5.QtCore import Qt, QSize
 from PyQt5 import QtWidgets
+from PyQt5.QtCore import QSize, Qt
 
 
 class EscapableQListWidget(QtWidgets.QListWidget):

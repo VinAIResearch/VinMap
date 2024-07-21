@@ -3,13 +3,12 @@ import warnings
 
 import mmcv
 from mmdet.core import bbox2roi
-from torch import nn
-from torch.nn import functional as F
-
 from mmocr.core import imshow_edge, imshow_node
 from mmocr.models.builder import DETECTORS, build_roi_extractor
 from mmocr.models.common.detectors import SingleStageDetector
 from mmocr.utils import list_from_file
+from torch import nn
+from torch.nn import functional as F
 
 
 @DETECTORS.register_module()
@@ -24,36 +23,32 @@ class SDMGR(SingleStageDetector):
             `show_results`, else class name.
     """
 
-    def __init__(self,
-                 backbone,
-                 neck=None,
-                 bbox_head=None,
-                 extractor=dict(
-                     type='mmdet.SingleRoIExtractor',
-                     roi_layer=dict(type='RoIAlign', output_size=7),
-                     featmap_strides=[1]),
-                 visual_modality=False,
-                 train_cfg=None,
-                 test_cfg=None,
-                 class_list=None,
-                 init_cfg=None,
-                 openset=False):
-        super().__init__(
-            backbone, neck, bbox_head, train_cfg, test_cfg, init_cfg=init_cfg)
+    def __init__(
+        self,
+        backbone,
+        neck=None,
+        bbox_head=None,
+        extractor=dict(
+            type="mmdet.SingleRoIExtractor", roi_layer=dict(type="RoIAlign", output_size=7), featmap_strides=[1]
+        ),
+        visual_modality=False,
+        train_cfg=None,
+        test_cfg=None,
+        class_list=None,
+        init_cfg=None,
+        openset=False,
+    ):
+        super().__init__(backbone, neck, bbox_head, train_cfg, test_cfg, init_cfg=init_cfg)
         self.visual_modality = visual_modality
         if visual_modality:
-            self.extractor = build_roi_extractor({
-                **extractor, 'out_channels':
-                self.backbone.base_channels
-            })
-            self.maxpool = nn.MaxPool2d(extractor['roi_layer']['output_size'])
+            self.extractor = build_roi_extractor({**extractor, "out_channels": self.backbone.base_channels})
+            self.maxpool = nn.MaxPool2d(extractor["roi_layer"]["output_size"])
         else:
             self.extractor = None
         self.class_list = class_list
         self.openset = openset
 
-    def forward_train(self, img, img_metas, relations, texts, gt_bboxes,
-                      gt_labels):
+    def forward_train(self, img, img_metas, relations, texts, gt_bboxes, gt_labels):
         """
         Args:
             img (tensor): Input images of shape (N, C, H, W).
@@ -76,21 +71,10 @@ class SDMGR(SingleStageDetector):
         node_preds, edge_preds = self.bbox_head.forward(relations, texts, x)
         return self.bbox_head.loss(node_preds, edge_preds, gt_labels)
 
-    def forward_test(self,
-                     img,
-                     img_metas,
-                     relations,
-                     texts,
-                     gt_bboxes,
-                     rescale=False):
+    def forward_test(self, img, img_metas, relations, texts, gt_bboxes, rescale=False):
         x = self.extract_feat(img, gt_bboxes)
         node_preds, edge_preds = self.bbox_head.forward(relations, texts, x)
-        return [
-            dict(
-                img_metas=img_metas,
-                nodes=F.softmax(node_preds, -1),
-                edges=F.softmax(edge_preds, -1))
-        ]
+        return [dict(img_metas=img_metas, nodes=F.softmax(node_preds, -1), edges=F.softmax(edge_preds, -1))]
 
     def extract_feat(self, img, gt_bboxes):
         if self.visual_modality:
@@ -99,15 +83,7 @@ class SDMGR(SingleStageDetector):
             return feats.view(feats.size(0), -1)
         return None
 
-    def show_result(self,
-                    img,
-                    result,
-                    boxes,
-                    win_name='',
-                    show=False,
-                    wait_time=0,
-                    out_file=None,
-                    **kwargs):
+    def show_result(self, img, result, boxes, win_name="", show=False, wait_time=0, out_file=None, **kwargs):
         """Draw `result` on `img`.
 
         Args:
@@ -139,14 +115,7 @@ class SDMGR(SingleStageDetector):
             show = False
 
         if self.openset:
-            img = imshow_edge(
-                img,
-                result,
-                boxes,
-                show=show,
-                win_name=win_name,
-                wait_time=wait_time,
-                out_file=out_file)
+            img = imshow_edge(img, result, boxes, show=show, win_name=win_name, wait_time=wait_time, out_file=out_file)
         else:
             img = imshow_node(
                 img,
@@ -156,11 +125,11 @@ class SDMGR(SingleStageDetector):
                 show=show,
                 win_name=win_name,
                 wait_time=wait_time,
-                out_file=out_file)
+                out_file=out_file,
+            )
 
         if not (show or out_file):
-            warnings.warn('show==False and out_file is not specified, only '
-                          'result image will be returned')
+            warnings.warn("show==False and out_file is not specified, only " "result image will be returned")
             return img
 
         return img

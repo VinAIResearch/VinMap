@@ -5,7 +5,6 @@ from argparse import ArgumentParser
 
 import mmcv
 from mmcv.utils import ProgressBar
-
 from mmocr.apis import init_detector, model_inference
 from mmocr.models import build_detector  # noqa: F401
 from mmocr.utils import list_from_file, list_to_file
@@ -38,49 +37,37 @@ def save_results(result, out_dir, img_name, score_thr=0.3):
         out_dir (str): Dir of txt files to save detected results.
         score_thr (float, optional): Score threshold to filter bboxes.
     """
-    assert 'boundary_result' in result
+    assert "boundary_result" in result
     assert score_thr > 0 and score_thr < 1
 
-    txt_file = gen_target_path(out_dir, img_name, '.txt')
-    valid_boundary_res = [
-        res for res in result['boundary_result'] if res[-1] > score_thr
-    ]
-    lines = [
-        ','.join([str(round(x)) for x in row]) for row in valid_boundary_res
-    ]
+    txt_file = gen_target_path(out_dir, img_name, ".txt")
+    valid_boundary_res = [res for res in result["boundary_result"] if res[-1] > score_thr]
+    lines = [",".join([str(round(x)) for x in row]) for row in valid_boundary_res]
     list_to_file(txt_file, lines)
 
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('img_root', type=str, help='Image root path')
-    parser.add_argument('img_list', type=str, help='Image path list file')
-    parser.add_argument('config', type=str, help='Config file')
-    parser.add_argument('checkpoint', type=str, help='Checkpoint file')
-    parser.add_argument(
-        '--score-thr', type=float, default=0.5, help='Bbox score threshold')
-    parser.add_argument(
-        '--out-dir',
-        type=str,
-        default='./results',
-        help='Dir to save '
-        'visualize images '
-        'and bbox')
-    parser.add_argument(
-        '--device', default='cuda:0', help='Device used for inference.')
+    parser.add_argument("img_root", type=str, help="Image root path")
+    parser.add_argument("img_list", type=str, help="Image path list file")
+    parser.add_argument("config", type=str, help="Config file")
+    parser.add_argument("checkpoint", type=str, help="Checkpoint file")
+    parser.add_argument("--score-thr", type=float, default=0.5, help="Bbox score threshold")
+    parser.add_argument("--out-dir", type=str, default="./results", help="Dir to save " "visualize images " "and bbox")
+    parser.add_argument("--device", default="cuda:0", help="Device used for inference.")
     args = parser.parse_args()
 
     assert 0 < args.score_thr < 1
 
     # build the model from a config file and a checkpoint file
     model = init_detector(args.config, args.checkpoint, device=args.device)
-    if hasattr(model, 'module'):
+    if hasattr(model, "module"):
         model = model.module
 
     # Start Inference
-    out_vis_dir = osp.join(args.out_dir, 'out_vis_dir')
+    out_vis_dir = osp.join(args.out_dir, "out_vis_dir")
     mmcv.mkdir_or_exist(out_vis_dir)
-    out_txt_dir = osp.join(args.out_dir, 'out_txt_dir')
+    out_txt_dir = osp.join(args.out_dir, "out_txt_dir")
     mmcv.mkdir_or_exist(out_txt_dir)
 
     lines = list_from_file(args.img_list)
@@ -97,15 +84,11 @@ def main():
         save_results(result, out_txt_dir, img_name, score_thr=args.score_thr)
         # show result
         out_file = osp.join(out_vis_dir, img_name)
-        kwargs_dict = {
-            'score_thr': args.score_thr,
-            'show': False,
-            'out_file': out_file
-        }
+        kwargs_dict = {"score_thr": args.score_thr, "show": False, "out_file": out_file}
         model.show_result(img_path, result, **kwargs_dict)
 
-    print(f'\nInference done, and results saved in {args.out_dir}\n')
+    print(f"\nInference done, and results saved in {args.out_dir}\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

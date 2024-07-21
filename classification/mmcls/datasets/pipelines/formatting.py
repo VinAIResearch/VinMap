@@ -28,9 +28,10 @@ def to_tensor(data):
         return torch.FloatTensor([data])
     else:
         raise TypeError(
-            f'Type {type(data)} cannot be converted to tensor.'
-            'Supported types are: `numpy.ndarray`, `torch.Tensor`, '
-            '`Sequence`, `int` and `float`')
+            f"Type {type(data)} cannot be converted to tensor."
+            "Supported types are: `numpy.ndarray`, `torch.Tensor`, "
+            "`Sequence`, `int` and `float`"
+        )
 
 
 @PIPELINES.register_module()
@@ -45,7 +46,7 @@ class ToTensor(object):
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(keys={self.keys})'
+        return self.__class__.__name__ + f"(keys={self.keys})"
 
 
 @PIPELINES.register_module()
@@ -63,7 +64,7 @@ class ImageToTensor(object):
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(keys={self.keys})'
+        return self.__class__.__name__ + f"(keys={self.keys})"
 
 
 @PIPELINES.register_module()
@@ -79,8 +80,7 @@ class Transpose(object):
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + \
-            f'(keys={self.keys}, order={self.order})'
+        return self.__class__.__name__ + f"(keys={self.keys}, order={self.order})"
 
 
 @PIPELINES.register_module()
@@ -90,7 +90,7 @@ class ToPIL(object):
         pass
 
     def __call__(self, results):
-        results['img'] = Image.fromarray(results['img'])
+        results["img"] = Image.fromarray(results["img"])
         return results
 
 
@@ -101,7 +101,7 @@ class ToNumpy(object):
         pass
 
     def __call__(self, results):
-        results['img'] = np.array(results['img'], dtype=np.float32)
+        results["img"] = np.array(results["img"], dtype=np.float32)
         return results
 
 
@@ -126,11 +126,11 @@ class Collect(object):
             - ``img_metas`` if available
     """
 
-    def __init__(self,
-                 keys,
-                 meta_keys=('filename', 'ori_filename', 'ori_shape',
-                            'img_shape', 'flip', 'flip_direction',
-                            'img_norm_cfg')):
+    def __init__(
+        self,
+        keys,
+        meta_keys=("filename", "ori_filename", "ori_shape", "img_shape", "flip", "flip_direction", "img_norm_cfg"),
+    ):
         self.keys = keys
         self.meta_keys = meta_keys
 
@@ -140,14 +140,13 @@ class Collect(object):
         for key in self.meta_keys:
             if key in results:
                 img_meta[key] = results[key]
-        data['img_metas'] = DC(img_meta, cpu_only=True)
+        data["img_metas"] = DC(img_meta, cpu_only=True)
         for key in self.keys:
             data[key] = results[key]
         return data
 
     def __repr__(self):
-        return self.__class__.__name__ + \
-            f'(keys={self.keys}, meta_keys={self.meta_keys})'
+        return self.__class__.__name__ + f"(keys={self.keys}, meta_keys={self.meta_keys})"
 
 
 @PIPELINES.register_module()
@@ -177,7 +176,7 @@ class WrapFieldsToLists(object):
         return results
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f"{self.__class__.__name__}()"
 
 
 @PIPELINES.register_module()

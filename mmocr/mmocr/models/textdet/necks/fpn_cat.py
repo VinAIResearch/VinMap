@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn import ConvModule
 from mmcv.runner import BaseModule, ModuleList, Sequential, auto_fp16
-
 from mmocr.models.builder import NECKS
 
 
@@ -34,21 +33,19 @@ class FPNC(BaseModule):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 in_channels,
-                 lateral_channels=256,
-                 out_channels=64,
-                 bias_on_lateral=False,
-                 bn_re_on_lateral=False,
-                 bias_on_smooth=False,
-                 bn_re_on_smooth=False,
-                 asf_cfg=None,
-                 conv_after_concat=False,
-                 init_cfg=[
-                     dict(type='Kaiming', layer='Conv'),
-                     dict(
-                         type='Constant', layer='BatchNorm', val=1., bias=1e-4)
-                 ]):
+    def __init__(
+        self,
+        in_channels,
+        lateral_channels=256,
+        out_channels=64,
+        bias_on_lateral=False,
+        bn_re_on_lateral=False,
+        bias_on_smooth=False,
+        bn_re_on_smooth=False,
+        asf_cfg=None,
+        conv_after_concat=False,
+        init_cfg=[dict(type="Kaiming", layer="Conv"), dict(type="Constant", layer="BatchNorm", val=1.0, bias=1e-4)],
+    ):
         super().__init__(init_cfg=init_cfg)
         assert isinstance(in_channels, list)
         self.in_channels = in_channels
@@ -67,8 +64,8 @@ class FPNC(BaseModule):
             norm_cfg = None
             act_cfg = None
             if self.bn_re_on_lateral:
-                norm_cfg = dict(type='BN')
-                act_cfg = dict(type='ReLU')
+                norm_cfg = dict(type="BN")
+                act_cfg = dict(type="ReLU")
             l_conv = ConvModule(
                 in_channels[i],
                 lateral_channels,
@@ -77,12 +74,13 @@ class FPNC(BaseModule):
                 conv_cfg=None,
                 norm_cfg=norm_cfg,
                 act_cfg=act_cfg,
-                inplace=False)
+                inplace=False,
+            )
             norm_cfg = None
             act_cfg = None
             if self.bn_re_on_smooth:
-                norm_cfg = dict(type='BN')
-                act_cfg = dict(type='ReLU')
+                norm_cfg = dict(type="BN")
+                act_cfg = dict(type="ReLU")
 
             smooth_conv = ConvModule(
                 lateral_channels,
@@ -93,7 +91,8 @@ class FPNC(BaseModule):
                 conv_cfg=None,
                 norm_cfg=norm_cfg,
                 act_cfg=act_cfg,
-                inplace=False)
+                inplace=False,
+            )
 
             self.lateral_convs.append(l_conv)
             self.smooth_convs.append(smooth_conv)
@@ -107,17 +106,18 @@ class FPNC(BaseModule):
                 conv_cfg=None,
                 norm_cfg=None,
                 act_cfg=None,
-                inplace=False)
-            if self.asf_cfg['attention_type'] == 'ScaleChannelSpatial':
+                inplace=False,
+            )
+            if self.asf_cfg["attention_type"] == "ScaleChannelSpatial":
                 self.asf_attn = ScaleChannelSpatialAttention(
-                    self.out_channels * self.num_outs,
-                    (self.out_channels * self.num_outs) // 4, self.num_outs)
+                    self.out_channels * self.num_outs, (self.out_channels * self.num_outs) // 4, self.num_outs
+                )
             else:
                 raise NotImplementedError
 
         if self.conv_after_concat:
-            norm_cfg = dict(type='BN')
-            act_cfg = dict(type='ReLU')
+            norm_cfg = dict(type="BN")
+            act_cfg = dict(type="ReLU")
             self.out_conv = ConvModule(
                 out_channels * self.num_outs,
                 out_channels * self.num_outs,
@@ -126,7 +126,8 @@ class FPNC(BaseModule):
                 conv_cfg=None,
                 norm_cfg=norm_cfg,
                 act_cfg=act_cfg,
-                inplace=False)
+                inplace=False,
+            )
 
     @auto_fp16()
     def forward(self, inputs):
@@ -142,26 +143,18 @@ class FPNC(BaseModule):
         """
         assert len(inputs) == len(self.in_channels)
         # build laterals
-        laterals = [
-            lateral_conv(inputs[i])
-            for i, lateral_conv in enumerate(self.lateral_convs)
-        ]
+        laterals = [lateral_conv(inputs[i]) for i, lateral_conv in enumerate(self.lateral_convs)]
         used_backbone_levels = len(laterals)
         # build top-down path
         for i in range(used_backbone_levels - 1, 0, -1):
             prev_shape = laterals[i - 1].shape[2:]
-            laterals[i - 1] = laterals[i - 1] + F.interpolate(
-                laterals[i], size=prev_shape, mode='nearest')
+            laterals[i - 1] = laterals[i - 1] + F.interpolate(laterals[i], size=prev_shape, mode="nearest")
         # build outputs
         # part 1: from original levels
-        outs = [
-            self.smooth_convs[i](laterals[i])
-            for i in range(used_backbone_levels)
-        ]
+        outs = [self.smooth_convs[i](laterals[i]) for i in range(used_backbone_levels)]
 
         for i, out in enumerate(outs):
-            outs[i] = F.interpolate(
-                outs[i], size=outs[0].shape[2:], mode='nearest')
+            outs[i] = F.interpolate(outs[i], size=outs[0].shape[2:], mode="nearest")
 
         out = torch.cat(outs, dim=1)
         if self.asf_cfg is not None:
@@ -169,7 +162,7 @@ class FPNC(BaseModule):
             attention = self.asf_attn(asf_feature)
             enhanced_feature = []
             for i, out in enumerate(outs):
-                enhanced_feature.append(attention[:, i:i + 1] * outs[i])
+                enhanced_feature.append(attention[:, i : i + 1] * outs[i])
             out = torch.cat(enhanced_feature, dim=1)
 
         if self.conv_after_concat:
@@ -191,11 +184,9 @@ class ScaleChannelSpatialAttention(BaseModule):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 in_channels,
-                 c_wise_channels,
-                 out_channels,
-                 init_cfg=[dict(type='Kaiming', layer='Conv', bias=0)]):
+    def __init__(
+        self, in_channels, c_wise_channels, out_channels, init_cfg=[dict(type="Kaiming", layer="Conv", bias=0)]
+    ):
         super().__init__(init_cfg=init_cfg)
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         # Channel Wise
@@ -207,8 +198,9 @@ class ScaleChannelSpatialAttention(BaseModule):
                 bias=False,
                 conv_cfg=None,
                 norm_cfg=None,
-                act_cfg=dict(type='ReLU'),
-                inplace=False),
+                act_cfg=dict(type="ReLU"),
+                inplace=False,
+            ),
             ConvModule(
                 c_wise_channels,
                 in_channels,
@@ -216,29 +208,17 @@ class ScaleChannelSpatialAttention(BaseModule):
                 bias=False,
                 conv_cfg=None,
                 norm_cfg=None,
-                act_cfg=dict(type='Sigmoid'),
-                inplace=False))
+                act_cfg=dict(type="Sigmoid"),
+                inplace=False,
+            ),
+        )
         # Spatial Wise
         self.spatial_wise = Sequential(
             ConvModule(
-                1,
-                1,
-                3,
-                padding=1,
-                bias=False,
-                conv_cfg=None,
-                norm_cfg=None,
-                act_cfg=dict(type='ReLU'),
-                inplace=False),
-            ConvModule(
-                1,
-                1,
-                1,
-                bias=False,
-                conv_cfg=None,
-                norm_cfg=None,
-                act_cfg=dict(type='Sigmoid'),
-                inplace=False))
+                1, 1, 3, padding=1, bias=False, conv_cfg=None, norm_cfg=None, act_cfg=dict(type="ReLU"), inplace=False
+            ),
+            ConvModule(1, 1, 1, bias=False, conv_cfg=None, norm_cfg=None, act_cfg=dict(type="Sigmoid"), inplace=False),
+        )
         # Attention Wise
         self.attention_wise = ConvModule(
             in_channels,
@@ -247,8 +227,9 @@ class ScaleChannelSpatialAttention(BaseModule):
             bias=False,
             conv_cfg=None,
             norm_cfg=None,
-            act_cfg=dict(type='Sigmoid'),
-            inplace=False)
+            act_cfg=dict(type="Sigmoid"),
+            inplace=False,
+        )
 
     @auto_fp16()
     def forward(self, inputs):

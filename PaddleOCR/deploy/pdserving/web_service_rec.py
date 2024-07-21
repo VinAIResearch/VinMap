@@ -11,28 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from paddle_serving_server.web_service import WebService, Op
-
-import logging
-import numpy as np
-import cv2
 import base64
+import logging
+
+import cv2
+import numpy as np
+
 # from paddle_serving_app.reader import OCRReader
-from ocr_reader import OCRReader, DetResizeForTest, ArgsParser
-from paddle_serving_app.reader import Sequential, ResizeByFactor
-from paddle_serving_app.reader import Div, Normalize, Transpose
+from ocr_reader import ArgsParser, DetResizeForTest, OCRReader
+from paddle_serving_app.reader import Div, Normalize, ResizeByFactor, Sequential, Transpose
+from paddle_serving_server.web_service import Op, WebService
+
 
 _LOGGER = logging.getLogger()
 
 
 class RecOp(Op):
     def init_op(self):
-        self.ocr_reader = OCRReader(
-            char_dict_path="../../ppocr/utils/ppocr_keys_v1.txt")
+        self.ocr_reader = OCRReader(char_dict_path="../../ppocr/utils/ppocr_keys_v1.txt")
 
     def preprocess(self, input_dicts, data_id, log_id):
-        (_, input_dict), = input_dicts.items()
-        raw_im = base64.b64decode(input_dict["image"].encode('utf8'))
+        ((_, input_dict),) = input_dicts.items()
+        raw_im = base64.b64decode(input_dict["image"].encode("utf8"))
         data = np.fromstring(raw_im, np.uint8)
         im = cv2.imdecode(data, cv2.IMREAD_COLOR)
         feed_list = []
@@ -60,14 +60,12 @@ class RecOp(Op):
         res_list = []
         if isinstance(fetch_data, dict):
             if len(fetch_data) > 0:
-                rec_batch_res = self.ocr_reader.postprocess(
-                    fetch_data, with_score=True)
+                rec_batch_res = self.ocr_reader.postprocess(fetch_data, with_score=True)
                 for res in rec_batch_res:
                     res_list.append(res[0])
         elif isinstance(fetch_data, list):
             for one_batch in fetch_data:
-                one_batch_res = self.ocr_reader.postprocess(
-                    one_batch, with_score=True)
+                one_batch_res = self.ocr_reader.postprocess(one_batch, with_score=True)
                 for res in one_batch_res:
                     res_list.append(res[0])
 

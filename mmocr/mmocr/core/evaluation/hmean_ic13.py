@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import mmocr.utils as utils
 import numpy as np
 
-import mmocr.utils as utils
 from . import utils as eval_utils
 
 
@@ -44,15 +44,17 @@ def compute_recall_precision(gt_polys, pred_polys):
     return recall, precision
 
 
-def eval_hmean_ic13(det_boxes,
-                    gt_boxes,
-                    gt_ignored_boxes,
-                    precision_thr=0.4,
-                    recall_thr=0.8,
-                    center_dist_thr=1.0,
-                    one2one_score=1.,
-                    one2many_score=0.8,
-                    many2one_score=1.):
+def eval_hmean_ic13(
+    det_boxes,
+    gt_boxes,
+    gt_ignored_boxes,
+    precision_thr=0.4,
+    recall_thr=0.8,
+    center_dist_thr=1.0,
+    one2one_score=1.0,
+    one2many_score=0.8,
+    many2one_score=1.0,
+):
     """Evaluate hmean of text detection using the icdar2013 standard.
 
     Args:
@@ -107,8 +109,8 @@ def eval_hmean_ic13(det_boxes,
         ignored_num = len(gt_ignored)
         pred_num = len(pred)
 
-        accum_recall = 0.
-        accum_precision = 0.
+        accum_recall = 0.0
+        accum_precision = 0.0
 
         gt_points = gt + gt_ignored
         gt_polys = [eval_utils.points2polygon(p) for p in gt_points]
@@ -116,7 +118,8 @@ def eval_hmean_ic13(det_boxes,
         gt_num = len(gt_polys)
 
         pred_polys, pred_points, pred_ignored_index = eval_utils.ignore_pred(
-            pred, gt_ignored_index, gt_polys, precision_thr)
+            pred, gt_ignored_index, gt_polys, precision_thr
+        )
 
         if pred_num > 0 and gt_num > 0:
 
@@ -125,28 +128,28 @@ def eval_hmean_ic13(det_boxes,
 
             # compute area recall and precision for each (gt, pred) pair
             # in one img.
-            recall_mat, precision_mat = compute_recall_precision(
-                gt_polys, pred_polys)
+            recall_mat, precision_mat = compute_recall_precision(gt_polys, pred_polys)
 
             # match one gt to one pred box.
             for gt_id in range(gt_num):
                 for pred_id in range(pred_num):
-                    if (gt_hit[gt_id] != 0 or pred_hit[pred_id] != 0
-                            or gt_id in gt_ignored_index
-                            or pred_id in pred_ignored_index):
+                    if (
+                        gt_hit[gt_id] != 0
+                        or pred_hit[pred_id] != 0
+                        or gt_id in gt_ignored_index
+                        or pred_id in pred_ignored_index
+                    ):
                         continue
                     match = eval_utils.one2one_match_ic13(
-                        gt_id, pred_id, recall_mat, precision_mat, recall_thr,
-                        precision_thr)
+                        gt_id, pred_id, recall_mat, precision_mat, recall_thr, precision_thr
+                    )
 
                     if match:
                         gt_point = np.array(gt_points[gt_id])
                         det_point = np.array(pred_points[pred_id])
 
-                        norm_dist = eval_utils.box_center_distance(
-                            det_point, gt_point)
-                        norm_dist /= eval_utils.box_diag(
-                            det_point) + eval_utils.box_diag(gt_point)
+                        norm_dist = eval_utils.box_center_distance(det_point, gt_point)
+                        norm_dist /= eval_utils.box_diag(det_point) + eval_utils.box_diag(gt_point)
                         norm_dist *= 2.0
 
                         if norm_dist < center_dist_thr:
@@ -160,8 +163,8 @@ def eval_hmean_ic13(det_boxes,
                 if gt_id in gt_ignored_index:
                     continue
                 match, match_det_set = eval_utils.one2many_match_ic13(
-                    gt_id, recall_mat, precision_mat, recall_thr,
-                    precision_thr, gt_hit, pred_hit, pred_ignored_index)
+                    gt_id, recall_mat, precision_mat, recall_thr, precision_thr, gt_hit, pred_hit, pred_ignored_index
+                )
 
                 if match:
                     gt_hit[gt_id] = 1
@@ -178,8 +181,8 @@ def eval_hmean_ic13(det_boxes,
                     continue
 
                 match, match_gt_set = eval_utils.many2one_match_ic13(
-                    pred_id, recall_mat, precision_mat, recall_thr,
-                    precision_thr, gt_hit, pred_hit, gt_ignored_index)
+                    pred_id, recall_mat, precision_mat, recall_thr, precision_thr, gt_hit, pred_hit, gt_ignored_index
+                )
 
                 if match:
                     pred_hit[pred_id] = 1
@@ -191,10 +194,9 @@ def eval_hmean_ic13(det_boxes,
         gt_care_number = gt_num - ignored_num
         pred_care_number = pred_num - len(pred_ignored_index)
 
-        r, p, h = eval_utils.compute_hmean(accum_recall, accum_precision,
-                                           gt_care_number, pred_care_number)
+        r, p, h = eval_utils.compute_hmean(accum_recall, accum_precision, gt_care_number, pred_care_number)
 
-        img_results.append({'recall': r, 'precision': p, 'hmean': h})
+        img_results.append({"recall": r, "precision": p, "hmean": h})
 
         dataset_gt_num += gt_care_number
         dataset_pred_num += pred_care_number
@@ -202,16 +204,17 @@ def eval_hmean_ic13(det_boxes,
         dataset_hit_prec += accum_precision
 
     total_r, total_p, total_h = eval_utils.compute_hmean(
-        dataset_hit_recall, dataset_hit_prec, dataset_gt_num, dataset_pred_num)
+        dataset_hit_recall, dataset_hit_prec, dataset_gt_num, dataset_pred_num
+    )
 
     dataset_results = {
-        'num_gts': dataset_gt_num,
-        'num_dets': dataset_pred_num,
-        'num_recall': dataset_hit_recall,
-        'num_precision': dataset_hit_prec,
-        'recall': total_r,
-        'precision': total_p,
-        'hmean': total_h
+        "num_gts": dataset_gt_num,
+        "num_dets": dataset_pred_num,
+        "num_recall": dataset_hit_recall,
+        "num_precision": dataset_hit_prec,
+        "recall": total_r,
+        "precision": total_p,
+        "hmean": total_h,
     }
 
     return dataset_results, img_results

@@ -35,7 +35,7 @@ class BaseMixupLayer(object, metaclass=ABCMeta):
         pass
 
 
-@AUGMENT.register_module(name='BatchMixup')
+@AUGMENT.register_module(name="BatchMixup")
 class BatchMixupLayer(BaseMixupLayer):
     r"""Mixup layer for a batch of data.
 
@@ -71,8 +71,7 @@ class BatchMixupLayer(BaseMixupLayer):
         index = torch.randperm(batch_size)
 
         mixed_img = lam * img + (1 - lam) * img[index, :]
-        mixed_gt_label = lam * one_hot_gt_label + (
-            1 - lam) * one_hot_gt_label[index, :]
+        mixed_gt_label = lam * one_hot_gt_label + (1 - lam) * one_hot_gt_label[index, :]
 
         return mixed_img, mixed_gt_label
 

@@ -12,32 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = ['build_neck']
+__all__ = ["build_neck"]
 
 
 def build_neck(config):
-    from .db_fpn import DBFPN, RSEFPN, LKPAN
-    from .east_fpn import EASTFPN
-    from .sast_fpn import SASTFPN
-    from .rnn import SequenceEncoder
-    from .pg_fpn import PGFPN
-    from .table_fpn import TableFPN
-    from .fpn import FPN
-    from .fce_fpn import FCEFPN
-    from .pren_fpn import PRENFPN
     from .csp_pan import CSPPAN
     from .ct_fpn import CTFPN
+    from .db_fpn import DBFPN, LKPAN, RSEFPN
+    from .east_fpn import EASTFPN
+    from .fce_fpn import FCEFPN
+    from .fpn import FPN
     from .fpn_unet import FPN_UNet
+    from .pg_fpn import PGFPN
+    from .pren_fpn import PRENFPN
     from .rf_adaptor import RFAdaptor
+    from .rnn import SequenceEncoder
+    from .sast_fpn import SASTFPN
+    from .table_fpn import TableFPN
+
     support_dict = [
-        'FPN', 'FCEFPN', 'LKPAN', 'DBFPN', 'RSEFPN', 'EASTFPN', 'SASTFPN',
-        'SequenceEncoder', 'PGFPN', 'TableFPN', 'PRENFPN', 'CSPPAN', 'CTFPN',
-        'RFAdaptor', 'FPN_UNet'
+        "FPN",
+        "FCEFPN",
+        "LKPAN",
+        "DBFPN",
+        "RSEFPN",
+        "EASTFPN",
+        "SASTFPN",
+        "SequenceEncoder",
+        "PGFPN",
+        "TableFPN",
+        "PRENFPN",
+        "CSPPAN",
+        "CTFPN",
+        "RFAdaptor",
+        "FPN_UNet",
     ]
 
-    module_name = config.pop('name')
-    assert module_name in support_dict, Exception('neck only support {}'.format(
-        support_dict))
+    module_name = config.pop("name")
+    assert module_name in support_dict, Exception("neck only support {}".format(support_dict))
 
     module_class = eval(module_name)(**config)
     return module_class

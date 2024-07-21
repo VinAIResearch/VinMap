@@ -11,45 +11,45 @@ from mmcv.runner import get_dist_info
 from mmcv.utils import Registry, build_from_cfg, digit_version
 from torch.utils.data import DataLoader
 
+
 try:
     from mmcv.utils import IS_IPU_AVAILABLE
 except ImportError:
     IS_IPU_AVAILABLE = False
 
-if platform.system() != 'Windows':
+if platform.system() != "Windows":
     # https://github.com/pytorch/pytorch/issues/973
     import resource
+
     rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
     hard_limit = rlimit[1]
     soft_limit = min(4096, hard_limit)
     resource.setrlimit(resource.RLIMIT_NOFILE, (soft_limit, hard_limit))
 
-DATASETS = Registry('dataset')
-PIPELINES = Registry('pipeline')
-SAMPLERS = Registry('sampler')
+DATASETS = Registry("dataset")
+PIPELINES = Registry("pipeline")
+SAMPLERS = Registry("sampler")
 
 
 def build_dataset(cfg, default_args=None):
-    from .dataset_wrappers import (ClassBalancedDataset, ConcatDataset,
-                                   KFoldDataset, RepeatDataset)
+    from .dataset_wrappers import ClassBalancedDataset, ConcatDataset, KFoldDataset, RepeatDataset
+
     if isinstance(cfg, (list, tuple)):
         dataset = ConcatDataset([build_dataset(c, default_args) for c in cfg])
-    elif cfg['type'] == 'ConcatDataset':
+    elif cfg["type"] == "ConcatDataset":
         dataset = ConcatDataset(
-            [build_dataset(c, default_args) for c in cfg['datasets']],
-            separate_eval=cfg.get('separate_eval', True))
-    elif cfg['type'] == 'RepeatDataset':
-        dataset = RepeatDataset(
-            build_dataset(cfg['dataset'], default_args), cfg['times'])
-    elif cfg['type'] == 'ClassBalancedDataset':
-        dataset = ClassBalancedDataset(
-            build_dataset(cfg['dataset'], default_args), cfg['oversample_thr'])
-    elif cfg['type'] == 'KFoldDataset':
+            [build_dataset(c, default_args) for c in cfg["datasets"]], separate_eval=cfg.get("separate_eval", True)
+        )
+    elif cfg["type"] == "RepeatDataset":
+        dataset = RepeatDataset(build_dataset(cfg["dataset"], default_args), cfg["times"])
+    elif cfg["type"] == "ClassBalancedDataset":
+        dataset = ClassBalancedDataset(build_dataset(cfg["dataset"], default_args), cfg["oversample_thr"])
+    elif cfg["type"] == "KFoldDataset":
         cp_cfg = copy.deepcopy(cfg)
-        if cp_cfg.get('test_mode', None) is None:
-            cp_cfg['test_mode'] = (default_args or {}).pop('test_mode', False)
-        cp_cfg['dataset'] = build_dataset(cp_cfg['dataset'], default_args)
-        cp_cfg.pop('type')
+        if cp_cfg.get("test_mode", None) is None:
+            cp_cfg["test_mode"] = (default_args or {}).pop("test_mode", False)
+        cp_cfg["dataset"] = build_dataset(cp_cfg["dataset"], default_args)
+        cp_cfg.pop("type")
         dataset = KFoldDataset(**cp_cfg)
     else:
         dataset = build_from_cfg(cfg, DATASETS, default_args)
@@ -57,18 +57,20 @@ def build_dataset(cfg, default_args=None):
     return dataset
 
 
-def build_dataloader(dataset,
-                     samples_per_gpu,
-                     workers_per_gpu,
-                     num_gpus=1,
-                     dist=True,
-                     shuffle=True,
-                     round_up=True,
-                     seed=None,
-                     pin_memory=True,
-                     persistent_workers=True,
-                     sampler_cfg=None,
-                     **kwargs):
+def build_dataloader(
+    dataset,
+    samples_per_gpu,
+    workers_per_gpu,
+    num_gpus=1,
+    dist=True,
+    shuffle=True,
+    round_up=True,
+    seed=None,
+    pin_memory=True,
+    persistent_workers=True,
+    sampler_cfg=None,
+    **kwargs
+):
     """Build PyTorch DataLoader.
 
     In distributed training, each GPU/process has a dataloader.
@@ -107,21 +109,21 @@ def build_dataloader(dataset,
         # shuffle=False when val and test
         sampler_cfg.update(shuffle=shuffle)
         sampler = build_sampler(
-            sampler_cfg,
-            default_args=dict(
-                dataset=dataset, num_replicas=world_size, rank=rank,
-                seed=seed))
+            sampler_cfg, default_args=dict(dataset=dataset, num_replicas=world_size, rank=rank, seed=seed)
+        )
     # Default sampler logic
     elif dist:
         sampler = build_sampler(
             dict(
-                type='DistributedSampler',
+                type="DistributedSampler",
                 dataset=dataset,
                 num_replicas=world_size,
                 rank=rank,
                 shuffle=shuffle,
                 round_up=round_up,
-                seed=seed))
+                seed=seed,
+            )
+        )
     else:
         sampler = None
 
@@ -136,14 +138,13 @@ def build_dataloader(dataset,
         batch_size = num_gpus * samples_per_gpu
         num_workers = num_gpus * workers_per_gpu
 
-    init_fn = partial(
-        worker_init_fn, num_workers=num_workers, rank=rank,
-        seed=seed) if seed is not None else None
+    init_fn = partial(worker_init_fn, num_workers=num_workers, rank=rank, seed=seed) if seed is not None else None
 
-    if digit_version(torch.__version__) >= digit_version('1.8.0'):
-        kwargs['persistent_workers'] = persistent_workers
+    if digit_version(torch.__version__) >= digit_version("1.8.0"):
+        kwargs["persistent_workers"] = persistent_workers
     if IS_IPU_AVAILABLE:
         from mmcv.device.ipu import IPUDataLoader
+
         data_loader = IPUDataLoader(
             dataset,
             None,
@@ -151,7 +152,8 @@ def build_dataloader(dataset,
             num_workers=num_workers,
             shuffle=shuffle,
             worker_init_fn=init_fn,
-            **kwargs)
+            **kwargs
+        )
     else:
         data_loader = DataLoader(
             dataset,
@@ -162,7 +164,8 @@ def build_dataloader(dataset,
             pin_memory=pin_memory,
             shuffle=shuffle,
             worker_init_fn=init_fn,
-            **kwargs)
+            **kwargs
+        )
 
     return data_loader
 

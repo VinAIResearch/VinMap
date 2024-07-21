@@ -25,19 +25,12 @@ class AugmenterBuilder:
             arg_list = [self.to_tuple_if_list(a) for a in args[1:]]
             return getattr(iaa, args[0])(*arg_list)
         if isinstance(args, dict):
-            if 'cls' in args:
-                cls = getattr(iaa, args['cls'])
-                return cls(
-                    **{
-                        k: self.to_tuple_if_list(v)
-                        for k, v in args.items() if not k == 'cls'
-                    })
+            if "cls" in args:
+                cls = getattr(iaa, args["cls"])
+                return cls(**{k: self.to_tuple_if_list(v) for k, v in args.items() if not k == "cls"})
             else:
-                return {
-                    key: self.build(value, root=False)
-                    for key, value in args.items()
-                }
-        raise RuntimeError('unknown augmenter arg: ' + str(args))
+                return {key: self.build(value, root=False) for key, value in args.items()}
+        raise RuntimeError("unknown augmenter arg: " + str(args))
 
     def to_tuple_if_list(self, obj):
         if isinstance(obj, list):
@@ -68,17 +61,17 @@ class ImgAug:
 
     def __call__(self, results):
         # img is bgr
-        image = results['img']
+        image = results["img"]
         aug = None
         shape = image.shape
 
         if self.augmenter:
             aug = self.augmenter.to_deterministic()
-            results['img'] = aug.augment_image(image)
-            results['img_shape'] = results['img'].shape
-            results['flip'] = 'unknown'  # it's unknown
-            results['flip_direction'] = 'unknown'  # it's unknown
-            target_shape = results['img_shape']
+            results["img"] = aug.augment_image(image)
+            results["img_shape"] = results["img"].shape
+            results["flip"] = "unknown"  # it's unknown
+            results["flip_direction"] = "unknown"  # it's unknown
+            target_shape = results["img_shape"]
 
             self.may_augment_annotation(aug, shape, target_shape, results)
 
@@ -89,7 +82,7 @@ class ImgAug:
             return results
 
         # augment polygon mask
-        for key in results['mask_fields']:
+        for key in results["mask_fields"]:
             if self.clip_invalid_polys:
                 masks = self.may_augment_poly(aug, shape, results[key])
                 results[key] = PolygonMasks(masks, *target_shape[:2])
@@ -99,7 +92,7 @@ class ImgAug:
                     results[key] = PolygonMasks(masks, *target_shape[:2])
 
         # augment bbox
-        for key in results['bbox_fields']:
+        for key in results["bbox_fields"]:
             bboxes = self.may_augment_bbox(aug, shape, results[key])
             results[key] = np.zeros(0)
             if len(bboxes) > 0:
@@ -111,16 +104,14 @@ class ImgAug:
         imgaug_bboxes = []
         for bbox in bboxes:
             x1, y1, x2, y2 = bbox
-            imgaug_bboxes.append(
-                imgaug.BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2))
-        imgaug_bboxes = aug.augment_bounding_boxes([
-            imgaug.BoundingBoxesOnImage(imgaug_bboxes, shape=ori_shape)
-        ])[0].clip_out_of_image()
+            imgaug_bboxes.append(imgaug.BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2))
+        imgaug_bboxes = aug.augment_bounding_boxes([imgaug.BoundingBoxesOnImage(imgaug_bboxes, shape=ori_shape)])[
+            0
+        ].clip_out_of_image()
 
         new_bboxes = []
         for box in imgaug_bboxes.bounding_boxes:
-            new_bboxes.append(
-                np.array([box.x1, box.y1, box.x2, box.y2], dtype=np.float32))
+            new_bboxes.append(np.array([box.x1, box.y1, box.x2, box.y2], dtype=np.float32))
 
         return new_bboxes
 
@@ -130,9 +121,9 @@ class ImgAug:
             poly = poly[0]
             poly = poly.reshape(-1, 2)
             imgaug_polys.append(imgaug.Polygon(poly))
-        imgaug_polys = aug.augment_polygons(
-            [imgaug.PolygonsOnImage(imgaug_polys,
-                                    shape=img_shape)])[0].clip_out_of_image()
+        imgaug_polys = aug.augment_polygons([imgaug.PolygonsOnImage(imgaug_polys, shape=img_shape)])[
+            0
+        ].clip_out_of_image()
 
         new_polys = []
         for poly in imgaug_polys.polygons:
@@ -152,16 +143,15 @@ class ImgAug:
             key_points.extend([imgaug.Keypoint(p[0], p[1]) for p in poly])
             poly_point_nums.append(poly.shape[0])
         # Warning: we do not clip the out-of-boudnary polygons
-        key_points = aug.augment_keypoints(
-            [imgaug.KeypointsOnImage(keypoints=key_points,
-                                     shape=img_shape)])[0].keypoints
+        key_points = aug.augment_keypoints([imgaug.KeypointsOnImage(keypoints=key_points, shape=img_shape)])[
+            0
+        ].keypoints
 
         new_polys = []
         start_idx = 0
         for poly_point_num in poly_point_nums:
             new_poly = []
-            for key_point in key_points[start_idx:(start_idx +
-                                                   poly_point_num)]:
+            for key_point in key_points[start_idx : (start_idx + poly_point_num)]:
                 new_poly.append([key_point.x, key_point.y])
             start_idx += poly_point_num
             new_poly = np.array(new_poly).flatten()
@@ -177,10 +167,7 @@ class ImgAug:
 @PIPELINES.register_module()
 class EastRandomCrop:
 
-    def __init__(self,
-                 target_size=(640, 640),
-                 max_tries=10,
-                 min_crop_side_ratio=0.1):
+    def __init__(self, target_size=(640, 640), max_tries=10, min_crop_side_ratio=0.1):
         self.target_size = target_size
         self.max_tries = max_tries
         self.min_crop_side_ratio = min_crop_side_ratio
@@ -188,45 +175,41 @@ class EastRandomCrop:
     def __call__(self, results):
         # sampling crop
         # crop image, boxes, masks
-        img = results['img']
-        crop_x, crop_y, crop_w, crop_h = self.crop_area(
-            img, results['gt_masks'])
+        img = results["img"]
+        crop_x, crop_y, crop_w, crop_h = self.crop_area(img, results["gt_masks"])
         scale_w = self.target_size[0] / crop_w
         scale_h = self.target_size[1] / crop_h
         scale = min(scale_w, scale_h)
         h = int(crop_h * scale)
         w = int(crop_w * scale)
-        padded_img = np.zeros(
-            (self.target_size[1], self.target_size[0], img.shape[2]),
-            img.dtype)
-        padded_img[:h, :w] = mmcv.imresize(
-            img[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w], (w, h))
+        padded_img = np.zeros((self.target_size[1], self.target_size[0], img.shape[2]), img.dtype)
+        padded_img[:h, :w] = mmcv.imresize(img[crop_y : crop_y + crop_h, crop_x : crop_x + crop_w], (w, h))
 
         # for bboxes
-        for key in results['bbox_fields']:
+        for key in results["bbox_fields"]:
             lines = []
             for box in results[key]:
                 box = box.reshape(2, 2)
-                poly = ((box - (crop_x, crop_y)) * scale)
+                poly = (box - (crop_x, crop_y)) * scale
                 if not self.is_poly_outside_rect(poly, 0, 0, w, h):
                     lines.append(poly.flatten())
             results[key] = np.array(lines)
         # for masks
-        for key in results['mask_fields']:
+        for key in results["mask_fields"]:
             polys = []
             polys_label = []
             for poly in results[key]:
                 poly = np.array(poly).reshape(-1, 2)
-                poly = ((poly - (crop_x, crop_y)) * scale)
+                poly = (poly - (crop_x, crop_y)) * scale
                 if not self.is_poly_outside_rect(poly, 0, 0, w, h):
                     polys.append([poly])
                     polys_label.append(0)
             results[key] = PolygonMasks(polys, *self.target_size)
-            if key == 'gt_masks':
-                results['gt_labels'] = polys_label
+            if key == "gt_masks":
+                results["gt_labels"] = polys_label
 
-        results['img'] = padded_img
-        results['img_shape'] = padded_img.shape
+        results["img"] = padded_img
+        results["img_shape"] = padded_img.shape
 
         return results
 
@@ -280,8 +263,7 @@ class EastRandomCrop:
         h_array = np.zeros(h, dtype=np.int32)
         w_array = np.zeros(w, dtype=np.int32)
         for points in polys:
-            points = np.round(
-                points, decimals=0).astype(np.int32).reshape(-1, 2)
+            points = np.round(points, decimals=0).astype(np.int32).reshape(-1, 2)
             min_x = np.min(points[:, 0])
             max_x = np.max(points[:, 0])
             w_array[min_x:max_x] = 1
@@ -308,14 +290,12 @@ class EastRandomCrop:
             else:
                 ymin, ymax = self.random_select(h_axis, h)
 
-            if (xmax - xmin < self.min_crop_side_ratio * w
-                    or ymax - ymin < self.min_crop_side_ratio * h):
+            if xmax - xmin < self.min_crop_side_ratio * w or ymax - ymin < self.min_crop_side_ratio * h:
                 # area too small
                 continue
             num_poly_in_rect = 0
             for poly in polys:
-                if not self.is_poly_outside_rect(poly, xmin, ymin, xmax - xmin,
-                                                 ymax - ymin):
+                if not self.is_poly_outside_rect(poly, xmin, ymin, xmax - xmin, ymax - ymin):
                     num_poly_in_rect += 1
                     break
 

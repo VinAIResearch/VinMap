@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmdet.core import BitmapMasks
-
 from mmocr.models.builder import LOSSES
 from mmocr.utils import check_argument
+
 from . import PANLoss
 
 
@@ -22,14 +22,9 @@ class PSELoss(PANLoss):
             "mean" and "sum".
     """
 
-    def __init__(self,
-                 alpha=0.7,
-                 ohem_ratio=3,
-                 reduction='mean',
-                 kernel_sample_type='adaptive'):
+    def __init__(self, alpha=0.7, ohem_ratio=3, reduction="mean", kernel_sample_type="adaptive"):
         super().__init__()
-        assert reduction in ['mean', 'sum'
-                             ], "reduction must be either of ['mean','sum']"
+        assert reduction in ["mean", "sum"], "reduction must be either of ['mean','sum']"
         self.alpha = alpha
         self.ohem_ratio = ohem_ratio
         self.reduction = reduction
@@ -69,19 +64,15 @@ class PSELoss(PANLoss):
         gt_mask = [item.to(score_maps.device) for item in gt_mask]
 
         # compute text loss
-        sampled_masks_text = self.ohem_batch(pred_texts.detach(),
-                                             gt_kernels[0], gt_mask[0])
-        loss_texts = self.dice_loss_with_logits(pred_texts, gt_kernels[0],
-                                                sampled_masks_text)
+        sampled_masks_text = self.ohem_batch(pred_texts.detach(), gt_kernels[0], gt_mask[0])
+        loss_texts = self.dice_loss_with_logits(pred_texts, gt_kernels[0], sampled_masks_text)
         losses.append(self.alpha * loss_texts)
 
         # compute kernel loss
-        if self.kernel_sample_type == 'hard':
-            sampled_masks_kernel = (gt_kernels[0] > 0.5).float() * (
-                gt_mask[0].float())
-        elif self.kernel_sample_type == 'adaptive':
-            sampled_masks_kernel = (pred_texts > 0).float() * (
-                gt_mask[0].float())
+        if self.kernel_sample_type == "hard":
+            sampled_masks_kernel = (gt_kernels[0] > 0.5).float() * (gt_mask[0].float())
+        elif self.kernel_sample_type == "adaptive":
+            sampled_masks_kernel = (pred_texts > 0).float() * (gt_mask[0].float())
         else:
             raise NotImplementedError
 
@@ -90,15 +81,15 @@ class PSELoss(PANLoss):
         loss_list = []
         for idx in range(num_kernel):
             loss_kernels = self.dice_loss_with_logits(
-                pred_kernels[:, idx, :, :], gt_kernels[1 + idx],
-                sampled_masks_kernel)
+                pred_kernels[:, idx, :, :], gt_kernels[1 + idx], sampled_masks_kernel
+            )
             loss_list.append(loss_kernels)
 
         losses.append((1 - self.alpha) * sum(loss_list) / len(loss_list))
 
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             losses = [item.mean() for item in losses]
-        elif self.reduction == 'sum':
+        elif self.reduction == "sum":
             losses = [item.sum() for item in losses]
         else:
             raise NotImplementedError

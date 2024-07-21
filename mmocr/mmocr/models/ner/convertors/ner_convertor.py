@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
-
 from mmocr.models.builder import CONVERTORS
 from mmocr.utils import list_from_file
 
@@ -20,14 +19,16 @@ class NerConvertor:
         end_id (int): Each output is prefixed with an output ID.
     """
 
-    def __init__(self,
-                 annotation_type='bio',
-                 vocab_file=None,
-                 categories=None,
-                 max_len=None,
-                 unknown_id=100,
-                 start_id=101,
-                 end_id=102):
+    def __init__(
+        self,
+        annotation_type="bio",
+        vocab_file=None,
+        categories=None,
+        max_len=None,
+        unknown_id=100,
+        start_id=101,
+        end_id=102,
+    ):
         self.annotation_type = annotation_type
         self.categories = categories
         self.word2ids = {}
@@ -36,18 +37,17 @@ class NerConvertor:
         self.start_id = start_id
         self.end_id = end_id
         assert self.max_len > 2
-        assert self.annotation_type in ['bio', 'bioes']
+        assert self.annotation_type in ["bio", "bioes"]
 
         vocabs = list_from_file(vocab_file)
         self.vocab_size = len(vocabs)
         for idx, vocab in enumerate(vocabs):
             self.word2ids.update({vocab: idx})
 
-        if self.annotation_type == 'bio':
-            self.label2id_dict, self.id2label, self.ignore_id = \
-                self._generate_labelid_dict()
-        elif self.annotation_type == 'bioes':
-            raise NotImplementedError('Bioes format is not supported yet!')
+        if self.annotation_type == "bio":
+            self.label2id_dict, self.id2label, self.ignore_id = self._generate_labelid_dict()
+        elif self.annotation_type == "bioes":
+            raise NotImplementedError("Bioes format is not supported yet!")
 
         assert self.ignore_id is not None
         assert self.id2label is not None
@@ -58,19 +58,14 @@ class NerConvertor:
         num_classes = len(self.categories)
         label2id_dict = {}
         ignore_id = 2 * num_classes + 1
-        id2label_dict = {
-            0: 'X',
-            ignore_id: 'O',
-            2 * num_classes + 2: '[START]',
-            2 * num_classes + 3: '[END]'
-        }
+        id2label_dict = {0: "X", ignore_id: "O", 2 * num_classes + 2: "[START]", 2 * num_classes + 3: "[END]"}
 
         for index, category in enumerate(self.categories):
             start_label = index + 1
             end_label = index + 1 + num_classes
             label2id_dict.update({category: [start_label, end_label]})
-            id2label_dict.update({start_label: 'B-' + category})
-            id2label_dict.update({end_label: 'I-' + category})
+            id2label_dict.update({start_label: "B-" + category})
+            id2label_dict.update({end_label: "I-" + category})
 
         return label2id_dict, id2label_dict, ignore_id
 
@@ -145,18 +140,18 @@ class NerConvertor:
             for index, tag in enumerate(results):
                 if not isinstance(tag, str):
                     tag = self.id2label[tag]
-                if self.annotation_type == 'bio':
-                    if tag.startswith('B-'):
+                if self.annotation_type == "bio":
+                    if tag.startswith("B-"):
                         if entity[2] != -1 and entity[1] < entity[2]:
                             entities.append(entity)
                         entity = [-1, -1, -1]
                         entity[1] = index
-                        entity[0] = tag.split('-')[1]
+                        entity[0] = tag.split("-")[1]
                         entity[2] = index
                         if index == len(results) - 1 and entity[1] < entity[2]:
                             entities.append(entity)
-                    elif tag.startswith('I-') and entity[1] != -1:
-                        _type = tag.split('-')[1]
+                    elif tag.startswith("I-") and entity[1] != -1:
+                        _type = tag.split("-")[1]
                         if _type == entity[0]:
                             entity[2] = index
 
@@ -167,7 +162,6 @@ class NerConvertor:
                             entities.append(entity)
                         entity = [-1, -1, -1]
                 else:
-                    raise NotImplementedError(
-                        'The data format is not supported yet!')
+                    raise NotImplementedError("The data format is not supported yet!")
             pred_entities.append(entities)
         return pred_entities

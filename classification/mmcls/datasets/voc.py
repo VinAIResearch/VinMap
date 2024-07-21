@@ -27,18 +27,36 @@ class VOC(MultiLabelDataset):
             set to '-1'.
     """
 
-    CLASSES = ('aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car',
-               'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
-               'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
-               'tvmonitor')
+    CLASSES = (
+        "aeroplane",
+        "bicycle",
+        "bird",
+        "boat",
+        "bottle",
+        "bus",
+        "car",
+        "cat",
+        "chair",
+        "cow",
+        "diningtable",
+        "dog",
+        "horse",
+        "motorbike",
+        "person",
+        "pottedplant",
+        "sheep",
+        "sofa",
+        "train",
+        "tvmonitor",
+    )
 
     def __init__(self, difficult_as_postive=None, **kwargs):
         self.difficult_as_postive = difficult_as_postive
         super(VOC, self).__init__(**kwargs)
-        if 'VOC2007' in self.data_prefix:
+        if "VOC2007" in self.data_prefix:
             self.year = 2007
         else:
-            raise ValueError('Cannot infer dataset year from img_prefix.')
+            raise ValueError("Cannot infer dataset year from img_prefix.")
 
     def load_annotations(self):
         """Load annotations.
@@ -49,21 +67,20 @@ class VOC(MultiLabelDataset):
         data_infos = []
         img_ids = mmcv.list_from_file(self.ann_file)
         for img_id in img_ids:
-            filename = f'JPEGImages/{img_id}.jpg'
-            xml_path = osp.join(self.data_prefix, 'Annotations',
-                                f'{img_id}.xml')
+            filename = f"JPEGImages/{img_id}.jpg"
+            xml_path = osp.join(self.data_prefix, "Annotations", f"{img_id}.xml")
             tree = ET.parse(xml_path)
             root = tree.getroot()
             labels = []
             labels_difficult = []
-            for obj in root.findall('object'):
-                label_name = obj.find('name').text
+            for obj in root.findall("object"):
+                label_name = obj.find("name").text
                 # in case customized dataset has wrong labels
                 # or CLASSES has been override.
                 if label_name not in self.CLASSES:
                     continue
                 label = self.class_to_idx[label_name]
-                difficult = int(obj.find('difficult').text)
+                difficult = int(obj.find("difficult").text)
                 if difficult:
                     labels_difficult.append(label)
                 else:
@@ -86,9 +103,8 @@ class VOC(MultiLabelDataset):
             gt_label[labels] = 1
 
             info = dict(
-                img_prefix=self.data_prefix,
-                img_info=dict(filename=filename),
-                gt_label=gt_label.astype(np.int8))
+                img_prefix=self.data_prefix, img_info=dict(filename=filename), gt_label=gt_label.astype(np.int8)
+            )
             data_infos.append(info)
 
         return data_infos

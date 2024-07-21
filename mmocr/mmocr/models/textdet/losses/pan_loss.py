@@ -6,10 +6,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from mmdet.core import BitmapMasks
-from torch import nn
-
 from mmocr.models.builder import LOSSES
 from mmocr.utils import check_argument
+from torch import nn
 
 
 @LOSSES.register_module()
@@ -32,16 +31,18 @@ class PANLoss(nn.Module):
             and < bbox num.
     """
 
-    def __init__(self,
-                 alpha=0.5,
-                 beta=0.25,
-                 delta_aggregation=0.5,
-                 delta_discrimination=3,
-                 ohem_ratio=3,
-                 reduction='mean',
-                 speedup_bbox_thr=-1):
+    def __init__(
+        self,
+        alpha=0.5,
+        beta=0.25,
+        delta_aggregation=0.5,
+        delta_discrimination=3,
+        ohem_ratio=3,
+        reduction="mean",
+        speedup_bbox_thr=-1,
+    ):
         super().__init__()
-        assert reduction in ['mean', 'sum'], "reduction must in ['mean','sum']"
+        assert reduction in ["mean", "sum"], "reduction must in ['mean','sum']"
         self.alpha = alpha
         self.beta = beta
         self.delta_aggregation = delta_aggregation
@@ -78,10 +79,8 @@ class PANLoss(nn.Module):
                 # hxw
                 mask_sz = mask.shape
                 # left, right, top, bottom
-                pad = [
-                    0, target_sz[1] - mask_sz[1], 0, target_sz[0] - mask_sz[0]
-                ]
-                mask = F.pad(mask, pad, mode='constant', value=0)
+                pad = [0, target_sz[1] - mask_sz[1], 0, target_sz[0] - mask_sz[0]]
+                mask = F.pad(mask, pad, mode="constant", value=0)
                 kernel.append(mask)
             kernel = torch.stack(kernel)
             results.append(kernel)
@@ -114,7 +113,7 @@ class PANLoss(nn.Module):
         inst_embed = preds[:, 2:, :, :]
         feature_sz = preds.size()
 
-        mapping = {'gt_kernels': gt_kernels, 'gt_mask': gt_mask}
+        mapping = {"gt_kernels": gt_kernels, "gt_mask": gt_mask}
         gt = {}
         for key, value in mapping.items():
             gt[key] = value
@@ -122,25 +121,20 @@ class PANLoss(nn.Module):
             gt[key] = self.bitmasks2tensor(gt[key], feature_sz[2:])
             gt[key] = [item.to(preds.device) for item in gt[key]]
         loss_aggrs, loss_discrs = self.aggregation_discrimination_loss(
-            gt['gt_kernels'][0], gt['gt_kernels'][1], inst_embed)
+            gt["gt_kernels"][0], gt["gt_kernels"][1], inst_embed
+        )
         # compute text loss
-        sampled_mask = self.ohem_batch(pred_texts.detach(),
-                                       gt['gt_kernels'][0], gt['gt_mask'][0])
-        loss_texts = self.dice_loss_with_logits(pred_texts,
-                                                gt['gt_kernels'][0],
-                                                sampled_mask)
+        sampled_mask = self.ohem_batch(pred_texts.detach(), gt["gt_kernels"][0], gt["gt_mask"][0])
+        loss_texts = self.dice_loss_with_logits(pred_texts, gt["gt_kernels"][0], sampled_mask)
 
         # compute kernel loss
 
-        sampled_masks_kernel = (gt['gt_kernels'][0] > 0.5).float() * (
-            gt['gt_mask'][0].float())
-        loss_kernels = self.dice_loss_with_logits(pred_kernels,
-                                                  gt['gt_kernels'][1],
-                                                  sampled_masks_kernel)
+        sampled_masks_kernel = (gt["gt_kernels"][0] > 0.5).float() * (gt["gt_mask"][0].float())
+        loss_kernels = self.dice_loss_with_logits(pred_kernels, gt["gt_kernels"][1], sampled_masks_kernel)
         losses = [loss_texts, loss_kernels, loss_aggrs, loss_discrs]
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             losses = [item.mean() for item in losses]
-        elif self.reduction == 'sum':
+        elif self.reduction == "sum":
             losses = [item.sum() for item in losses]
         else:
             raise NotImplementedError
@@ -150,14 +144,11 @@ class PANLoss(nn.Module):
 
         results = dict()
         results.update(
-            loss_text=losses[0],
-            loss_kernel=losses[1],
-            loss_aggregation=losses[2],
-            loss_discrimination=losses[3])
+            loss_text=losses[0], loss_kernel=losses[1], loss_aggregation=losses[2], loss_discrimination=losses[3]
+        )
         return results
 
-    def aggregation_discrimination_loss(self, gt_texts, gt_kernels,
-                                        inst_embeds):
+    def aggregation_discrimination_loss(self, gt_texts, gt_kernels, inst_embeds):
         """Compute the aggregation and discrimnative losses.
 
         Args:
@@ -191,14 +182,13 @@ class PANLoss(nn.Module):
             kernel_avgs = []
             select_num = self.speedup_bbox_thr
             if 0 < select_num < text_num:
-                inds = np.random.choice(
-                    text_num, select_num, replace=False) + 1
+                inds = np.random.choice(text_num, select_num, replace=False) + 1
             else:
                 inds = range(1, text_num + 1)
 
             for i in inds:
                 # for each text instance
-                kernel_i = (kernel == i)  # 0.2ms
+                kernel_i = kernel == i  # 0.2ms
                 if kernel_i.sum() == 0 or (text == i).sum() == 0:  # 0.2ms
                     continue
 
@@ -208,13 +198,9 @@ class PANLoss(nn.Module):
 
                 embed_i = embed[:, text == i]  # 0.6ms
                 # ||F(p) - G(K_i)|| - delta_aggregation, shape: nums
-                distance = (embed_i - avg.reshape(4, 1)).norm(  # 0.5ms
-                    2, dim=0) - self.delta_aggregation
+                distance = (embed_i - avg.reshape(4, 1)).norm(2, dim=0) - self.delta_aggregation  # 0.5ms
                 # compute D(p,K_i) in Eq (2)
-                hinge = torch.max(
-                    distance,
-                    torch.tensor(0, device=distance.device,
-                                 dtype=torch.float)).pow(2)
+                hinge = torch.max(distance, torch.tensor(0, device=distance.device, dtype=torch.float)).pow(2)
 
                 aggr = torch.log(hinge + 1).mean()
                 loss_aggr_img.append(aggr)
@@ -223,30 +209,23 @@ class PANLoss(nn.Module):
             if num_inst > 0:
                 loss_aggr_img = torch.stack(loss_aggr_img).mean()
             else:
-                loss_aggr_img = torch.tensor(
-                    0, device=gt_texts.device, dtype=torch.float)
+                loss_aggr_img = torch.tensor(0, device=gt_texts.device, dtype=torch.float)
             loss_aggrs.append(loss_aggr_img)
 
             loss_discr_img = 0
             for avg_i, avg_j in itertools.combinations(kernel_avgs, 2):
                 # delta_discrimination - ||G(K_i) - G(K_j)||
-                distance_ij = self.delta_discrimination - (avg_i -
-                                                           avg_j).norm(2)
+                distance_ij = self.delta_discrimination - (avg_i - avg_j).norm(2)
                 # D(K_i,K_j)
-                D_ij = torch.max(
-                    distance_ij,
-                    torch.tensor(
-                        0, device=distance_ij.device,
-                        dtype=torch.float)).pow(2)
+                D_ij = torch.max(distance_ij, torch.tensor(0, device=distance_ij.device, dtype=torch.float)).pow(2)
                 loss_discr_img += torch.log(D_ij + 1)
 
             if num_inst > 1:
-                loss_discr_img /= (num_inst * (num_inst - 1))
+                loss_discr_img /= num_inst * (num_inst - 1)
             else:
-                loss_discr_img = torch.tensor(
-                    0, device=gt_texts.device, dtype=torch.float)
+                loss_discr_img = torch.tensor(0, device=gt_texts.device, dtype=torch.float)
             if num_inst == 0:
-                warnings.warn('num of instance is 0')
+                warnings.warn("num of instance is 0")
             loss_discrs.append(loss_discr_img)
         return torch.stack(loss_aggrs), torch.stack(loss_discrs)
 
@@ -289,20 +268,18 @@ class PANLoss(nn.Module):
         assert text_score.shape == gt_text.shape
         assert gt_text.shape == gt_mask.shape
 
-        pos_num = (int)(torch.sum(gt_text > 0.5).item()) - (int)(
-            torch.sum((gt_text > 0.5) * (gt_mask <= 0.5)).item())
+        pos_num = (int)(torch.sum(gt_text > 0.5).item()) - (int)(torch.sum((gt_text > 0.5) * (gt_mask <= 0.5)).item())
         neg_num = (int)(torch.sum(gt_text <= 0.5).item())
         neg_num = (int)(min(pos_num * self.ohem_ratio, neg_num))
 
         if pos_num == 0 or neg_num == 0:
-            warnings.warn('pos_num = 0 or neg_num = 0')
+            warnings.warn("pos_num = 0 or neg_num = 0")
             return gt_mask.bool()
 
         neg_score = text_score[gt_text <= 0.5]
         neg_score_sorted, _ = torch.sort(neg_score, descending=True)
         threshold = neg_score_sorted[neg_num - 1]
-        sampled_mask = (((text_score >= threshold) + (gt_text > 0.5)) > 0) * (
-            gt_mask > 0.5)
+        sampled_mask = (((text_score >= threshold) + (gt_text > 0.5)) > 0) * (gt_mask > 0.5)
         return sampled_mask
 
     def ohem_batch(self, text_scores, gt_texts, gt_mask):
@@ -325,8 +302,7 @@ class PANLoss(nn.Module):
 
         sampled_masks = []
         for i in range(text_scores.shape[0]):
-            sampled_masks.append(
-                self.ohem_img(text_scores[i], gt_texts[i], gt_mask[i]))
+            sampled_masks.append(self.ohem_img(text_scores[i], gt_texts[i], gt_mask[i]))
 
         sampled_masks = torch.stack(sampled_masks)
 

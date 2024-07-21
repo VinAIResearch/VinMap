@@ -10,17 +10,12 @@ from scipy.io import loadmat
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Crop images in Synthtext-style dataset in '
-        'prepration for MMOCR\'s use')
-    parser.add_argument(
-        'anno_path', help='Path to gold annotation data (gt.mat)')
-    parser.add_argument('img_path', help='Path to images')
-    parser.add_argument('out_dir', help='Path of output images and labels')
-    parser.add_argument(
-        '--n_proc',
-        default=1,
-        type=int,
-        help='Number of processes to run with')
+        description="Crop images in Synthtext-style dataset in " "prepration for MMOCR's use"
+    )
+    parser.add_argument("anno_path", help="Path to gold annotation data (gt.mat)")
+    parser.add_argument("img_path", help="Path to images")
+    parser.add_argument("out_dir", help="Path of output images and labels")
+    parser.add_argument("--n_proc", default=1, type=int, help="Number of processes to run with")
     args = parser.parse_args()
     return args
 
@@ -44,8 +39,7 @@ def load_gt_datum(datum):
         wordBB = wordBB[:, :, np.newaxis]
     cur_wordBB = wordBB.transpose(2, 1, 0)
     for box in cur_wordBB:
-        word_bboxes.append(
-            [max(round(coord), 0) for pt in box for coord in pt])
+        word_bboxes.append([max(round(coord), 0) for pt in box for coord in pt])
 
     # Validate word bboxes.
     if len(words) != len(word_bboxes):
@@ -54,14 +48,13 @@ def load_gt_datum(datum):
     # From (2, 4, num_boxes) to (num_boxes, 4, 2)
     cur_charBB = charBB.transpose(2, 1, 0)
     for box in cur_charBB:
-        char_bboxes.append(
-            [max(round(coord), 0) for pt in box for coord in pt])
+        char_bboxes.append([max(round(coord), 0) for pt in box for coord in pt])
 
     char_bbox_idx = 0
     char_bbox_grps = []
 
     for word in words:
-        temp_bbox = char_bboxes[char_bbox_idx:char_bbox_idx + len(word)]
+        temp_bbox = char_bboxes[char_bbox_idx : char_bbox_idx + len(word)]
         char_bbox_idx += len(word)
         char_bbox_grps.append(temp_bbox)
 
@@ -76,12 +69,11 @@ def load_gt_datum(datum):
 
 def load_gt_data(filename, n_proc):
     mat_data = loadmat(filename, simplify_cells=True)
-    imnames = mat_data['imnames']
-    txt = mat_data['txt']
-    wordBB = mat_data['wordBB']
-    charBB = mat_data['charBB']
-    return mmcv.track_parallel_progress(
-        load_gt_datum, list(zip(imnames, txt, wordBB, charBB)), nproc=n_proc)
+    imnames = mat_data["imnames"]
+    txt = mat_data["txt"]
+    wordBB = mat_data["wordBB"]
+    charBB = mat_data["charBB"]
+    return mmcv.track_parallel_progress(load_gt_datum, list(zip(imnames, txt, wordBB, charBB)), nproc=n_proc)
 
 
 def process(data, img_path_prefix, out_dir):
@@ -101,13 +93,11 @@ def process(data, img_path_prefix, out_dir):
             pass  # occurs when multi-proessing
 
     for i, word in enumerate(words):
-        output_image_patch_name = f'{img_name}_{i}.png'
-        output_label_name = f'{img_name}_{i}.txt'
-        output_image_patch_path = os.path.join(output_sub_dir,
-                                               output_image_patch_name)
+        output_image_patch_name = f"{img_name}_{i}.png"
+        output_label_name = f"{img_name}_{i}.txt"
+        output_image_patch_path = os.path.join(output_sub_dir, output_image_patch_name)
         output_label_path = os.path.join(output_sub_dir, output_label_name)
-        if os.path.exists(output_image_patch_path) and os.path.exists(
-                output_label_path):
+        if os.path.exists(output_image_patch_path) and os.path.exists(output_label_path):
             continue
 
         word_bbox = word_bboxes[i]
@@ -122,23 +112,21 @@ def process(data, img_path_prefix, out_dir):
         char_bbox_grp[:, 1::2] -= min_y
 
         mmcv.imwrite(cropped_img, output_image_patch_path)
-        with open(output_label_path, 'w') as output_label_file:
-            output_label_file.write(word + '\n')
+        with open(output_label_path, "w") as output_label_file:
+            output_label_file.write(word + "\n")
             for cbox in char_bbox_grp:
-                output_label_file.write('%d %d %d %d %d %d %d %d\n' %
-                                        tuple(cbox.tolist()))
+                output_label_file.write("%d %d %d %d %d %d %d %d\n" % tuple(cbox.tolist()))
 
 
 def main():
     args = parse_args()
-    print('Loading annoataion data...')
+    print("Loading annoataion data...")
     data = load_gt_data(args.anno_path, args.n_proc)
-    process_with_outdir = partial(
-        process, img_path_prefix=args.img_path, out_dir=args.out_dir)
-    print('Creating cropped images and gold labels...')
+    process_with_outdir = partial(process, img_path_prefix=args.img_path, out_dir=args.out_dir)
+    print("Creating cropped images and gold labels...")
     mmcv.track_parallel_progress(process_with_outdir, data, nproc=args.n_proc)
-    print('Done')
+    print("Done")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

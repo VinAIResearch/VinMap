@@ -10,8 +10,7 @@ from .base_dataset import BaseDataset
 from .builder import DATASETS
 
 
-def find_folders(root: str,
-                 file_client: FileClient) -> Tuple[List[str], Dict[str, int]]:
+def find_folders(root: str, file_client: FileClient) -> Tuple[List[str], Dict[str, int]]:
     """Find classes by folders under a root.
 
     Args:
@@ -29,14 +28,14 @@ def find_folders(root: str,
             list_dir=True,
             list_file=False,
             recursive=False,
-        ))
+        )
+    )
     folders.sort()
     folder_to_idx = {folders[i]: i for i in range(len(folders))}
     return folders, folder_to_idx
 
 
-def get_samples(root: str, folder_to_idx: Dict[str, int],
-                is_valid_file: Callable, file_client: FileClient):
+def get_samples(root: str, folder_to_idx: Dict[str, int], is_valid_file: Callable, file_client: FileClient):
     """Make dataset by walking all images under a root.
 
     Args:
@@ -62,7 +61,8 @@ def get_samples(root: str, folder_to_idx: Dict[str, int],
                 list_dir=False,
                 list_file=True,
                 recursive=True,
-            ))
+            )
+        )
         for file in sorted(list(files)):
             if is_valid_file(file):
                 path = file_client.join_path(folder_name, file)
@@ -150,29 +150,26 @@ class CustomDataset(BaseDataset):
             Defaults to None.
     """
 
-    def __init__(self,
-                 data_prefix: str,
-                 pipeline: Sequence = (),
-                 classes: Union[str, Sequence[str], None] = None,
-                 ann_file: Optional[str] = None,
-                 extensions: Sequence[str] = ('.jpg', '.jpeg', '.png', '.ppm',
-                                              '.bmp', '.pgm', '.tif'),
-                 test_mode: bool = False,
-                 file_client_args: Optional[dict] = None):
+    def __init__(
+        self,
+        data_prefix: str,
+        pipeline: Sequence = (),
+        classes: Union[str, Sequence[str], None] = None,
+        ann_file: Optional[str] = None,
+        extensions: Sequence[str] = (".jpg", ".jpeg", ".png", ".ppm", ".bmp", ".pgm", ".tif"),
+        test_mode: bool = False,
+        file_client_args: Optional[dict] = None,
+    ):
         self.extensions = tuple(set([i.lower() for i in extensions]))
         self.file_client_args = file_client_args
 
         super().__init__(
-            data_prefix=data_prefix,
-            pipeline=pipeline,
-            classes=classes,
-            ann_file=ann_file,
-            test_mode=test_mode)
+            data_prefix=data_prefix, pipeline=pipeline, classes=classes, ann_file=ann_file, test_mode=test_mode
+        )
 
     def _find_samples(self):
         """find samples from ``data_prefix``."""
-        file_client = FileClient.infer_client(self.file_client_args,
-                                              self.data_prefix)
+        file_client = FileClient.infer_client(self.file_client_args, self.data_prefix)
         classes, folder_to_idx = find_folders(self.data_prefix, file_client)
         samples, empty_classes = get_samples(
             self.data_prefix,
@@ -183,23 +180,26 @@ class CustomDataset(BaseDataset):
 
         if len(samples) == 0:
             raise RuntimeError(
-                f'Found 0 files in subfolders of: {self.data_prefix}. '
-                f'Supported extensions are: {",".join(self.extensions)}')
+                f"Found 0 files in subfolders of: {self.data_prefix}. "
+                f'Supported extensions are: {",".join(self.extensions)}'
+            )
 
         if self.CLASSES is not None:
-            assert len(self.CLASSES) == len(classes), \
-                f"The number of subfolders ({len(classes)}) doesn't match " \
-                f'the number of specified classes ({len(self.CLASSES)}). ' \
-                'Please check the data folder.'
+            assert len(self.CLASSES) == len(classes), (
+                f"The number of subfolders ({len(classes)}) doesn't match "
+                f"the number of specified classes ({len(self.CLASSES)}). "
+                "Please check the data folder."
+            )
         else:
             self.CLASSES = classes
 
         if empty_classes:
             warnings.warn(
-                'Found no valid file in the folder '
+                "Found no valid file in the folder "
                 f'{", ".join(empty_classes)}. '
                 f"Supported extensions are: {', '.join(self.extensions)}",
-                UserWarning)
+                UserWarning,
+            )
 
         self.folder_to_idx = folder_to_idx
 
@@ -210,17 +210,16 @@ class CustomDataset(BaseDataset):
         if self.ann_file is None:
             samples = self._find_samples()
         elif isinstance(self.ann_file, str):
-            lines = mmcv.list_from_file(
-                self.ann_file, file_client_args=self.file_client_args)
-            samples = [x.strip().rsplit(' ', 1) for x in lines]
+            lines = mmcv.list_from_file(self.ann_file, file_client_args=self.file_client_args)
+            samples = [x.strip().rsplit(" ", 1) for x in lines]
         else:
-            raise TypeError('ann_file must be a str or None')
+            raise TypeError("ann_file must be a str or None")
 
         data_infos = []
         for filename, gt_label in samples:
-            info = {'img_prefix': self.data_prefix}
-            info['img_info'] = {'filename': filename}
-            info['gt_label'] = np.array(gt_label, dtype=np.int64)
+            info = {"img_prefix": self.data_prefix}
+            info["img_info"] = {"filename": filename}
+            info["gt_label"] = np.array(gt_label, dtype=np.int64)
             data_infos.append(info)
         return data_infos
 

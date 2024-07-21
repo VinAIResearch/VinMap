@@ -22,17 +22,17 @@ def print_timm_feature_info(feature_info):
     """
     logger = get_root_logger()
     if feature_info is None:
-        logger.warning('This backbone does not have feature_info')
+        logger.warning("This backbone does not have feature_info")
     elif isinstance(feature_info, list):
         for feat_idx, each_info in enumerate(feature_info):
-            logger.info(f'backbone feature_info[{feat_idx}]: {each_info}')
+            logger.info(f"backbone feature_info[{feat_idx}]: {each_info}")
     else:
         try:
-            logger.info(f'backbone out_indices: {feature_info.out_indices}')
-            logger.info(f'backbone out_channels: {feature_info.channels()}')
-            logger.info(f'backbone out_strides: {feature_info.reduction()}')
+            logger.info(f"backbone out_indices: {feature_info.out_indices}")
+            logger.info(f"backbone out_channels: {feature_info.channels()}")
+            logger.info(f"backbone out_strides: {feature_info.reduction()}")
         except AttributeError:
-            logger.warning('Unexpected format of backbone feature_info')
+            logger.warning("Unexpected format of backbone feature_info")
 
 
 @BACKBONES.register_module()
@@ -61,46 +61,51 @@ class TIMMBackbone(BaseBackbone):
         **kwargs: Other timm & model specific arguments.
     """
 
-    def __init__(self,
-                 model_name,
-                 features_only=False,
-                 pretrained=False,
-                 checkpoint_path='',
-                 in_channels=3,
-                 init_cfg=None,
-                 **kwargs):
+    def __init__(
+        self,
+        model_name,
+        features_only=False,
+        pretrained=False,
+        checkpoint_path="",
+        in_channels=3,
+        init_cfg=None,
+        **kwargs,
+    ):
         if timm is None:
             raise RuntimeError(
                 'Failed to import timm. Please run "pip install timm". '
-                '"pip install dataclasses" may also be needed for Python 3.6.')
+                '"pip install dataclasses" may also be needed for Python 3.6.'
+            )
         if not isinstance(pretrained, bool):
-            raise TypeError('pretrained must be bool, not str for model path')
+            raise TypeError("pretrained must be bool, not str for model path")
         if features_only and checkpoint_path:
             warnings.warn(
-                'Using both features_only and checkpoint_path will cause error'
-                ' in timm. See '
-                'https://github.com/rwightman/pytorch-image-models/issues/488')
+                "Using both features_only and checkpoint_path will cause error"
+                " in timm. See "
+                "https://github.com/rwightman/pytorch-image-models/issues/488"
+            )
 
         super(TIMMBackbone, self).__init__(init_cfg)
-        if 'norm_layer' in kwargs:
-            kwargs['norm_layer'] = NORM_LAYERS.get(kwargs['norm_layer'])
+        if "norm_layer" in kwargs:
+            kwargs["norm_layer"] = NORM_LAYERS.get(kwargs["norm_layer"])
         self.timm_model = timm.create_model(
             model_name=model_name,
             features_only=features_only,
             pretrained=pretrained,
             in_chans=in_channels,
             checkpoint_path=checkpoint_path,
-            **kwargs)
+            **kwargs,
+        )
 
         # reset classifier
-        if hasattr(self.timm_model, 'reset_classifier'):
-            self.timm_model.reset_classifier(0, '')
+        if hasattr(self.timm_model, "reset_classifier"):
+            self.timm_model.reset_classifier(0, "")
 
         # Hack to use pretrained weights from timm
         if pretrained or checkpoint_path:
             self._is_init = True
 
-        feature_info = getattr(self.timm_model, 'feature_info', None)
+        feature_info = getattr(self.timm_model, "feature_info", None)
         print_timm_feature_info(feature_info)
 
     def forward(self, x):
@@ -108,5 +113,5 @@ class TIMMBackbone(BaseBackbone):
         if isinstance(features, (list, tuple)):
             features = tuple(features)
         else:
-            features = (features, )
+            features = (features,)
         return features

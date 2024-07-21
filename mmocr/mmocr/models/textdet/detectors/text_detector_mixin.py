@@ -2,7 +2,6 @@
 import warnings
 
 import mmcv
-
 from mmocr.core import imshow_pred_boundary
 
 
@@ -16,18 +15,20 @@ class TextDetectorMixin:
     def __init__(self, show_score):
         self.show_score = show_score
 
-    def show_result(self,
-                    img,
-                    result,
-                    score_thr=0.5,
-                    bbox_color='green',
-                    text_color='green',
-                    thickness=1,
-                    font_scale=0.5,
-                    win_name='',
-                    show=False,
-                    wait_time=0,
-                    out_file=None):
+    def show_result(
+        self,
+        img,
+        result,
+        score_thr=0.5,
+        bbox_color="green",
+        text_color="green",
+        thickness=1,
+        font_scale=0.5,
+        win_name="",
+        show=False,
+        wait_time=0,
+        out_file=None,
+    ):
         """Draw `result` over `img`.
 
         Args:
@@ -51,8 +52,8 @@ class TextDetectorMixin:
         img = img.copy()
         boundaries = None
         labels = None
-        if 'boundary_result' in result.keys():
-            boundaries = result['boundary_result']
+        if "boundary_result" in result.keys():
+            boundaries = result["boundary_result"]
             labels = [0] * len(boundaries)
 
         # if out_file specified, do not show image in window
@@ -73,9 +74,9 @@ class TextDetectorMixin:
                 show=show,
                 wait_time=wait_time,
                 out_file=out_file,
-                show_score=self.show_score)
+                show_score=self.show_score,
+            )
 
         if not (show or out_file):
-            warnings.warn('show==False and out_file is not specified, '
-                          'result image will be returned')
+            warnings.warn("show==False and out_file is not specified, " "result image will be returned")
         return img

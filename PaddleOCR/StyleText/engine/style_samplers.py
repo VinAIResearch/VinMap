@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import numpy as np
 import random
+
 import cv2
+import numpy as np
 
 
 class DatasetSampler(object):
@@ -35,7 +36,7 @@ class DatasetSampler(object):
             self.index = 0
         if self.dataset_with_label:
             path_label = self.path_label_list[self.index]
-            rel_image_path, label = path_label.split('\t')
+            rel_image_path, label = path_label.split("\t")
         else:
             rel_image_path = self.path_label_list[self.index]
             label = None

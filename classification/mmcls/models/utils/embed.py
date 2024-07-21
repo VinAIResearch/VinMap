@@ -13,11 +13,7 @@ from mmcv.runner.base_module import BaseModule
 from .helpers import to_2tuple
 
 
-def resize_pos_embed(pos_embed,
-                     src_shape,
-                     dst_shape,
-                     mode='bicubic',
-                     num_extra_tokens=1):
+def resize_pos_embed(pos_embed, src_shape, dst_shape, mode="bicubic", num_extra_tokens=1):
     """Resize pos_embed weights.
 
     Args:
@@ -38,20 +34,20 @@ def resize_pos_embed(pos_embed,
     """
     if src_shape[0] == dst_shape[0] and src_shape[1] == dst_shape[1]:
         return pos_embed
-    assert pos_embed.ndim == 3, 'shape of pos_embed must be [1, L, C]'
+    assert pos_embed.ndim == 3, "shape of pos_embed must be [1, L, C]"
     _, L, C = pos_embed.shape
     src_h, src_w = src_shape
-    assert L == src_h * src_w + num_extra_tokens, \
-        f"The length of `pos_embed` ({L}) doesn't match the expected " \
-        f'shape ({src_h}*{src_w}+{num_extra_tokens}). Please check the' \
-        '`img_size` argument.'
+    assert L == src_h * src_w + num_extra_tokens, (
+        f"The length of `pos_embed` ({L}) doesn't match the expected "
+        f"shape ({src_h}*{src_w}+{num_extra_tokens}). Please check the"
+        "`img_size` argument."
+    )
     extra_tokens = pos_embed[:, :num_extra_tokens]
 
     src_weight = pos_embed[:, num_extra_tokens:]
     src_weight = src_weight.reshape(1, src_h, src_w, C).permute(0, 3, 1, 2)
 
-    dst_weight = F.interpolate(
-        src_weight, size=dst_shape, align_corners=False, mode=mode)
+    dst_weight = F.interpolate(src_weight, size=dst_shape, align_corners=False, mode=mode)
     dst_weight = torch.flatten(dst_weight, 2).transpose(1, 2)
 
     return torch.cat((extra_tokens, dst_weight), dim=1)
@@ -89,7 +85,7 @@ def resize_relative_position_bias_table(src_shape, dst_shape, table, num_head):
     cur = 1
     for i in range(src_shape // 2):
         dis.append(cur)
-        cur += q**(i + 1)
+        cur += q ** (i + 1)
 
     r_ids = [-_ for _ in reversed(dis)]
 
@@ -104,11 +100,8 @@ def resize_relative_position_bias_table(src_shape, dst_shape, table, num_head):
 
     for i in range(num_head):
         z = table[:, i].view(src_shape, src_shape).float().numpy()
-        f_cubic = interpolate.interp2d(x, y, z, kind='cubic')
-        all_rel_pos_bias.append(
-            torch.Tensor(f_cubic(dx,
-                                 dy)).contiguous().view(-1,
-                                                        1).to(table.device))
+        f_cubic = interpolate.interp2d(x, y, z, kind="cubic")
+        all_rel_pos_bias.append(torch.Tensor(f_cubic(dx, dy)).contiguous().view(-1, 1).to(table.device))
     new_rel_pos_bias = torch.cat(all_rel_pos_bias, dim=-1)
     return new_rel_pos_bias
 
@@ -130,42 +123,42 @@ class PatchEmbed(BaseModule):
             Default: None
     """
 
-    def __init__(self,
-                 img_size=224,
-                 in_channels=3,
-                 embed_dims=768,
-                 norm_cfg=None,
-                 conv_cfg=None,
-                 init_cfg=None):
+    def __init__(self, img_size=224, in_channels=3, embed_dims=768, norm_cfg=None, conv_cfg=None, init_cfg=None):
         super(PatchEmbed, self).__init__(init_cfg)
-        warnings.warn('The `PatchEmbed` in mmcls will be deprecated. '
-                      'Please use `mmcv.cnn.bricks.transformer.PatchEmbed`. '
-                      "It's more general and supports dynamic input shape")
+        warnings.warn(
+            "The `PatchEmbed` in mmcls will be deprecated. "
+            "Please use `mmcv.cnn.bricks.transformer.PatchEmbed`. "
+            "It's more general and supports dynamic input shape"
+        )
 
         if isinstance(img_size, int):
             img_size = to_2tuple(img_size)
         elif isinstance(img_size, tuple):
             if len(img_size) == 1:
                 img_size = to_2tuple(img_size[0])
-            assert len(img_size) == 2, \
-                f'The size of image should have length 1 or 2, ' \
-                f'but got {len(img_size)}'
+            assert len(img_size) == 2, f"The size of image should have length 1 or 2, " f"but got {len(img_size)}"
 
         self.img_size = img_size
         self.embed_dims = embed_dims
 
         # Use conv layer to embed
         conv_cfg = conv_cfg or dict()
-        _conv_cfg = dict(
-            type='Conv2d', kernel_size=16, stride=16, padding=0, dilation=1)
+        _conv_cfg = dict(type="Conv2d", kernel_size=16, stride=16, padding=0, dilation=1)
         _conv_cfg.update(conv_cfg)
         self.projection = build_conv_layer(_conv_cfg, in_channels, embed_dims)
 
         # Calculate how many patches a input image is splited to.
-        h_out, w_out = [(self.img_size[i] + 2 * self.projection.padding[i] -
-                         self.projection.dilation[i] *
-                         (self.projection.kernel_size[i] - 1) - 1) //
-                        self.projection.stride[i] + 1 for i in range(2)]
+        h_out, w_out = [
+            (
+                self.img_size[i]
+                + 2 * self.projection.padding[i]
+                - self.projection.dilation[i] * (self.projection.kernel_size[i] - 1)
+                - 1
+            )
+            // self.projection.stride[i]
+            + 1
+            for i in range(2)
+        ]
 
         self.patches_resolution = (h_out, w_out)
         self.num_patches = h_out * w_out
@@ -177,9 +170,9 @@ class PatchEmbed(BaseModule):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        assert H == self.img_size[0] and W == self.img_size[1], \
-            f"Input image size ({H}*{W}) doesn't " \
-            f'match model ({self.img_size[0]}*{self.img_size[1]}).'
+        assert H == self.img_size[0] and W == self.img_size[1], (
+            f"Input image size ({H}*{W}) doesn't " f"match model ({self.img_size[0]}*{self.img_size[1]})."
+        )
         # The output size is (B, N, D), where N=H*W/P/P, D is embid_dim
         x = self.projection(x).flatten(2).transpose(1, 2)
 
@@ -209,14 +202,9 @@ class HybridEmbed(BaseModule):
             Default: None.
     """
 
-    def __init__(self,
-                 backbone,
-                 img_size=224,
-                 feature_size=None,
-                 in_channels=3,
-                 embed_dims=768,
-                 conv_cfg=None,
-                 init_cfg=None):
+    def __init__(
+        self, backbone, img_size=224, feature_size=None, in_channels=3, embed_dims=768, conv_cfg=None, init_cfg=None
+    ):
         super(HybridEmbed, self).__init__(init_cfg)
         assert isinstance(backbone, nn.Module)
         if isinstance(img_size, int):
@@ -224,9 +212,7 @@ class HybridEmbed(BaseModule):
         elif isinstance(img_size, tuple):
             if len(img_size) == 1:
                 img_size = to_2tuple(img_size[0])
-            assert len(img_size) == 2, \
-                f'The size of image should have length 1 or 2, ' \
-                f'but got {len(img_size)}'
+            assert len(img_size) == 2, f"The size of image should have length 1 or 2, " f"but got {len(img_size)}"
 
         self.img_size = img_size
         self.backbone = backbone
@@ -241,8 +227,7 @@ class HybridEmbed(BaseModule):
                 training = backbone.training
                 if training:
                     backbone.eval()
-                o = self.backbone(
-                    torch.zeros(1, in_channels, img_size[0], img_size[1]))
+                o = self.backbone(torch.zeros(1, in_channels, img_size[0], img_size[1]))
                 if isinstance(o, (list, tuple)):
                     # last feature if backbone outputs list/tuple of features
                     o = o[-1]
@@ -251,7 +236,7 @@ class HybridEmbed(BaseModule):
                 backbone.train(training)
         else:
             feature_size = to_2tuple(feature_size)
-            if hasattr(self.backbone, 'feature_info'):
+            if hasattr(self.backbone, "feature_info"):
                 feature_dim = self.backbone.feature_info.channels()[-1]
             else:
                 feature_dim = self.backbone.num_features
@@ -259,8 +244,7 @@ class HybridEmbed(BaseModule):
 
         # Use conv layer to embed
         conv_cfg = conv_cfg or dict()
-        _conv_cfg = dict(
-            type='Conv2d', kernel_size=1, stride=1, padding=0, dilation=1)
+        _conv_cfg = dict(type="Conv2d", kernel_size=1, stride=1, padding=0, dilation=1)
         _conv_cfg.update(conv_cfg)
         self.projection = build_conv_layer(_conv_cfg, feature_dim, embed_dims)
 
@@ -309,17 +293,19 @@ class PatchMerging(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size=2,
-                 stride=None,
-                 padding='corner',
-                 dilation=1,
-                 bias=False,
-                 norm_cfg=dict(type='LN'),
-                 is_post_norm=False,
-                 init_cfg=None):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=2,
+        stride=None,
+        padding="corner",
+        dilation=1,
+        bias=False,
+        norm_cfg=dict(type="LN"),
+        is_post_norm=False,
+        init_cfg=None,
+    ):
         super().__init__(init_cfg=init_cfg)
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -336,21 +322,15 @@ class PatchMerging(BaseModule):
 
         if isinstance(padding, str):
             self.adaptive_padding = AdaptivePadding(
-                kernel_size=kernel_size,
-                stride=stride,
-                dilation=dilation,
-                padding=padding)
+                kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding
+            )
             # disable the padding of unfold
             padding = 0
         else:
             self.adaptive_padding = None
 
         padding = to_2tuple(padding)
-        self.sampler = nn.Unfold(
-            kernel_size=kernel_size,
-            dilation=dilation,
-            padding=padding,
-            stride=stride)
+        self.sampler = nn.Unfold(kernel_size=kernel_size, dilation=dilation, padding=padding, stride=stride)
 
         sample_dim = kernel_size[0] * kernel_size[1] * in_channels
 
@@ -380,13 +360,10 @@ class PatchMerging(BaseModule):
               (Merged_H, Merged_W).
         """
         B, L, C = x.shape
-        assert isinstance(input_size, Sequence), f'Expect ' \
-                                                 f'input_size is ' \
-                                                 f'`Sequence` ' \
-                                                 f'but get {input_size}'
+        assert isinstance(input_size, Sequence), f"Expect " f"input_size is " f"`Sequence` " f"but get {input_size}"
 
         H, W = input_size
-        assert L == H * W, 'input feature has wrong size'
+        assert L == H * W, "input feature has wrong size"
 
         x = x.view(B, H, W, C).permute([0, 3, 1, 2])  # B, C, H, W
 
@@ -399,12 +376,12 @@ class PatchMerging(BaseModule):
         # if kernel_size=2 and stride=2, x should has shape (B, 4*C, H/2*W/2)
         x = self.sampler(x)
 
-        out_h = (H + 2 * self.sampler.padding[0] - self.sampler.dilation[0] *
-                 (self.sampler.kernel_size[0] - 1) -
-                 1) // self.sampler.stride[0] + 1
-        out_w = (W + 2 * self.sampler.padding[1] - self.sampler.dilation[1] *
-                 (self.sampler.kernel_size[1] - 1) -
-                 1) // self.sampler.stride[1] + 1
+        out_h = (
+            H + 2 * self.sampler.padding[0] - self.sampler.dilation[0] * (self.sampler.kernel_size[0] - 1) - 1
+        ) // self.sampler.stride[0] + 1
+        out_w = (
+            W + 2 * self.sampler.padding[1] - self.sampler.dilation[1] * (self.sampler.kernel_size[1] - 1) - 1
+        ) // self.sampler.stride[1] + 1
 
         output_size = (out_h, out_w)
         x = x.transpose(1, 2)  # B, H/2*W/2, 4*C

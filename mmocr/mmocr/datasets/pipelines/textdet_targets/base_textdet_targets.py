@@ -2,12 +2,11 @@
 import sys
 
 import cv2
+import mmocr.utils.check_argument as check_argument
 import numpy as np
 import pyclipper
 from mmcv.utils import print_log
 from shapely.geometry import Polygon as plg
-
-import mmocr.utils.check_argument as check_argument
 
 
 class BaseTextDetTargets:
@@ -35,21 +34,16 @@ class BaseTextDetTargets:
         # b^2
         b_square = np.square(xs - point_2[0]) + np.square(ys - point_2[1])
         # c^2
-        c_square = np.square(point_1[0] - point_2[0]) + np.square(point_1[1] -
-                                                                  point_2[1])
+        c_square = np.square(point_1[0] - point_2[0]) + np.square(point_1[1] - point_2[1])
         # -cosC=(c^2-a^2-b^2)/2(ab)
-        neg_cos_c = (
-            (c_square - a_square - b_square) /
-            (np.finfo(np.float32).eps + 2 * np.sqrt(a_square * b_square)))
+        neg_cos_c = (c_square - a_square - b_square) / (np.finfo(np.float32).eps + 2 * np.sqrt(a_square * b_square))
         # sinC^2=1-cosC^2
         square_sin = 1 - np.square(neg_cos_c)
         square_sin = np.nan_to_num(square_sin)
         # distance=a*b*sinC/c=a*h/c=2*area/c
-        result = np.sqrt(a_square * b_square * square_sin /
-                         (np.finfo(np.float32).eps + c_square))
+        result = np.sqrt(a_square * b_square * square_sin / (np.finfo(np.float32).eps + c_square))
         # set result to minimum edge if C<pi/2
-        result[neg_cos_c < 0] = np.sqrt(np.fmin(a_square,
-                                                b_square))[neg_cos_c < 0]
+        result[neg_cos_c < 0] = np.sqrt(np.fmin(a_square, b_square))[neg_cos_c < 0]
         return result
 
     def polygon_area(self, polygon):
@@ -65,10 +59,9 @@ class BaseTextDetTargets:
         edge = 0
         for i in range(polygon.shape[0]):
             next_index = (i + 1) % polygon.shape[0]
-            edge += (polygon[next_index, 0] - polygon[i, 0]) * (
-                polygon[next_index, 1] + polygon[i, 1])
+            edge += (polygon[next_index, 0] - polygon[i, 0]) * (polygon[next_index, 1] + polygon[i, 1])
 
-        return edge / 2.
+        return edge / 2.0
 
     def polygon_size(self, polygon):
         """Estimate the height and width of the minimum bounding box of the
@@ -85,12 +78,7 @@ class BaseTextDetTargets:
         size = rect[1]
         return size
 
-    def generate_kernels(self,
-                         img_size,
-                         text_polys,
-                         shrink_ratio,
-                         max_shrink=sys.maxsize,
-                         ignore_tags=None):
+    def generate_kernels(self, img_size, text_polys, shrink_ratio, max_shrink=sys.maxsize, ignore_tags=None):
         """Generate text instance kernels for one shrink ratio.
 
         Args:
@@ -112,12 +100,9 @@ class BaseTextDetTargets:
             instance = poly[0].reshape(-1, 2).astype(np.int32)
             area = plg(instance).area
             peri = cv2.arcLength(instance, True)
-            distance = min(
-                int(area * (1 - shrink_ratio * shrink_ratio) / (peri + 0.001) +
-                    0.5), max_shrink)
+            distance = min(int(area * (1 - shrink_ratio * shrink_ratio) / (peri + 0.001) + 0.5), max_shrink)
             pco = pyclipper.PyclipperOffset()
-            pco.AddPath(instance, pyclipper.JT_ROUND,
-                        pyclipper.ET_CLOSEDPOLYGON)
+            pco.AddPath(instance, pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
             shrunk = np.array(pco.Execute(-distance))
 
             # check shrunk == [] or empty ndarray
@@ -129,7 +114,7 @@ class BaseTextDetTargets:
                 shrunk = np.array(shrunk[0]).reshape(-1, 2)
 
             except Exception as e:
-                print_log(f'{shrunk} with error {e}')
+                print_log(f"{shrunk} with error {e}")
                 if ignore_tags is not None:
                     ignore_tags[text_ind] = True
                 continue
@@ -154,8 +139,7 @@ class BaseTextDetTargets:
         mask = np.ones(mask_size, dtype=np.uint8)
 
         for poly in polygons_ignore:
-            instance = poly[0].reshape(-1,
-                                       2).astype(np.int32).reshape(1, -1, 2)
+            instance = poly[0].reshape(-1, 2).astype(np.int32).reshape(1, -1, 2)
             cv2.fillPoly(mask, instance, 0)
 
         return mask

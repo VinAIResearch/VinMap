@@ -7,14 +7,15 @@ from mmcv.cnn import UPSAMPLE_LAYERS as MMCV_UPSAMPLE_LAYERS
 from mmcv.utils import Registry, build_from_cfg
 from mmdet.models.builder import BACKBONES as MMDET_BACKBONES
 
-CONVERTORS = Registry('convertor')
-ENCODERS = Registry('encoder')
-DECODERS = Registry('decoder')
-PREPROCESSOR = Registry('preprocessor')
-POSTPROCESSOR = Registry('postprocessor')
 
-UPSAMPLE_LAYERS = Registry('upsample layer', parent=MMCV_UPSAMPLE_LAYERS)
-BACKBONES = Registry('models', parent=MMDET_BACKBONES)
+CONVERTORS = Registry("convertor")
+ENCODERS = Registry("encoder")
+DECODERS = Registry("decoder")
+PREPROCESSOR = Registry("preprocessor")
+POSTPROCESSOR = Registry("postprocessor")
+
+UPSAMPLE_LAYERS = Registry("upsample layer", parent=MMCV_UPSAMPLE_LAYERS)
+BACKBONES = Registry("models", parent=MMDET_BACKBONES)
 LOSSES = BACKBONES
 DETECTORS = BACKBONES
 ROI_EXTRACTORS = BACKBONES
@@ -23,13 +24,12 @@ NECKS = BACKBONES
 FUSERS = BACKBONES
 RECOGNIZERS = BACKBONES
 
-ACTIVATION_LAYERS = Registry('activation layer', parent=MMCV_ACTIVATION_LAYERS)
+ACTIVATION_LAYERS = Registry("activation layer", parent=MMCV_ACTIVATION_LAYERS)
 
 
 def build_recognizer(cfg, train_cfg=None, test_cfg=None):
     """Build recognizer."""
-    return build_from_cfg(cfg, RECOGNIZERS,
-                          dict(train_cfg=train_cfg, test_cfg=test_cfg))
+    return build_from_cfg(cfg, RECOGNIZERS, dict(train_cfg=train_cfg, test_cfg=test_cfg))
 
 
 def build_convertor(cfg):
@@ -106,20 +106,19 @@ def build_upsample_layer(cfg, *args, **kwargs):
         nn.Module: Created upsample layer.
     """
     if not isinstance(cfg, dict):
-        raise TypeError(f'cfg must be a dict, but got {type(cfg)}')
-    if 'type' not in cfg:
-        raise KeyError(
-            f'the cfg dict must contain the key "type", but got {cfg}')
+        raise TypeError(f"cfg must be a dict, but got {type(cfg)}")
+    if "type" not in cfg:
+        raise KeyError(f'the cfg dict must contain the key "type", but got {cfg}')
     cfg_ = cfg.copy()
 
-    layer_type = cfg_.pop('type')
+    layer_type = cfg_.pop("type")
     if layer_type not in UPSAMPLE_LAYERS:
-        raise KeyError(f'Unrecognized upsample type {layer_type}')
+        raise KeyError(f"Unrecognized upsample type {layer_type}")
     else:
         upsample = UPSAMPLE_LAYERS.get(layer_type)
 
     if upsample is nn.Upsample:
-        cfg_['mode'] = layer_type
+        cfg_["mode"] = layer_type
     layer = upsample(*args, **kwargs, **cfg_)
     return layer
 
@@ -141,12 +140,9 @@ def build_activation_layer(cfg):
 def build_detector(cfg, train_cfg=None, test_cfg=None):
     """Build detector."""
     if train_cfg is not None or test_cfg is not None:
-        warnings.warn(
-            'train_cfg and test_cfg is deprecated, '
-            'please specify them in model', UserWarning)
-    assert cfg.get('train_cfg') is None or train_cfg is None, \
-        'train_cfg specified in both outer field and model field '
-    assert cfg.get('test_cfg') is None or test_cfg is None, \
-        'test_cfg specified in both outer field and model field '
-    return DETECTORS.build(
-        cfg, default_args=dict(train_cfg=train_cfg, test_cfg=test_cfg))
+        warnings.warn("train_cfg and test_cfg is deprecated, " "please specify them in model", UserWarning)
+    assert (
+        cfg.get("train_cfg") is None or train_cfg is None
+    ), "train_cfg specified in both outer field and model field "
+    assert cfg.get("test_cfg") is None or test_cfg is None, "test_cfg specified in both outer field and model field "
+    return DETECTORS.build(cfg, default_args=dict(train_cfg=train_cfg, test_cfg=test_cfg))

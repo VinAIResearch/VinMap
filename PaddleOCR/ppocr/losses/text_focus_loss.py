@@ -16,19 +16,21 @@ This code is refer from:
 https://github.com/FudanVI/FudanOCR/blob/main/scene-text-telescope/loss/text_focus_loss.py
 """
 
-import paddle.nn as nn
-import paddle
-import numpy as np
 import pickle as pkl
 
-standard_alphebet = '-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+import numpy as np
+import paddle
+import paddle.nn as nn
+
+
+standard_alphebet = "-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 standard_dict = {}
 for index in range(len(standard_alphebet)):
     standard_dict[standard_alphebet[index]] = index
 
 
 def load_confuse_matrix(confuse_dict_path):
-    f = open(confuse_dict_path, 'rb')
+    f = open(confuse_dict_path, "rb")
     data = pkl.load(f)
     f.close()
     number = data[:10]
@@ -42,7 +44,7 @@ def load_confuse_matrix(confuse_dict_path):
     rearrange_data[rearrange_data == np.inf] = 1
     rearrange_data = paddle.to_tensor(rearrange_data)
 
-    lower_alpha = 'abcdefghijklmnopqrstuvwxyz'
+    lower_alpha = "abcdefghijklmnopqrstuvwxyz"
     # upper_alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     for i in range(63):
         for j in range(63):
@@ -84,8 +86,4 @@ class TelescopeLoss(nn.Layer):
         attention_loss = self.l1_loss(word_attention_map_gt, word_attention_map_pred)
         recognition_loss = weight_cross_entropy(sr_pred, text_gt, self.weight_table)
         loss = mse_loss + attention_loss * 10 + recognition_loss * 0.0005
-        return {
-            "mse_loss": mse_loss,
-            "attention_loss": attention_loss,
-            "loss": loss
-        }
+        return {"mse_loss": mse_loss, "attention_loss": attention_loss, "loss": loss}

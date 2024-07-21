@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmocr.models.builder import ENCODERS, build_decoder, build_encoder
+
 from .base_encoder import BaseEncoder
 
 
@@ -17,11 +18,13 @@ class ABIVisionModel(BaseEncoder):
         init_cfg (dict): Specifies the initialization method for model layers.
     """
 
-    def __init__(self,
-                 encoder=dict(type='TransformerEncoder'),
-                 decoder=dict(type='ABIVisionDecoder'),
-                 init_cfg=dict(type='Xavier', layer='Conv2d'),
-                 **kwargs):
+    def __init__(
+        self,
+        encoder=dict(type="TransformerEncoder"),
+        decoder=dict(type="ABIVisionDecoder"),
+        init_cfg=dict(type="Xavier", layer="Conv2d"),
+        **kwargs
+    ):
         super().__init__(init_cfg=init_cfg)
         self.encoder = build_encoder(encoder)
         self.decoder = build_decoder(decoder)

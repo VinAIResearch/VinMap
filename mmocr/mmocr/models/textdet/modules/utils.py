@@ -74,34 +74,25 @@ def feature_embedding(input_feats, out_feat_len):
     residue_dim = out_feat_len % feat_dim
 
     if residue_dim > 0:
-        embed_wave = np.array([
-            np.power(1000, 2.0 * (j // 2) / feat_repeat_times + 1)
-            for j in range(feat_repeat_times + 1)
-        ]).reshape((feat_repeat_times + 1, 1, 1))
-        repeat_feats = np.repeat(
-            np.expand_dims(input_feats, axis=0), feat_repeat_times, axis=0)
-        residue_feats = np.hstack([
-            input_feats[:, 0:residue_dim],
-            np.zeros((num_nodes, feat_dim - residue_dim))
-        ])
+        embed_wave = np.array(
+            [np.power(1000, 2.0 * (j // 2) / feat_repeat_times + 1) for j in range(feat_repeat_times + 1)]
+        ).reshape((feat_repeat_times + 1, 1, 1))
+        repeat_feats = np.repeat(np.expand_dims(input_feats, axis=0), feat_repeat_times, axis=0)
+        residue_feats = np.hstack([input_feats[:, 0:residue_dim], np.zeros((num_nodes, feat_dim - residue_dim))])
         residue_feats = np.expand_dims(residue_feats, axis=0)
         repeat_feats = np.concatenate([repeat_feats, residue_feats], axis=0)
         embedded_feats = repeat_feats / embed_wave
         embedded_feats[:, 0::2] = np.sin(embedded_feats[:, 0::2])
         embedded_feats[:, 1::2] = np.cos(embedded_feats[:, 1::2])
-        embedded_feats = np.transpose(embedded_feats, (1, 0, 2)).reshape(
-            (num_nodes, -1))[:, 0:out_feat_len]
+        embedded_feats = np.transpose(embedded_feats, (1, 0, 2)).reshape((num_nodes, -1))[:, 0:out_feat_len]
     else:
-        embed_wave = np.array([
-            np.power(1000, 2.0 * (j // 2) / feat_repeat_times)
-            for j in range(feat_repeat_times)
-        ]).reshape((feat_repeat_times, 1, 1))
-        repeat_feats = np.repeat(
-            np.expand_dims(input_feats, axis=0), feat_repeat_times, axis=0)
+        embed_wave = np.array(
+            [np.power(1000, 2.0 * (j // 2) / feat_repeat_times) for j in range(feat_repeat_times)]
+        ).reshape((feat_repeat_times, 1, 1))
+        repeat_feats = np.repeat(np.expand_dims(input_feats, axis=0), feat_repeat_times, axis=0)
         embedded_feats = repeat_feats / embed_wave
         embedded_feats[:, 0::2] = np.sin(embedded_feats[:, 0::2])
         embedded_feats[:, 1::2] = np.cos(embedded_feats[:, 1::2])
-        embedded_feats = np.transpose(embedded_feats, (1, 0, 2)).reshape(
-            (num_nodes, -1)).astype(np.float32)
+        embedded_feats = np.transpose(embedded_feats, (1, 0, 2)).reshape((num_nodes, -1)).astype(np.float32)
 
     return embedded_feats

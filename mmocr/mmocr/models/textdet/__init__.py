@@ -6,6 +6,5 @@ from .losses import *  # NOQA
 from .necks import *  # NOQA
 from .postprocess import *  # NOQA
 
-__all__ = (
-    dense_heads.__all__ + detectors.__all__ + losses.__all__ + necks.__all__ +
-    postprocess.__all__)
+
+__all__ = dense_heads.__all__ + detectors.__all__ + losses.__all__ + necks.__all__ + postprocess.__all__

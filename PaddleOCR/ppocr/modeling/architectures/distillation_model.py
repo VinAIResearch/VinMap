@@ -11,19 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 from paddle import nn
-from ppocr.modeling.transforms import build_transform
 from ppocr.modeling.backbones import build_backbone
-from ppocr.modeling.necks import build_neck
 from ppocr.modeling.heads import build_head
-from .base_model import BaseModel
+from ppocr.modeling.necks import build_neck
+from ppocr.modeling.transforms import build_transform
 from ppocr.utils.save_load import load_pretrained_params
 
-__all__ = ['DistillationModel']
+from .base_model import BaseModel
+
+
+__all__ = ["DistillationModel"]
 
 
 class DistillationModel(nn.Layer):

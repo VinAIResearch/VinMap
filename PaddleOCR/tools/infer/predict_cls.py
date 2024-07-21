@@ -14,23 +14,25 @@
 import os
 import sys
 
+
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(__dir__)
-sys.path.insert(0, os.path.abspath(os.path.join(__dir__, '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(__dir__, "../..")))
 
-os.environ["FLAGS_allocator_strategy"] = 'auto_growth'
+os.environ["FLAGS_allocator_strategy"] = "auto_growth"
 
-import cv2
 import copy
-import numpy as np
 import math
 import time
 import traceback
 
+import cv2
+import numpy as np
 import tools.infer.utility as utility
 from ppocr.postprocess import build_post_process
 from ppocr.utils.logging import get_logger
-from ppocr.utils.utility import get_image_file_list, check_and_read
+from ppocr.utils.utility import check_and_read, get_image_file_list
+
 
 logger = get_logger()
 
@@ -41,12 +43,11 @@ class TextClassifier(object):
         self.cls_batch_num = args.cls_batch_num
         self.cls_thresh = args.cls_thresh
         postprocess_params = {
-            'name': 'ClsPostProcess',
+            "name": "ClsPostProcess",
             "label_list": args.label_list,
         }
         self.postprocess_op = build_post_process(postprocess_params)
-        self.predictor, self.input_tensor, self.output_tensors, _ = \
-            utility.create_predictor(args, 'cls', logger)
+        self.predictor, self.input_tensor, self.output_tensors, _ = utility.create_predictor(args, "cls", logger)
         self.use_onnx = args.use_onnx
 
     def resize_norm_img(self, img):
@@ -59,7 +60,7 @@ class TextClassifier(object):
         else:
             resized_w = int(math.ceil(imgH * ratio))
         resized_image = cv2.resize(img, (resized_w, imgH))
-        resized_image = resized_image.astype('float32')
+        resized_image = resized_image.astype("float32")
         if self.cls_image_shape[0] == 1:
             resized_image = resized_image / 255
             resized_image = resized_image[np.newaxis, :]
@@ -81,7 +82,7 @@ class TextClassifier(object):
         # Sorting can speed up the cls process
         indices = np.argsort(np.array(width_list))
 
-        cls_res = [['', 0.0]] * img_num
+        cls_res = [["", 0.0]] * img_num
         batch_num = self.cls_batch_num
         elapse = 0
         for beg_img_no in range(0, img_num, batch_num):
@@ -116,9 +117,8 @@ class TextClassifier(object):
             for rno in range(len(cls_result)):
                 label, score = cls_result[rno]
                 cls_res[indices[beg_img_no + rno]] = [label, score]
-                if '180' in label and score > self.cls_thresh:
-                    img_list[indices[beg_img_no + rno]] = cv2.rotate(
-                        img_list[indices[beg_img_no + rno]], 1)
+                if "180" in label and score > self.cls_thresh:
+                    img_list[indices[beg_img_no + rno]] = cv2.rotate(img_list[indices[beg_img_no + rno]], 1)
         return img_list, cls_res, elapse
 
 
@@ -143,8 +143,7 @@ def main(args):
         logger.info(E)
         exit()
     for ino in range(len(img_list)):
-        logger.info("Predicts of {}:{}".format(valid_image_file_list[ino],
-                                               cls_res[ino]))
+        logger.info("Predicts of {}:{}".format(valid_image_file_list[ino], cls_res[ino]))
 
 
 if __name__ == "__main__":

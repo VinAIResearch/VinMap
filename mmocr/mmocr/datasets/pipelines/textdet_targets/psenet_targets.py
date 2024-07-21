@@ -17,7 +17,5 @@ class PSENetTargets(PANetTargets):
         max_shrink(int): The maximum shrinking distance.
     """
 
-    def __init__(self,
-                 shrink_ratio=(1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4),
-                 max_shrink=20):
+    def __init__(self, shrink_ratio=(1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4), max_shrink=20):
         super().__init__(shrink_ratio=shrink_ratio, max_shrink=max_shrink)

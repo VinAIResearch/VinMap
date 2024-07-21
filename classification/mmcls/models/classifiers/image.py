@@ -8,17 +8,11 @@ from .base import BaseClassifier
 @CLASSIFIERS.register_module()
 class ImageClassifier(BaseClassifier):
 
-    def __init__(self,
-                 backbone,
-                 neck=None,
-                 head=None,
-                 pretrained=None,
-                 train_cfg=None,
-                 init_cfg=None):
+    def __init__(self, backbone, neck=None, head=None, pretrained=None, train_cfg=None, init_cfg=None):
         super(ImageClassifier, self).__init__(init_cfg)
 
         if pretrained is not None:
-            self.init_cfg = dict(type='Pretrained', checkpoint=pretrained)
+            self.init_cfg = dict(type="Pretrained", checkpoint=pretrained)
         self.backbone = build_backbone(backbone)
 
         if neck is not None:
@@ -29,7 +23,7 @@ class ImageClassifier(BaseClassifier):
 
         self.augments = None
         if train_cfg is not None:
-            augments_cfg = train_cfg.get('augments', None)
+            augments_cfg = train_cfg.get("augments", None)
             if augments_cfg is not None:
                 self.augments = Augments(augments_cfg)
 
@@ -38,9 +32,9 @@ class ImageClassifier(BaseClassifier):
 
         See `mmclassificaiton/tools/analysis_tools/get_flops.py`
         """
-        return self.extract_feat(img, stage='pre_logits')
+        return self.extract_feat(img, stage="pre_logits")
 
-    def extract_feat(self, img, stage='neck'):
+    def extract_feat(self, img, stage="neck"):
         """Directly extract features from the specified stage.
 
         Args:
@@ -104,21 +98,21 @@ class ImageClassifier(BaseClassifier):
             >>> print(out.shape)  # The hidden dims in head is 3072
             torch.Size([1, 3072])
         """  # noqa: E501
-        assert stage in ['backbone', 'neck', 'pre_logits'], \
-            (f'Invalid output stage "{stage}", please choose from "backbone", '
-             '"neck" and "pre_logits"')
+        assert stage in ["backbone", "neck", "pre_logits"], (
+            f'Invalid output stage "{stage}", please choose from "backbone", ' '"neck" and "pre_logits"'
+        )
 
         x = self.backbone(img)
 
-        if stage == 'backbone':
+        if stage == "backbone":
             return x
 
         if self.with_neck:
             x = self.neck(x)
-        if stage == 'neck':
+        if stage == "neck":
             return x
 
-        if self.with_head and hasattr(self.head, 'pre_logits'):
+        if self.with_head and hasattr(self.head, "pre_logits"):
             x = self.head.pre_logits(x)
         return x
 
@@ -152,9 +146,7 @@ class ImageClassifier(BaseClassifier):
         x = self.extract_feat(img)
 
         if isinstance(self.head, MultiLabelClsHead):
-            assert 'softmax' not in kwargs, (
-                'Please use `sigmoid` instead of `softmax` '
-                'in multi-label tasks.')
+            assert "softmax" not in kwargs, "Please use `sigmoid` instead of `softmax` " "in multi-label tasks."
         res = self.head.simple_test(x, **kwargs)
 
         return res

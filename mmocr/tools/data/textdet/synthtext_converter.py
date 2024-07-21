@@ -7,10 +7,9 @@ import time
 import lmdb
 import mmcv
 import numpy as np
+from mmocr.utils import check_argument
 from scipy.io import loadmat
 from shapely.geometry import Polygon
-
-from mmocr.utils import check_argument
 
 
 def trace_boundary(char_boxes):
@@ -28,10 +27,7 @@ def trace_boundary(char_boxes):
     # from top left to to right
     p_top = [box[0:2] for box in char_boxes]
     # from bottom right to bottom left
-    p_bottom = [
-        char_boxes[idx][[2, 3], :]
-        for idx in range(len(char_boxes) - 1, -1, -1)
-    ]
+    p_bottom = [char_boxes[idx][[2, 3], :] for idx in range(len(char_boxes) - 1, -1, -1)]
 
     p = p_top + p_bottom
 
@@ -60,7 +56,7 @@ def match_bbox_char_str(bboxes, char_bboxes, strs):
     if len(bboxes.shape) == 2:
         bboxes = np.expand_dims(bboxes, axis=2)
     bboxes = np.transpose(bboxes, (2, 1, 0))
-    chars = ''.join(strs).replace('\n', '').replace(' ', '')
+    chars = "".join(strs).replace("\n", "").replace(" ", "")
     num_boxes = bboxes.shape[0]
 
     poly_list = [Polygon(bboxes[iter]) for iter in range(num_boxes)]
@@ -93,8 +89,7 @@ def match_bbox_char_str(bboxes, char_bboxes, strs):
             boundary = trace_boundary(item)
         poly_boundary_list.append(boundary)
 
-    return (poly_list, poly_box_list, poly_boundary_list, poly_charbox_list,
-            poly_char_idx_list, poly_char_list)
+    return (poly_list, poly_box_list, poly_boundary_list, poly_charbox_list, poly_char_idx_list, poly_char_list)
 
 
 def convert_annotations(root_path, gt_name, lmdb_name):
@@ -110,7 +105,7 @@ def convert_annotations(root_path, gt_name, lmdb_name):
     assert isinstance(lmdb_name, str)
     start_time = time.time()
     gt = loadmat(gt_name)
-    img_num = len(gt['imnames'][0])
+    img_num = len(gt["imnames"][0])
     env = lmdb.open(lmdb_name, map_size=int(1e9 * 40))
     with env.begin(write=True) as txn:
         for img_id in range(img_num):
@@ -118,48 +113,43 @@ def convert_annotations(root_path, gt_name, lmdb_name):
                 total_time_sec = time.time() - start_time
                 avg_time_sec = total_time_sec / img_id
                 eta_mins = (avg_time_sec * (img_num - img_id)) / 60
-                print(f'\ncurrent_img/total_imgs {img_id}/{img_num} | '
-                      f'eta: {eta_mins:.3f} mins')
+                print(f"\ncurrent_img/total_imgs {img_id}/{img_num} | " f"eta: {eta_mins:.3f} mins")
             # for each img
-            img_file = osp.join(root_path, 'imgs', gt['imnames'][0][img_id][0])
-            img = mmcv.imread(img_file, 'unchanged')
+            img_file = osp.join(root_path, "imgs", gt["imnames"][0][img_id][0])
+            img = mmcv.imread(img_file, "unchanged")
             height, width = img.shape[0:2]
             img_json = {}
-            img_json['file_name'] = gt['imnames'][0][img_id][0]
-            img_json['height'] = height
-            img_json['width'] = width
-            img_json['annotations'] = []
-            wordBB = gt['wordBB'][0][img_id]
-            charBB = gt['charBB'][0][img_id]
-            txt = gt['txt'][0][img_id]
-            poly_list, _, poly_boundary_list, _, _, _ = match_bbox_char_str(
-                wordBB, charBB, txt)
+            img_json["file_name"] = gt["imnames"][0][img_id][0]
+            img_json["height"] = height
+            img_json["width"] = width
+            img_json["annotations"] = []
+            wordBB = gt["wordBB"][0][img_id]
+            charBB = gt["charBB"][0][img_id]
+            txt = gt["txt"][0][img_id]
+            poly_list, _, poly_boundary_list, _, _, _ = match_bbox_char_str(wordBB, charBB, txt)
             for poly_inx in range(len(poly_list)):
 
                 polygon = poly_list[poly_inx]
                 min_x, min_y, max_x, max_y = polygon.bounds
                 bbox = [min_x, min_y, max_x - min_x, max_y - min_y]
                 anno_info = dict()
-                anno_info['iscrowd'] = 0
-                anno_info['category_id'] = 1
-                anno_info['bbox'] = bbox
-                anno_info['segmentation'] = [
-                    poly_boundary_list[poly_inx].flatten().tolist()
-                ]
+                anno_info["iscrowd"] = 0
+                anno_info["category_id"] = 1
+                anno_info["bbox"] = bbox
+                anno_info["segmentation"] = [poly_boundary_list[poly_inx].flatten().tolist()]
 
-                img_json['annotations'].append(anno_info)
+                img_json["annotations"].append(anno_info)
             string = json.dumps(img_json)
-            txn.put(str(img_id).encode('utf8'), string.encode('utf8'))
-        key = 'total_number'.encode('utf8')
-        value = str(img_num).encode('utf8')
+            txn.put(str(img_id).encode("utf8"), string.encode("utf8"))
+        key = "total_number".encode("utf8")
+        value = str(img_num).encode("utf8")
         txn.put(key, value)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Convert synthtext to lmdb dataset')
-    parser.add_argument('synthtext_path', help='synthetic root path')
-    parser.add_argument('-o', '--out-dir', help='output path')
+    parser = argparse.ArgumentParser(description="Convert synthtext to lmdb dataset")
+    parser.add_argument("synthtext_path", help="synthetic root path")
+    parser.add_argument("-o", "--out-dir", help="output path")
     args = parser.parse_args()
     return args
 
@@ -170,10 +160,10 @@ def main():
     out_dir = args.out_dir if args.out_dir else synthtext_path
     mmcv.mkdir_or_exist(out_dir)
 
-    gt_name = osp.join(synthtext_path, 'gt.mat')
-    lmdb_name = 'synthtext.lmdb'
+    gt_name = osp.join(synthtext_path, "gt.mat")
+    lmdb_name = "synthtext.lmdb"
     convert_annotations(synthtext_path, gt_name, osp.join(out_dir, lmdb_name))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

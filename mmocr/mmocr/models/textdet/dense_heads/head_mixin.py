@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
-
 from mmocr.models.builder import HEADS, build_loss, build_postprocessor
 from mmocr.utils import check_argument
 
@@ -40,10 +39,11 @@ class HeadMixin:
         for b in boundaries:
             sz = len(b)
             check_argument.valid_boundary(b, True)
-            b[:sz -
-              1] = (np.array(b[:sz - 1]) *
-                    (np.tile(scale_factor[:2], int(
-                        (sz - 1) / 2)).reshape(1, sz - 1))).flatten().tolist()
+            b[: sz - 1] = (
+                (np.array(b[: sz - 1]) * (np.tile(scale_factor[:2], int((sz - 1) / 2)).reshape(1, sz - 1)))
+                .flatten()
+                .tolist()
+            )
         return boundaries
 
     def get_boundary(self, score_maps, img_metas, rescale):
@@ -67,12 +67,9 @@ class HeadMixin:
         boundaries = self.postprocessor(score_maps)
 
         if rescale:
-            boundaries = self.resize_boundary(
-                boundaries,
-                1.0 / self.downsample_ratio / img_metas[0]['scale_factor'])
+            boundaries = self.resize_boundary(boundaries, 1.0 / self.downsample_ratio / img_metas[0]["scale_factor"])
 
-        results = dict(
-            boundary_result=boundaries, filename=img_metas[0]['filename'])
+        results = dict(boundary_result=boundaries, filename=img_metas[0]["filename"])
 
         return results
 

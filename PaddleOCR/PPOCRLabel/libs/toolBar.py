@@ -11,12 +11,12 @@
 # CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 try:
-    from PyQt5.QtGui import *
     from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
     from PyQt5.QtWidgets import *
 except ImportError:
-    from PyQt4.QtGui import *
     from PyQt4.QtCore import *
+    from PyQt4.QtGui import *
 
 
 class ToolBar(QToolBar):
@@ -41,6 +41,7 @@ class ToolBar(QToolBar):
 
 class ToolButton(QToolButton):
     """ToolBar companion class which ensures all buttons have the same size."""
+
     minSize = (60, 60)
 
     def minimumSizeHint(self):

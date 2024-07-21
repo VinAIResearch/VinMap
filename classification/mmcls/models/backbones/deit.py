@@ -55,11 +55,11 @@ class DistilledVisionTransformer(VisionTransformer):
         init_cfg (dict, optional): Initialization config dict.
             Defaults to None.
     """
+
     num_extra_tokens = 2  # cls_token, dist_token
 
-    def __init__(self, arch='deit-base', *args, **kwargs):
-        super(DistilledVisionTransformer, self).__init__(
-            arch=arch, *args, **kwargs)
+    def __init__(self, arch="deit-base", *args, **kwargs):
+        super(DistilledVisionTransformer, self).__init__(arch=arch, *args, **kwargs)
         self.dist_token = nn.Parameter(torch.zeros(1, 1, self.embed_dims))
 
     def forward(self, x):
@@ -75,7 +75,8 @@ class DistilledVisionTransformer(VisionTransformer):
             self.patch_resolution,
             patch_resolution,
             mode=self.interpolate_mode,
-            num_extra_tokens=self.num_extra_tokens)
+            num_extra_tokens=self.num_extra_tokens,
+        )
         x = self.drop_after_pos(x)
 
         if not self.with_cls_token:
@@ -112,6 +113,5 @@ class DistilledVisionTransformer(VisionTransformer):
     def init_weights(self):
         super(DistilledVisionTransformer, self).init_weights()
 
-        if not (isinstance(self.init_cfg, dict)
-                and self.init_cfg['type'] == 'Pretrained'):
+        if not (isinstance(self.init_cfg, dict) and self.init_cfg["type"] == "Pretrained"):
             trunc_normal_(self.dist_token, std=0.02)

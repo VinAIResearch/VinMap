@@ -3,9 +3,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from mmdet.core import multi_apply
-from torch import nn
-
 from mmocr.models.builder import LOSSES
+from torch import nn
 
 
 @LOSSES.register_module()
@@ -22,7 +21,7 @@ class FCELoss(nn.Module):
         ohem_ratio (float): the negative/positive ratio in OHEM.
     """
 
-    def __init__(self, fourier_degree, num_sample, ohem_ratio=3.):
+    def __init__(self, fourier_degree, num_sample, ohem_ratio=3.0):
         super().__init__()
         self.fourier_degree = fourier_degree
         self.num_sample = num_sample
@@ -48,8 +47,7 @@ class FCELoss(nn.Module):
             ``loss_reg_x`` and ``loss_reg_y``.
         """
         assert isinstance(preds, list)
-        assert p3_maps[0].shape[0] == 4 * self.fourier_degree + 5,\
-            'fourier degree not equal in FCEhead and FCEtarget'
+        assert p3_maps[0].shape[0] == 4 * self.fourier_degree + 5, "fourier degree not equal in FCEhead and FCEtarget"
 
         device = preds[0][0].device
         # to tensor
@@ -59,10 +57,10 @@ class FCELoss(nn.Module):
 
         losses = multi_apply(self.forward_single, preds, gts)
 
-        loss_tr = torch.tensor(0., device=device).float()
-        loss_tcl = torch.tensor(0., device=device).float()
-        loss_reg_x = torch.tensor(0., device=device).float()
-        loss_reg_y = torch.tensor(0., device=device).float()
+        loss_tr = torch.tensor(0.0, device=device).float()
+        loss_tcl = torch.tensor(0.0, device=device).float()
+        loss_reg_x = torch.tensor(0.0, device=device).float()
+        loss_reg_y = torch.tensor(0.0, device=device).float()
 
         for idx, loss in enumerate(losses):
             if idx == 0:
@@ -92,13 +90,13 @@ class FCELoss(nn.Module):
         tr_pred = cls_pred[:, :, :, :2].view(-1, 2)
         tcl_pred = cls_pred[:, :, :, 2:].view(-1, 2)
         x_pred = reg_pred[:, :, :, 0:k].view(-1, k)
-        y_pred = reg_pred[:, :, :, k:2 * k].view(-1, k)
+        y_pred = reg_pred[:, :, :, k : 2 * k].view(-1, k)
 
         tr_mask = gt[:, :, :, :1].view(-1)
         tcl_mask = gt[:, :, :, 1:2].view(-1)
         train_mask = gt[:, :, :, 2:3].view(-1)
-        x_map = gt[:, :, :, 3:3 + k].view(-1, k)
-        y_map = gt[:, :, :, 3 + k:].view(-1, k)
+        x_map = gt[:, :, :, 3 : 3 + k].view(-1, k)
+        y_map = gt[:, :, :, 3 + k :].view(-1, k)
 
         tr_train_mask = train_mask * tr_mask
         device = x_map.device
@@ -106,35 +104,29 @@ class FCELoss(nn.Module):
         loss_tr = self.ohem(tr_pred, tr_mask.long(), train_mask.long())
 
         # tcl loss
-        loss_tcl = torch.tensor(0.).float().to(device)
+        loss_tcl = torch.tensor(0.0).float().to(device)
         tr_neg_mask = 1 - tr_train_mask
         if tr_train_mask.sum().item() > 0:
-            loss_tcl_pos = F.cross_entropy(
-                tcl_pred[tr_train_mask.bool()],
-                tcl_mask[tr_train_mask.bool()].long())
-            loss_tcl_neg = F.cross_entropy(tcl_pred[tr_neg_mask.bool()],
-                                           tcl_mask[tr_neg_mask.bool()].long())
+            loss_tcl_pos = F.cross_entropy(tcl_pred[tr_train_mask.bool()], tcl_mask[tr_train_mask.bool()].long())
+            loss_tcl_neg = F.cross_entropy(tcl_pred[tr_neg_mask.bool()], tcl_mask[tr_neg_mask.bool()].long())
             loss_tcl = loss_tcl_pos + 0.5 * loss_tcl_neg
 
         # regression loss
-        loss_reg_x = torch.tensor(0.).float().to(device)
-        loss_reg_y = torch.tensor(0.).float().to(device)
+        loss_reg_x = torch.tensor(0.0).float().to(device)
+        loss_reg_y = torch.tensor(0.0).float().to(device)
         if tr_train_mask.sum().item() > 0:
-            weight = (tr_mask[tr_train_mask.bool()].float() +
-                      tcl_mask[tr_train_mask.bool()].float()) / 2
+            weight = (tr_mask[tr_train_mask.bool()].float() + tcl_mask[tr_train_mask.bool()].float()) / 2
             weight = weight.contiguous().view(-1, 1)
 
             ft_x, ft_y = self.fourier2poly(x_map, y_map)
             ft_x_pre, ft_y_pre = self.fourier2poly(x_pred, y_pred)
 
-            loss_reg_x = torch.mean(weight * F.smooth_l1_loss(
-                ft_x_pre[tr_train_mask.bool()],
-                ft_x[tr_train_mask.bool()],
-                reduction='none'))
-            loss_reg_y = torch.mean(weight * F.smooth_l1_loss(
-                ft_y_pre[tr_train_mask.bool()],
-                ft_y[tr_train_mask.bool()],
-                reduction='none'))
+            loss_reg_x = torch.mean(
+                weight * F.smooth_l1_loss(ft_x_pre[tr_train_mask.bool()], ft_x[tr_train_mask.bool()], reduction="none")
+            )
+            loss_reg_y = torch.mean(
+                weight * F.smooth_l1_loss(ft_y_pre[tr_train_mask.bool()], ft_y[tr_train_mask.bool()], reduction="none")
+            )
 
         return loss_tr, loss_tcl, loss_reg_x, loss_reg_y
 
@@ -146,17 +138,12 @@ class FCELoss(nn.Module):
         n_pos = pos.float().sum()
 
         if n_pos.item() > 0:
-            loss_pos = F.cross_entropy(
-                predict[pos], target[pos], reduction='sum')
-            loss_neg = F.cross_entropy(
-                predict[neg], target[neg], reduction='none')
-            n_neg = min(
-                int(neg.float().sum().item()),
-                int(self.ohem_ratio * n_pos.float()))
+            loss_pos = F.cross_entropy(predict[pos], target[pos], reduction="sum")
+            loss_neg = F.cross_entropy(predict[neg], target[neg], reduction="none")
+            n_neg = min(int(neg.float().sum().item()), int(self.ohem_ratio * n_pos.float()))
         else:
-            loss_pos = torch.tensor(0.).to(device)
-            loss_neg = F.cross_entropy(
-                predict[neg], target[neg], reduction='none')
+            loss_pos = torch.tensor(0.0).to(device)
+            loss_neg = F.cross_entropy(predict[neg], target[neg], reduction="none")
             n_neg = 100
         if len(loss_neg) > n_neg:
             loss_neg, _ = torch.topk(loss_neg, n_neg)
@@ -181,25 +168,17 @@ class FCELoss(nn.Module):
 
         device = real_maps.device
 
-        k_vect = torch.arange(
-            -self.fourier_degree,
-            self.fourier_degree + 1,
-            dtype=torch.float,
-            device=device).view(-1, 1)
-        i_vect = torch.arange(
-            0, self.num_sample, dtype=torch.float, device=device).view(1, -1)
+        k_vect = torch.arange(-self.fourier_degree, self.fourier_degree + 1, dtype=torch.float, device=device).view(
+            -1, 1
+        )
+        i_vect = torch.arange(0, self.num_sample, dtype=torch.float, device=device).view(1, -1)
 
-        transform_matrix = 2 * np.pi / self.num_sample * torch.mm(
-            k_vect, i_vect)
+        transform_matrix = 2 * np.pi / self.num_sample * torch.mm(k_vect, i_vect)
 
-        x1 = torch.einsum('ak, kn-> an', real_maps,
-                          torch.cos(transform_matrix))
-        x2 = torch.einsum('ak, kn-> an', imag_maps,
-                          torch.sin(transform_matrix))
-        y1 = torch.einsum('ak, kn-> an', real_maps,
-                          torch.sin(transform_matrix))
-        y2 = torch.einsum('ak, kn-> an', imag_maps,
-                          torch.cos(transform_matrix))
+        x1 = torch.einsum("ak, kn-> an", real_maps, torch.cos(transform_matrix))
+        x2 = torch.einsum("ak, kn-> an", imag_maps, torch.sin(transform_matrix))
+        y1 = torch.einsum("ak, kn-> an", real_maps, torch.sin(transform_matrix))
+        y2 = torch.einsum("ak, kn-> an", imag_maps, torch.cos(transform_matrix))
 
         x_maps = x1 - x2
         y_maps = y1 + y2

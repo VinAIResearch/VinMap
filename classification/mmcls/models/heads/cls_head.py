@@ -3,8 +3,8 @@ import warnings
 
 import torch
 import torch.nn.functional as F
-
 from mmcls.models.losses import Accuracy
+
 from ..builder import HEADS, build_loss
 from ..utils import is_tracing
 from .base_head import BaseHead
@@ -22,19 +22,15 @@ class ClsHead(BaseHead):
             it is not reasonable to calculate accuracy. Defaults to False.
     """
 
-    def __init__(self,
-                 loss=dict(type='CrossEntropyLoss', loss_weight=1.0),
-                 topk=(1, ),
-                 cal_acc=False,
-                 init_cfg=None):
+    def __init__(self, loss=dict(type="CrossEntropyLoss", loss_weight=1.0), topk=(1,), cal_acc=False, init_cfg=None):
         super(ClsHead, self).__init__(init_cfg=init_cfg)
 
         assert isinstance(loss, dict)
         assert isinstance(topk, (int, tuple))
         if isinstance(topk, int):
-            topk = (topk, )
+            topk = (topk,)
         for _topk in topk:
-            assert _topk > 0, 'Top-k should be larger than 0'
+            assert _topk > 0, "Top-k should be larger than 0"
         self.topk = topk
 
         self.compute_loss = build_loss(loss)
@@ -45,17 +41,13 @@ class ClsHead(BaseHead):
         num_samples = len(cls_score)
         losses = dict()
         # compute loss
-        loss = self.compute_loss(
-            cls_score, gt_label, avg_factor=num_samples, **kwargs)
+        loss = self.compute_loss(cls_score, gt_label, avg_factor=num_samples, **kwargs)
         if self.cal_acc:
             # compute accuracy
             acc = self.compute_accuracy(cls_score, gt_label)
             assert len(acc) == len(self.topk)
-            losses['accuracy'] = {
-                f'top-{k}': a
-                for k, a in zip(self.topk, acc)
-            }
-        losses['loss'] = loss
+            losses["accuracy"] = {f"top-{k}": a for k, a in zip(self.topk, acc)}
+        losses["loss"] = loss
         return losses
 
     def forward_train(self, cls_score, gt_label, **kwargs):
@@ -69,8 +61,8 @@ class ClsHead(BaseHead):
             x = x[-1]
 
         warnings.warn(
-            'The input of ClsHead should be already logits. '
-            'Please modify the backbone if you want to get pre-logits feature.'
+            "The input of ClsHead should be already logits. "
+            "Please modify the backbone if you want to get pre-logits feature."
         )
         return x
 
@@ -98,8 +90,7 @@ class ClsHead(BaseHead):
             cls_score = cls_score[-1]
 
         if softmax:
-            pred = (
-                F.softmax(cls_score, dim=1) if cls_score is not None else None)
+            pred = F.softmax(cls_score, dim=1) if cls_score is not None else None
         else:
             pred = cls_score
 

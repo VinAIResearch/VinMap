@@ -1,10 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn.functional as F
-from torch import nn
-
 from mmocr.models.builder import LOSSES
 from mmocr.models.common.losses.dice_loss import DiceLoss
+from torch import nn
 
 
 @LOSSES.register_module()
@@ -23,16 +22,9 @@ class DBLoss(nn.Module):
             If False, dice loss will be used instead.
     """
 
-    def __init__(self,
-                 alpha=1,
-                 beta=1,
-                 reduction='mean',
-                 negative_ratio=3.0,
-                 eps=1e-6,
-                 bbce_loss=False):
+    def __init__(self, alpha=1, beta=1, reduction="mean", negative_ratio=3.0, eps=1e-6, bbce_loss=False):
         super().__init__()
-        assert reduction in ['mean',
-                             'sum'], " reduction must in ['mean','sum']"
+        assert reduction in ["mean", "sum"], " reduction must in ['mean','sum']"
         self.alpha = alpha
         self.beta = beta
         self.reduction = reduction
@@ -67,10 +59,8 @@ class DBLoss(nn.Module):
             for batch_inx in range(batch_size):
                 mask = torch.from_numpy(bitmasks[batch_inx].masks[level_inx])
                 mask_sz = mask.shape
-                pad = [
-                    0, target_sz[1] - mask_sz[1], 0, target_sz[0] - mask_sz[0]
-                ]
-                mask = F.pad(mask, pad, mode='constant', value=0)
+                pad = [0, target_sz[1] - mask_sz[1], 0, target_sz[0] - mask_sz[0]]
+                mask = F.pad(mask, pad, mode="constant", value=0)
                 kernel.append(mask)
             kernel = torch.stack(kernel)
             result_tensors.append(kernel)
@@ -79,33 +69,28 @@ class DBLoss(nn.Module):
 
     def balance_bce_loss(self, pred, gt, mask):
 
-        positive = (gt * mask)
-        negative = ((1 - gt) * mask)
+        positive = gt * mask
+        negative = (1 - gt) * mask
         positive_count = int(positive.float().sum())
-        negative_count = min(
-            int(negative.float().sum()),
-            int(positive_count * self.negative_ratio))
+        negative_count = min(int(negative.float().sum()), int(positive_count * self.negative_ratio))
 
         assert gt.max() <= 1 and gt.min() >= 0
         assert pred.max() <= 1 and pred.min() >= 0
-        loss = F.binary_cross_entropy(pred, gt, reduction='none')
+        loss = F.binary_cross_entropy(pred, gt, reduction="none")
         positive_loss = loss * positive.float()
         negative_loss = loss * negative.float()
 
         negative_loss, _ = torch.topk(negative_loss.view(-1), negative_count)
 
-        balance_loss = (positive_loss.sum() + negative_loss.sum()) / (
-            positive_count + negative_count + self.eps)
+        balance_loss = (positive_loss.sum() + negative_loss.sum()) / (positive_count + negative_count + self.eps)
 
         return balance_loss
 
     def l1_thr_loss(self, pred, gt, mask):
-        thr_loss = torch.abs((pred - gt) * mask).sum() / (
-            mask.sum() + self.eps)
+        thr_loss = torch.abs((pred - gt) * mask).sum() / (mask.sum() + self.eps)
         return thr_loss
 
-    def forward(self, preds, downsample_ratio, gt_shrink, gt_shrink_mask,
-                gt_thr, gt_thr_mask):
+    def forward(self, preds, downsample_ratio, gt_shrink, gt_shrink_mask, gt_thr, gt_thr_mask):
         """Compute DBNet loss.
 
         Args:
@@ -137,29 +122,22 @@ class DBLoss(nn.Module):
         pred_db = preds[:, 2, :, :]
         feature_sz = preds.size()
 
-        keys = ['gt_shrink', 'gt_shrink_mask', 'gt_thr', 'gt_thr_mask']
+        keys = ["gt_shrink", "gt_shrink_mask", "gt_thr", "gt_thr_mask"]
         gt = {}
         for k in keys:
             gt[k] = eval(k)
             gt[k] = [item.rescale(downsample_ratio) for item in gt[k]]
             gt[k] = self.bitmasks2tensor(gt[k], feature_sz[2:])
             gt[k] = [item.to(preds.device) for item in gt[k]]
-        gt['gt_shrink'][0] = (gt['gt_shrink'][0] > 0).float()
+        gt["gt_shrink"][0] = (gt["gt_shrink"][0] > 0).float()
         if self.bbce_loss:
-            loss_prob = self.balance_bce_loss(pred_prob, gt['gt_shrink'][0],
-                                              gt['gt_shrink_mask'][0])
+            loss_prob = self.balance_bce_loss(pred_prob, gt["gt_shrink"][0], gt["gt_shrink_mask"][0])
         else:
-            loss_prob = self.dice_loss(pred_prob, gt['gt_shrink'][0],
-                                       gt['gt_shrink_mask'][0])
+            loss_prob = self.dice_loss(pred_prob, gt["gt_shrink"][0], gt["gt_shrink_mask"][0])
 
-        loss_db = self.dice_loss(pred_db, gt['gt_shrink'][0],
-                                 gt['gt_shrink_mask'][0])
-        loss_thr = self.l1_thr_loss(pred_thr, gt['gt_thr'][0],
-                                    gt['gt_thr_mask'][0])
+        loss_db = self.dice_loss(pred_db, gt["gt_shrink"][0], gt["gt_shrink_mask"][0])
+        loss_thr = self.l1_thr_loss(pred_thr, gt["gt_thr"][0], gt["gt_thr_mask"][0])
 
-        results = dict(
-            loss_prob=self.alpha * loss_prob,
-            loss_db=loss_db,
-            loss_thr=self.beta * loss_thr)
+        results = dict(loss_prob=self.alpha * loss_prob, loss_db=loss_db, loss_thr=self.beta * loss_thr)
 
         return results

@@ -31,16 +31,18 @@ class SELayer(BaseModule):
             Default: (dict(type='ReLU'), dict(type='Sigmoid'))
     """
 
-    def __init__(self,
-                 channels,
-                 squeeze_channels=None,
-                 ratio=16,
-                 divisor=8,
-                 bias='auto',
-                 conv_cfg=None,
-                 act_cfg=(dict(type='ReLU'), dict(type='Sigmoid')),
-                 return_weight=False,
-                 init_cfg=None):
+    def __init__(
+        self,
+        channels,
+        squeeze_channels=None,
+        ratio=16,
+        divisor=8,
+        bias="auto",
+        conv_cfg=None,
+        act_cfg=(dict(type="ReLU"), dict(type="Sigmoid")),
+        return_weight=False,
+        init_cfg=None,
+    ):
         super(SELayer, self).__init__(init_cfg)
         if isinstance(act_cfg, dict):
             act_cfg = (act_cfg, act_cfg)
@@ -49,9 +51,9 @@ class SELayer(BaseModule):
         self.global_avgpool = nn.AdaptiveAvgPool2d(1)
         if squeeze_channels is None:
             squeeze_channels = make_divisible(channels // ratio, divisor)
-        assert isinstance(squeeze_channels, int) and squeeze_channels > 0, \
-            '"squeeze_channels" should be a positive integer, but get ' + \
-            f'{squeeze_channels} instead.'
+        assert isinstance(squeeze_channels, int) and squeeze_channels > 0, (
+            '"squeeze_channels" should be a positive integer, but get ' + f"{squeeze_channels} instead."
+        )
         self.return_weight = return_weight
         self.conv1 = ConvModule(
             in_channels=channels,
@@ -60,7 +62,8 @@ class SELayer(BaseModule):
             stride=1,
             bias=bias,
             conv_cfg=conv_cfg,
-            act_cfg=act_cfg[0])
+            act_cfg=act_cfg[0],
+        )
         self.conv2 = ConvModule(
             in_channels=squeeze_channels,
             out_channels=channels,
@@ -68,7 +71,8 @@ class SELayer(BaseModule):
             stride=1,
             bias=bias,
             conv_cfg=conv_cfg,
-            act_cfg=act_cfg[1])
+            act_cfg=act_cfg[1],
+        )
 
     def forward(self, x):
         out = self.global_avgpool(x)

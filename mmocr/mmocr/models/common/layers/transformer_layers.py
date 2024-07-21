@@ -1,9 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch.nn as nn
 from mmcv.runner import BaseModule
-
-from mmocr.models.common.modules import (MultiHeadAttention,
-                                         PositionwiseFeedForward)
+from mmocr.models.common.modules import MultiHeadAttention, PositionwiseFeedForward
 
 
 class TFEncoderLayer(BaseModule):
@@ -27,33 +25,32 @@ class TFEncoderLayer(BaseModule):
             Default：None.
     """
 
-    def __init__(self,
-                 d_model=512,
-                 d_inner=256,
-                 n_head=8,
-                 d_k=64,
-                 d_v=64,
-                 dropout=0.1,
-                 qkv_bias=False,
-                 act_cfg=dict(type='mmcv.GELU'),
-                 operation_order=None):
+    def __init__(
+        self,
+        d_model=512,
+        d_inner=256,
+        n_head=8,
+        d_k=64,
+        d_v=64,
+        dropout=0.1,
+        qkv_bias=False,
+        act_cfg=dict(type="mmcv.GELU"),
+        operation_order=None,
+    ):
         super().__init__()
-        self.attn = MultiHeadAttention(
-            n_head, d_model, d_k, d_v, qkv_bias=qkv_bias, dropout=dropout)
+        self.attn = MultiHeadAttention(n_head, d_model, d_k, d_v, qkv_bias=qkv_bias, dropout=dropout)
         self.norm1 = nn.LayerNorm(d_model)
-        self.mlp = PositionwiseFeedForward(
-            d_model, d_inner, dropout=dropout, act_cfg=act_cfg)
+        self.mlp = PositionwiseFeedForward(d_model, d_inner, dropout=dropout, act_cfg=act_cfg)
         self.norm2 = nn.LayerNorm(d_model)
 
         self.operation_order = operation_order
         if self.operation_order is None:
-            self.operation_order = ('norm', 'self_attn', 'norm', 'ffn')
+            self.operation_order = ("norm", "self_attn", "norm", "ffn")
 
-        assert self.operation_order in [('norm', 'self_attn', 'norm', 'ffn'),
-                                        ('self_attn', 'norm', 'ffn', 'norm')]
+        assert self.operation_order in [("norm", "self_attn", "norm", "ffn"), ("self_attn", "norm", "ffn", "norm")]
 
     def forward(self, x, mask=None):
-        if self.operation_order == ('self_attn', 'norm', 'ffn', 'norm'):
+        if self.operation_order == ("self_attn", "norm", "ffn", "norm"):
             residual = x
             x = residual + self.attn(x, x, x, mask)
             x = self.norm1(x)
@@ -61,7 +58,7 @@ class TFEncoderLayer(BaseModule):
             residual = x
             x = residual + self.mlp(x)
             x = self.norm2(x)
-        elif self.operation_order == ('norm', 'self_attn', 'norm', 'ffn'):
+        elif self.operation_order == ("norm", "self_attn", "norm", "ffn"):
             residual = x
             x = self.norm1(x)
             x = residual + self.attn(x, x, x, mask)
@@ -95,70 +92,58 @@ class TFDecoderLayer(nn.Module):
             Default：None.
     """
 
-    def __init__(self,
-                 d_model=512,
-                 d_inner=256,
-                 n_head=8,
-                 d_k=64,
-                 d_v=64,
-                 dropout=0.1,
-                 qkv_bias=False,
-                 act_cfg=dict(type='mmcv.GELU'),
-                 operation_order=None):
+    def __init__(
+        self,
+        d_model=512,
+        d_inner=256,
+        n_head=8,
+        d_k=64,
+        d_v=64,
+        dropout=0.1,
+        qkv_bias=False,
+        act_cfg=dict(type="mmcv.GELU"),
+        operation_order=None,
+    ):
         super().__init__()
 
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.norm3 = nn.LayerNorm(d_model)
 
-        self.self_attn = MultiHeadAttention(
-            n_head, d_model, d_k, d_v, dropout=dropout, qkv_bias=qkv_bias)
+        self.self_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout, qkv_bias=qkv_bias)
 
-        self.enc_attn = MultiHeadAttention(
-            n_head, d_model, d_k, d_v, dropout=dropout, qkv_bias=qkv_bias)
+        self.enc_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout, qkv_bias=qkv_bias)
 
-        self.mlp = PositionwiseFeedForward(
-            d_model, d_inner, dropout=dropout, act_cfg=act_cfg)
+        self.mlp = PositionwiseFeedForward(d_model, d_inner, dropout=dropout, act_cfg=act_cfg)
 
         self.operation_order = operation_order
         if self.operation_order is None:
-            self.operation_order = ('norm', 'self_attn', 'norm',
-                                    'enc_dec_attn', 'norm', 'ffn')
+            self.operation_order = ("norm", "self_attn", "norm", "enc_dec_attn", "norm", "ffn")
         assert self.operation_order in [
-            ('norm', 'self_attn', 'norm', 'enc_dec_attn', 'norm', 'ffn'),
-            ('self_attn', 'norm', 'enc_dec_attn', 'norm', 'ffn', 'norm')
+            ("norm", "self_attn", "norm", "enc_dec_attn", "norm", "ffn"),
+            ("self_attn", "norm", "enc_dec_attn", "norm", "ffn", "norm"),
         ]
 
-    def forward(self,
-                dec_input,
-                enc_output,
-                self_attn_mask=None,
-                dec_enc_attn_mask=None):
-        if self.operation_order == ('self_attn', 'norm', 'enc_dec_attn',
-                                    'norm', 'ffn', 'norm'):
-            dec_attn_out = self.self_attn(dec_input, dec_input, dec_input,
-                                          self_attn_mask)
+    def forward(self, dec_input, enc_output, self_attn_mask=None, dec_enc_attn_mask=None):
+        if self.operation_order == ("self_attn", "norm", "enc_dec_attn", "norm", "ffn", "norm"):
+            dec_attn_out = self.self_attn(dec_input, dec_input, dec_input, self_attn_mask)
             dec_attn_out += dec_input
             dec_attn_out = self.norm1(dec_attn_out)
 
-            enc_dec_attn_out = self.enc_attn(dec_attn_out, enc_output,
-                                             enc_output, dec_enc_attn_mask)
+            enc_dec_attn_out = self.enc_attn(dec_attn_out, enc_output, enc_output, dec_enc_attn_mask)
             enc_dec_attn_out += dec_attn_out
             enc_dec_attn_out = self.norm2(enc_dec_attn_out)
 
             mlp_out = self.mlp(enc_dec_attn_out)
             mlp_out += enc_dec_attn_out
             mlp_out = self.norm3(mlp_out)
-        elif self.operation_order == ('norm', 'self_attn', 'norm',
-                                      'enc_dec_attn', 'norm', 'ffn'):
+        elif self.operation_order == ("norm", "self_attn", "norm", "enc_dec_attn", "norm", "ffn"):
             dec_input_norm = self.norm1(dec_input)
-            dec_attn_out = self.self_attn(dec_input_norm, dec_input_norm,
-                                          dec_input_norm, self_attn_mask)
+            dec_attn_out = self.self_attn(dec_input_norm, dec_input_norm, dec_input_norm, self_attn_mask)
             dec_attn_out += dec_input
 
             enc_dec_attn_in = self.norm2(dec_attn_out)
-            enc_dec_attn_out = self.enc_attn(enc_dec_attn_in, enc_output,
-                                             enc_output, dec_enc_attn_mask)
+            enc_dec_attn_out = self.enc_attn(enc_dec_attn_in, enc_output, enc_output, dec_enc_attn_mask)
             enc_dec_attn_out += dec_attn_out
 
             mlp_out = self.mlp(self.norm3(enc_dec_attn_out))

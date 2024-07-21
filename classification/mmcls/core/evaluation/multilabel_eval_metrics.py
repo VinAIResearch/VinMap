@@ -28,18 +28,14 @@ def average_performance(pred, target, thr=None, k=None):
         pred = pred.detach().cpu().numpy()
         target = target.detach().cpu().numpy()
     elif not (isinstance(pred, np.ndarray) and isinstance(target, np.ndarray)):
-        raise TypeError('pred and target should both be torch.Tensor or'
-                        'np.ndarray')
+        raise TypeError("pred and target should both be torch.Tensor or" "np.ndarray")
     if thr is None and k is None:
         thr = 0.5
-        warnings.warn('Neither thr nor k is given, set thr as 0.5 by '
-                      'default.')
+        warnings.warn("Neither thr nor k is given, set thr as 0.5 by " "default.")
     elif thr is not None and k is not None:
-        warnings.warn('Both thr and k are given, use threshold in favor of '
-                      'top-k.')
+        warnings.warn("Both thr and k are given, use threshold in favor of " "top-k.")
 
-    assert pred.shape == \
-        target.shape, 'pred and target should be in the same shape.'
+    assert pred.shape == target.shape, "pred and target should be in the same shape."
 
     eps = np.finfo(np.float32).eps
     target[target == -1] = 0
@@ -59,10 +55,8 @@ def average_performance(pred, target, thr=None, k=None):
     fp = (pos_inds * (1 - target)) == 1
     fn = ((1 - pos_inds) * target) == 1
 
-    precision_class = tp.sum(axis=0) / np.maximum(
-        tp.sum(axis=0) + fp.sum(axis=0), eps)
-    recall_class = tp.sum(axis=0) / np.maximum(
-        tp.sum(axis=0) + fn.sum(axis=0), eps)
+    precision_class = tp.sum(axis=0) / np.maximum(tp.sum(axis=0) + fp.sum(axis=0), eps)
+    recall_class = tp.sum(axis=0) / np.maximum(tp.sum(axis=0) + fn.sum(axis=0), eps)
     CP = precision_class.mean() * 100.0
     CR = recall_class.mean() * 100.0
     CF1 = 2 * CP * CR / np.maximum(CP + CR, eps)

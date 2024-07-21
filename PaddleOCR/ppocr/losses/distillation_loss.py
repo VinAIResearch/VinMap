@@ -1,31 +1,29 @@
-#copyright (c) 2021 PaddlePaddle Authors. All Rights Reserve.
+# copyright (c) 2021 PaddlePaddle Authors. All Rights Reserve.
 #
-#Licensed under the Apache License, Version 2.0 (the "License");
-#you may not use this file except in compliance with the License.
-#You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-#Unless required by applicable law or agreed to in writing, software
-#distributed under the License is distributed on an "AS IS" BASIS,
-#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#See the License for the specific language governing permissions and
-#limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+import cv2
+import numpy as np
 import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
-import numpy as np
-import cv2
 
+from .basic_loss import DistanceLoss, DKDLoss, DMLLoss, KLDivLoss, LossFromOutput
+from .det_basic_loss import BalanceLoss, DiceLoss, MaskL1Loss
+from .det_db_loss import DBLoss
+from .rec_ce_loss import CELoss
 from .rec_ctc_loss import CTCLoss
 from .rec_sar_loss import SARLoss
-from .rec_ce_loss import CELoss
-from .basic_loss import DMLLoss, KLDivLoss, DKDLoss
-from .basic_loss import DistanceLoss
-from .basic_loss import LossFromOutput
-from .det_db_loss import DBLoss
-from .det_basic_loss import BalanceLoss, MaskL1Loss, DiceLoss
 from .vqa_token_layoutlm_loss import VQASerTokenLayoutLMLoss
 
 
@@ -33,7 +31,7 @@ def _sum_loss(loss_dict):
     if "loss" in loss_dict.keys():
         return loss_dict
     else:
-        loss_dict["loss"] = 0.
+        loss_dict["loss"] = 0.0
         for k, value in loss_dict.items():
             if k == "loss":
                 continue
@@ -43,18 +41,19 @@ def _sum_loss(loss_dict):
 
 
 class DistillationDMLLoss(DMLLoss):
-    """
-    """
+    """ """
 
-    def __init__(self,
-                 model_name_pairs=[],
-                 act=None,
-                 use_log=False,
-                 key=None,
-                 multi_head=False,
-                 dis_head='ctc',
-                 maps_name=None,
-                 name="dml"):
+    def __init__(
+        self,
+        model_name_pairs=[],
+        act=None,
+        use_log=False,
+        key=None,
+        multi_head=False,
+        dis_head="ctc",
+        maps_name=None,
+        name="dml",
+    ):
         super().__init__(act=act, use_log=use_log)
         assert isinstance(model_name_pairs, list)
         self.key = key
@@ -67,8 +66,7 @@ class DistillationDMLLoss(DMLLoss):
     def _check_model_name_pairs(self, model_name_pairs):
         if not isinstance(model_name_pairs, list):
             return []
-        elif isinstance(model_name_pairs[0], list) and isinstance(
-                model_name_pairs[0][0], str):
+        elif isinstance(model_name_pairs[0], list) and isinstance(model_name_pairs[0][0], str):
             return model_name_pairs
         else:
             return [model_name_pairs]
@@ -106,14 +104,12 @@ class DistillationDMLLoss(DMLLoss):
                 out2 = out2[self.key]
             if self.maps_name is None:
                 if self.multi_head:
-                    loss = super().forward(out1[self.dis_head],
-                                           out2[self.dis_head])
+                    loss = super().forward(out1[self.dis_head], out2[self.dis_head])
                 else:
                     loss = super().forward(out1, out2)
                 if isinstance(loss, dict):
                     for key in loss:
-                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1],
-                                                       idx)] = loss[key]
+                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1], idx)] = loss[key]
                 else:
                     loss_dict["{}_{}".format(self.name, idx)] = loss
             else:
@@ -123,11 +119,9 @@ class DistillationDMLLoss(DMLLoss):
                     loss = super().forward(outs1[k], outs2[k])
                     if isinstance(loss, dict):
                         for key in loss:
-                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[
-                                0], pair[1], self.maps_name, idx)] = loss[key]
+                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[0], pair[1], self.maps_name, idx)] = loss[key]
                     else:
-                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[
-                            _c], idx)] = loss
+                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[_c], idx)] = loss
 
         loss_dict = _sum_loss(loss_dict)
 
@@ -135,16 +129,9 @@ class DistillationDMLLoss(DMLLoss):
 
 
 class DistillationKLDivLoss(KLDivLoss):
-    """
-    """
+    """ """
 
-    def __init__(self,
-                 model_name_pairs=[],
-                 key=None,
-                 multi_head=False,
-                 dis_head='ctc',
-                 maps_name=None,
-                 name="kl_div"):
+    def __init__(self, model_name_pairs=[], key=None, multi_head=False, dis_head="ctc", maps_name=None, name="kl_div"):
         super().__init__()
         assert isinstance(model_name_pairs, list)
         self.key = key
@@ -157,8 +144,7 @@ class DistillationKLDivLoss(KLDivLoss):
     def _check_model_name_pairs(self, model_name_pairs):
         if not isinstance(model_name_pairs, list):
             return []
-        elif isinstance(model_name_pairs[0], list) and isinstance(
-                model_name_pairs[0][0], str):
+        elif isinstance(model_name_pairs[0], list) and isinstance(model_name_pairs[0][0], str):
             return model_name_pairs
         else:
             return [model_name_pairs]
@@ -198,19 +184,15 @@ class DistillationKLDivLoss(KLDivLoss):
                 if self.multi_head:
                     # for nrtr dml loss
                     max_len = batch[3].max()
-                    tgt = batch[2][:, 1:2 + max_len]
+                    tgt = batch[2][:, 1 : 2 + max_len]
                     tgt = tgt.reshape([-1])
-                    non_pad_mask = paddle.not_equal(
-                        tgt, paddle.zeros(
-                            tgt.shape, dtype=tgt.dtype))
-                    loss = super().forward(out1[self.dis_head],
-                                           out2[self.dis_head], non_pad_mask)
+                    non_pad_mask = paddle.not_equal(tgt, paddle.zeros(tgt.shape, dtype=tgt.dtype))
+                    loss = super().forward(out1[self.dis_head], out2[self.dis_head], non_pad_mask)
                 else:
                     loss = super().forward(out1, out2)
                 if isinstance(loss, dict):
                     for key in loss:
-                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1],
-                                                       idx)] = loss[key]
+                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1], idx)] = loss[key]
                 else:
                     loss_dict["{}_{}".format(self.name, idx)] = loss
             else:
@@ -220,11 +202,9 @@ class DistillationKLDivLoss(KLDivLoss):
                     loss = super().forward(outs1[k], outs2[k])
                     if isinstance(loss, dict):
                         for key in loss:
-                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[
-                                0], pair[1], self.maps_name, idx)] = loss[key]
+                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[0], pair[1], self.maps_name, idx)] = loss[key]
                     else:
-                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[
-                            _c], idx)] = loss
+                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[_c], idx)] = loss
 
         loss_dict = _sum_loss(loss_dict)
 
@@ -232,19 +212,20 @@ class DistillationKLDivLoss(KLDivLoss):
 
 
 class DistillationDKDLoss(DKDLoss):
-    """
-    """
+    """ """
 
-    def __init__(self,
-                 model_name_pairs=[],
-                 key=None,
-                 multi_head=False,
-                 dis_head='ctc',
-                 maps_name=None,
-                 name="dkd",
-                 temperature=1.0,
-                 alpha=1.0,
-                 beta=1.0):
+    def __init__(
+        self,
+        model_name_pairs=[],
+        key=None,
+        multi_head=False,
+        dis_head="ctc",
+        maps_name=None,
+        name="dkd",
+        temperature=1.0,
+        alpha=1.0,
+        beta=1.0,
+    ):
         super().__init__(temperature, alpha, beta)
         assert isinstance(model_name_pairs, list)
         self.key = key
@@ -257,8 +238,7 @@ class DistillationDKDLoss(DKDLoss):
     def _check_model_name_pairs(self, model_name_pairs):
         if not isinstance(model_name_pairs, list):
             return []
-        elif isinstance(model_name_pairs[0], list) and isinstance(
-                model_name_pairs[0][0], str):
+        elif isinstance(model_name_pairs[0], list) and isinstance(model_name_pairs[0][0], str):
             return model_name_pairs
         else:
             return [model_name_pairs]
@@ -299,24 +279,21 @@ class DistillationDKDLoss(DKDLoss):
                 if self.multi_head:
                     # for nrtr dml loss
                     max_len = batch[3].max()
-                    tgt = batch[2][:, 1:2 +
-                                   max_len]  # [batch_size, max_len + 1]
+                    tgt = batch[2][:, 1 : 2 + max_len]  # [batch_size, max_len + 1]
 
                     tgt = tgt.reshape([-1])  # batch_size * (max_len + 1)
                     non_pad_mask = paddle.not_equal(
-                        tgt, paddle.zeros(
-                            tgt.shape,
-                            dtype=tgt.dtype))  # batch_size * (max_len + 1)
+                        tgt, paddle.zeros(tgt.shape, dtype=tgt.dtype)
+                    )  # batch_size * (max_len + 1)
 
                     loss = super().forward(
-                        out1[self.dis_head], out2[self.dis_head], tgt,
-                        non_pad_mask)  # [batch_size, max_len + 1, num_char]
+                        out1[self.dis_head], out2[self.dis_head], tgt, non_pad_mask
+                    )  # [batch_size, max_len + 1, num_char]
                 else:
                     loss = super().forward(out1, out2)
                 if isinstance(loss, dict):
                     for key in loss:
-                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1],
-                                                       idx)] = loss[key]
+                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1], idx)] = loss[key]
                 else:
                     loss_dict["{}_{}".format(self.name, idx)] = loss
             else:
@@ -326,11 +303,9 @@ class DistillationDKDLoss(DKDLoss):
                     loss = super().forward(outs1[k], outs2[k])
                     if isinstance(loss, dict):
                         for key in loss:
-                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[
-                                0], pair[1], self.maps_name, idx)] = loss[key]
+                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[0], pair[1], self.maps_name, idx)] = loss[key]
                     else:
-                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[
-                            _c], idx)] = loss
+                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[_c], idx)] = loss
 
         loss_dict = _sum_loss(loss_dict)
 
@@ -338,8 +313,7 @@ class DistillationDKDLoss(DKDLoss):
 
 
 class DistillationNRTRDMLLoss(DistillationDMLLoss):
-    """
-    """
+    """ """
 
     def forward(self, predicts, batch):
         loss_dict = dict()
@@ -353,19 +327,15 @@ class DistillationNRTRDMLLoss(DistillationDMLLoss):
             if self.multi_head:
                 # for nrtr dml loss
                 max_len = batch[3].max()
-                tgt = batch[2][:, 1:2 + max_len]
+                tgt = batch[2][:, 1 : 2 + max_len]
                 tgt = tgt.reshape([-1])
-                non_pad_mask = paddle.not_equal(
-                    tgt, paddle.zeros(
-                        tgt.shape, dtype=tgt.dtype))
-                loss = super().forward(out1[self.dis_head], out2[self.dis_head],
-                                       non_pad_mask)
+                non_pad_mask = paddle.not_equal(tgt, paddle.zeros(tgt.shape, dtype=tgt.dtype))
+                loss = super().forward(out1[self.dis_head], out2[self.dis_head], non_pad_mask)
             else:
                 loss = super().forward(out1, out2)
             if isinstance(loss, dict):
                 for key in loss:
-                    loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1],
-                                                   idx)] = loss[key]
+                    loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1], idx)] = loss[key]
             else:
                 loss_dict["{}_{}".format(self.name, idx)] = loss
 
@@ -375,16 +345,9 @@ class DistillationNRTRDMLLoss(DistillationDMLLoss):
 
 
 class DistillationKLDivLoss(KLDivLoss):
-    """
-    """
+    """ """
 
-    def __init__(self,
-                 model_name_pairs=[],
-                 key=None,
-                 multi_head=False,
-                 dis_head='ctc',
-                 maps_name=None,
-                 name="kl_div"):
+    def __init__(self, model_name_pairs=[], key=None, multi_head=False, dis_head="ctc", maps_name=None, name="kl_div"):
         super().__init__()
         assert isinstance(model_name_pairs, list)
         self.key = key
@@ -397,8 +360,7 @@ class DistillationKLDivLoss(KLDivLoss):
     def _check_model_name_pairs(self, model_name_pairs):
         if not isinstance(model_name_pairs, list):
             return []
-        elif isinstance(model_name_pairs[0], list) and isinstance(
-                model_name_pairs[0][0], str):
+        elif isinstance(model_name_pairs[0], list) and isinstance(model_name_pairs[0][0], str):
             return model_name_pairs
         else:
             return [model_name_pairs]
@@ -438,19 +400,15 @@ class DistillationKLDivLoss(KLDivLoss):
                 if self.multi_head:
                     # for nrtr dml loss
                     max_len = batch[3].max()
-                    tgt = batch[2][:, 1:2 + max_len]
+                    tgt = batch[2][:, 1 : 2 + max_len]
                     tgt = tgt.reshape([-1])
-                    non_pad_mask = paddle.not_equal(
-                        tgt, paddle.zeros(
-                            tgt.shape, dtype=tgt.dtype))
-                    loss = super().forward(out1[self.dis_head],
-                                           out2[self.dis_head], non_pad_mask)
+                    non_pad_mask = paddle.not_equal(tgt, paddle.zeros(tgt.shape, dtype=tgt.dtype))
+                    loss = super().forward(out1[self.dis_head], out2[self.dis_head], non_pad_mask)
                 else:
                     loss = super().forward(out1, out2)
                 if isinstance(loss, dict):
                     for key in loss:
-                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1],
-                                                       idx)] = loss[key]
+                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1], idx)] = loss[key]
                 else:
                     loss_dict["{}_{}".format(self.name, idx)] = loss
             else:
@@ -460,11 +418,9 @@ class DistillationKLDivLoss(KLDivLoss):
                     loss = super().forward(outs1[k], outs2[k])
                     if isinstance(loss, dict):
                         for key in loss:
-                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[
-                                0], pair[1], self.maps_name, idx)] = loss[key]
+                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[0], pair[1], self.maps_name, idx)] = loss[key]
                     else:
-                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[
-                            _c], idx)] = loss
+                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[_c], idx)] = loss
 
         loss_dict = _sum_loss(loss_dict)
 
@@ -472,19 +428,20 @@ class DistillationKLDivLoss(KLDivLoss):
 
 
 class DistillationDKDLoss(DKDLoss):
-    """
-    """
+    """ """
 
-    def __init__(self,
-                 model_name_pairs=[],
-                 key=None,
-                 multi_head=False,
-                 dis_head='ctc',
-                 maps_name=None,
-                 name="dkd",
-                 temperature=1.0,
-                 alpha=1.0,
-                 beta=1.0):
+    def __init__(
+        self,
+        model_name_pairs=[],
+        key=None,
+        multi_head=False,
+        dis_head="ctc",
+        maps_name=None,
+        name="dkd",
+        temperature=1.0,
+        alpha=1.0,
+        beta=1.0,
+    ):
         super().__init__(temperature, alpha, beta)
         assert isinstance(model_name_pairs, list)
         self.key = key
@@ -497,8 +454,7 @@ class DistillationDKDLoss(DKDLoss):
     def _check_model_name_pairs(self, model_name_pairs):
         if not isinstance(model_name_pairs, list):
             return []
-        elif isinstance(model_name_pairs[0], list) and isinstance(
-                model_name_pairs[0][0], str):
+        elif isinstance(model_name_pairs[0], list) and isinstance(model_name_pairs[0][0], str):
             return model_name_pairs
         else:
             return [model_name_pairs]
@@ -539,24 +495,21 @@ class DistillationDKDLoss(DKDLoss):
                 if self.multi_head:
                     # for nrtr dml loss
                     max_len = batch[3].max()
-                    tgt = batch[2][:, 1:2 +
-                                   max_len]  # [batch_size, max_len + 1]
+                    tgt = batch[2][:, 1 : 2 + max_len]  # [batch_size, max_len + 1]
 
                     tgt = tgt.reshape([-1])  # batch_size * (max_len + 1)
                     non_pad_mask = paddle.not_equal(
-                        tgt, paddle.zeros(
-                            tgt.shape,
-                            dtype=tgt.dtype))  # batch_size * (max_len + 1)
+                        tgt, paddle.zeros(tgt.shape, dtype=tgt.dtype)
+                    )  # batch_size * (max_len + 1)
 
                     loss = super().forward(
-                        out1[self.dis_head], out2[self.dis_head], tgt,
-                        non_pad_mask)  # [batch_size, max_len + 1, num_char]
+                        out1[self.dis_head], out2[self.dis_head], tgt, non_pad_mask
+                    )  # [batch_size, max_len + 1, num_char]
                 else:
                     loss = super().forward(out1, out2)
                 if isinstance(loss, dict):
                     for key in loss:
-                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1],
-                                                       idx)] = loss[key]
+                        loss_dict["{}_{}_{}_{}".format(key, pair[0], pair[1], idx)] = loss[key]
                 else:
                     loss_dict["{}_{}".format(self.name, idx)] = loss
             else:
@@ -566,11 +519,9 @@ class DistillationDKDLoss(DKDLoss):
                     loss = super().forward(outs1[k], outs2[k])
                     if isinstance(loss, dict):
                         for key in loss:
-                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[
-                                0], pair[1], self.maps_name, idx)] = loss[key]
+                            loss_dict["{}_{}_{}_{}_{}".format(key, pair[0], pair[1], self.maps_name, idx)] = loss[key]
                     else:
-                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[
-                            _c], idx)] = loss
+                        loss_dict["{}_{}_{}".format(self.name, self.maps_name[_c], idx)] = loss
 
         loss_dict = _sum_loss(loss_dict)
 
@@ -578,11 +529,7 @@ class DistillationDKDLoss(DKDLoss):
 
 
 class DistillationCTCLoss(CTCLoss):
-    def __init__(self,
-                 model_name_list=[],
-                 key=None,
-                 multi_head=False,
-                 name="loss_ctc"):
+    def __init__(self, model_name_list=[], key=None, multi_head=False, name="loss_ctc"):
         super().__init__()
         self.model_name_list = model_name_list
         self.key = key
@@ -596,27 +543,21 @@ class DistillationCTCLoss(CTCLoss):
             if self.key is not None:
                 out = out[self.key]
             if self.multi_head:
-                assert 'ctc' in out, 'multi head has multi out'
-                loss = super().forward(out['ctc'], batch[:2] + batch[3:])
+                assert "ctc" in out, "multi head has multi out"
+                loss = super().forward(out["ctc"], batch[:2] + batch[3:])
             else:
                 loss = super().forward(out, batch)
             if isinstance(loss, dict):
                 for key in loss:
-                    loss_dict["{}_{}_{}".format(self.name, model_name,
-                                                idx)] = loss[key]
+                    loss_dict["{}_{}_{}".format(self.name, model_name, idx)] = loss[key]
             else:
                 loss_dict["{}_{}".format(self.name, model_name)] = loss
         return loss_dict
 
 
 class DistillationSARLoss(SARLoss):
-    def __init__(self,
-                 model_name_list=[],
-                 key=None,
-                 multi_head=False,
-                 name="loss_sar",
-                 **kwargs):
-        ignore_index = kwargs.get('ignore_index', 92)
+    def __init__(self, model_name_list=[], key=None, multi_head=False, name="loss_sar", **kwargs):
+        ignore_index = kwargs.get("ignore_index", 92)
         super().__init__(ignore_index=ignore_index)
         self.model_name_list = model_name_list
         self.key = key
@@ -630,27 +571,20 @@ class DistillationSARLoss(SARLoss):
             if self.key is not None:
                 out = out[self.key]
             if self.multi_head:
-                assert 'sar' in out, 'multi head has multi out'
-                loss = super().forward(out['sar'], batch[:1] + batch[2:])
+                assert "sar" in out, "multi head has multi out"
+                loss = super().forward(out["sar"], batch[:1] + batch[2:])
             else:
                 loss = super().forward(out, batch)
             if isinstance(loss, dict):
                 for key in loss:
-                    loss_dict["{}_{}_{}".format(self.name, model_name,
-                                                idx)] = loss[key]
+                    loss_dict["{}_{}_{}".format(self.name, model_name, idx)] = loss[key]
             else:
                 loss_dict["{}_{}".format(self.name, model_name)] = loss
         return loss_dict
 
 
 class DistillationNRTRLoss(CELoss):
-    def __init__(self,
-                 model_name_list=[],
-                 key=None,
-                 multi_head=False,
-                 smoothing=True,
-                 name="loss_nrtr",
-                 **kwargs):
+    def __init__(self, model_name_list=[], key=None, multi_head=False, smoothing=True, name="loss_nrtr", **kwargs):
         super().__init__(smoothing=smoothing)
         self.model_name_list = model_name_list
         self.key = key
@@ -664,30 +598,31 @@ class DistillationNRTRLoss(CELoss):
             if self.key is not None:
                 out = out[self.key]
             if self.multi_head:
-                assert 'gtc' in out, 'multi head has multi out'
-                loss = super().forward(out['gtc'], batch[:1] + batch[2:])
+                assert "gtc" in out, "multi head has multi out"
+                loss = super().forward(out["gtc"], batch[:1] + batch[2:])
             else:
                 loss = super().forward(out, batch)
             if isinstance(loss, dict):
                 for key in loss:
-                    loss_dict["{}_{}_{}".format(self.name, model_name,
-                                                idx)] = loss[key]
+                    loss_dict["{}_{}_{}".format(self.name, model_name, idx)] = loss[key]
             else:
                 loss_dict["{}_{}".format(self.name, model_name)] = loss
         return loss_dict
 
 
 class DistillationDBLoss(DBLoss):
-    def __init__(self,
-                 model_name_list=[],
-                 balance_loss=True,
-                 main_loss_type='DiceLoss',
-                 alpha=5,
-                 beta=10,
-                 ohem_ratio=3,
-                 eps=1e-6,
-                 name="db",
-                 **kwargs):
+    def __init__(
+        self,
+        model_name_list=[],
+        balance_loss=True,
+        main_loss_type="DiceLoss",
+        alpha=5,
+        beta=10,
+        ohem_ratio=3,
+        eps=1e-6,
+        name="db",
+        **kwargs
+    ):
         super().__init__()
         self.model_name_list = model_name_list
         self.name = name
@@ -715,16 +650,18 @@ class DistillationDBLoss(DBLoss):
 
 
 class DistillationDilaDBLoss(DBLoss):
-    def __init__(self,
-                 model_name_pairs=[],
-                 key=None,
-                 balance_loss=True,
-                 main_loss_type='DiceLoss',
-                 alpha=5,
-                 beta=10,
-                 ohem_ratio=3,
-                 eps=1e-6,
-                 name="dila_dbloss"):
+    def __init__(
+        self,
+        model_name_pairs=[],
+        key=None,
+        balance_loss=True,
+        main_loss_type="DiceLoss",
+        alpha=5,
+        beta=10,
+        ohem_ratio=3,
+        eps=1e-6,
+        name="dila_dbloss",
+    ):
         super().__init__()
         self.model_name_pairs = model_name_pairs
         self.name = name
@@ -745,21 +682,17 @@ class DistillationDilaDBLoss(DBLoss):
             # dilation to teacher prediction
             dilation_w = np.array([[1, 1], [1, 1]])
             th_shrink_maps = tch_preds[:, 0, :, :]
-            th_shrink_maps = th_shrink_maps.numpy() > 0.3  # thresh = 0.3 
+            th_shrink_maps = th_shrink_maps.numpy() > 0.3  # thresh = 0.3
             dilate_maps = np.zeros_like(th_shrink_maps).astype(np.float32)
             for i in range(th_shrink_maps.shape[0]):
-                dilate_maps[i] = cv2.dilate(
-                    th_shrink_maps[i, :, :].astype(np.uint8), dilation_w)
+                dilate_maps[i] = cv2.dilate(th_shrink_maps[i, :, :].astype(np.uint8), dilation_w)
             th_shrink_maps = paddle.to_tensor(dilate_maps)
 
-            label_threshold_map, label_threshold_mask, label_shrink_map, label_shrink_mask = batch[
-                1:]
+            label_threshold_map, label_threshold_mask, label_shrink_map, label_shrink_mask = batch[1:]
 
             # calculate the shrink map loss
-            bce_loss = self.alpha * self.bce_loss(
-                stu_shrink_maps, th_shrink_maps, label_shrink_mask)
-            loss_binary_maps = self.dice_loss(stu_binary_maps, th_shrink_maps,
-                                              label_shrink_mask)
+            bce_loss = self.alpha * self.bce_loss(stu_shrink_maps, th_shrink_maps, label_shrink_mask)
+            loss_binary_maps = self.dice_loss(stu_binary_maps, th_shrink_maps, label_shrink_mask)
 
             # k = f"{self.name}_{pair[0]}_{pair[1]}"
             k = "{}_{}_{}".format(self.name, pair[0], pair[1])
@@ -770,15 +703,9 @@ class DistillationDilaDBLoss(DBLoss):
 
 
 class DistillationDistanceLoss(DistanceLoss):
-    """
-    """
+    """ """
 
-    def __init__(self,
-                 mode="l2",
-                 model_name_pairs=[],
-                 key=None,
-                 name="loss_distance",
-                 **kargs):
+    def __init__(self, mode="l2", model_name_pairs=[], key=None, name="loss_distance", **kargs):
         super().__init__(mode=mode, **kargs)
         assert isinstance(model_name_pairs, list)
         self.key = key
@@ -796,20 +723,14 @@ class DistillationDistanceLoss(DistanceLoss):
             loss = super().forward(out1, out2)
             if isinstance(loss, dict):
                 for key in loss:
-                    loss_dict["{}_{}_{}".format(self.name, key, idx)] = loss[
-                        key]
+                    loss_dict["{}_{}_{}".format(self.name, key, idx)] = loss[key]
             else:
-                loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1],
-                                               idx)] = loss
+                loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1], idx)] = loss
         return loss_dict
 
 
 class DistillationVQASerTokenLayoutLMLoss(VQASerTokenLayoutLMLoss):
-    def __init__(self,
-                 num_classes,
-                 model_name_list=[],
-                 key=None,
-                 name="loss_ser"):
+    def __init__(self, num_classes, model_name_list=[], key=None, name="loss_ser"):
         super().__init__(num_classes=num_classes)
         self.model_name_list = model_name_list
         self.key = key
@@ -827,12 +748,7 @@ class DistillationVQASerTokenLayoutLMLoss(VQASerTokenLayoutLMLoss):
 
 
 class DistillationLossFromOutput(LossFromOutput):
-    def __init__(self,
-                 reduction="none",
-                 model_name_list=[],
-                 dist_key=None,
-                 key="loss",
-                 name="loss_re"):
+    def __init__(self, reduction="none", model_name_list=[], dist_key=None, key="loss", name="loss_re"):
         super().__init__(key=key, reduction=reduction)
         self.model_name_list = model_name_list
         self.name = name
@@ -850,16 +766,9 @@ class DistillationLossFromOutput(LossFromOutput):
 
 
 class DistillationSERDMLLoss(DMLLoss):
-    """
-    """
+    """ """
 
-    def __init__(self,
-                 act="softmax",
-                 use_log=True,
-                 num_classes=7,
-                 model_name_pairs=[],
-                 key=None,
-                 name="loss_dml_ser"):
+    def __init__(self, act="softmax", use_log=True, num_classes=7, model_name_pairs=[], key=None, name="loss_dml_ser"):
         super().__init__(act=act, use_log=use_log)
         assert isinstance(model_name_pairs, list)
         self.key = key
@@ -880,24 +789,24 @@ class DistillationSERDMLLoss(DMLLoss):
 
             attention_mask = batch[2]
             if attention_mask is not None:
-                active_output = attention_mask.reshape([-1, ]) == 1
+                active_output = (
+                    attention_mask.reshape(
+                        [
+                            -1,
+                        ]
+                    )
+                    == 1
+                )
                 out1 = out1[active_output]
                 out2 = out2[active_output]
 
-            loss_dict["{}_{}".format(self.name, idx)] = super().forward(out1,
-                                                                        out2)
+            loss_dict["{}_{}".format(self.name, idx)] = super().forward(out1, out2)
 
         return loss_dict
 
 
 class DistillationVQADistanceLoss(DistanceLoss):
-    def __init__(self,
-                 mode="l2",
-                 model_name_pairs=[],
-                 key=None,
-                 index=None,
-                 name="loss_distance",
-                 **kargs):
+    def __init__(self, mode="l2", model_name_pairs=[], key=None, index=None, name="loss_distance", **kargs):
         super().__init__(mode=mode, **kargs)
         assert isinstance(model_name_pairs, list)
         self.key = key
@@ -924,18 +833,23 @@ class DistillationVQADistanceLoss(DistanceLoss):
                 out1 = out1.reshape([-1, out1.shape[-1]])
                 out2 = out2.reshape([-1, out2.shape[-1]])
             if attention_mask is not None:
-                active_output = attention_mask.reshape([-1, ]) == 1
+                active_output = (
+                    attention_mask.reshape(
+                        [
+                            -1,
+                        ]
+                    )
+                    == 1
+                )
                 out1 = out1[active_output]
                 out2 = out2[active_output]
 
             loss = super().forward(out1, out2)
             if isinstance(loss, dict):
                 for key in loss:
-                    loss_dict["{}_{}nohu_{}".format(self.name, key,
-                                                    idx)] = loss[key]
+                    loss_dict["{}_{}nohu_{}".format(self.name, key, idx)] = loss[key]
             else:
-                loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1],
-                                               idx)] = loss
+                loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1], idx)] = loss
         return loss_dict
 
 
@@ -955,8 +869,7 @@ class CTCDKDLoss(nn.Layer):
         self.use_log = True
 
     def kl_loss(self, p1, p2):  # predict, label
-        loss = paddle.multiply(
-            p2, paddle.log((p2 + self.eps) / (p1 + self.eps) + self.eps))
+        loss = paddle.multiply(p2, paddle.log((p2 + self.eps) / (p1 + self.eps) + self.eps))
         bs = loss.shape[0]
         loss = paddle.sum(loss) / bs
         return loss
@@ -994,10 +907,8 @@ class CTCDKDLoss(nn.Layer):
         tckd_loss = self.kl_loss(pred_student, pred_teacher)
 
         gt_mask_ex = paddle.expand_as(gt_mask.unsqueeze(axis=1), logits_teacher)
-        pred_teacher_part2 = F.softmax(
-            logits_teacher / self.temperature - 1000.0 * gt_mask_ex, axis=-1)
-        pred_student_part2 = F.softmax(
-            logits_student / self.temperature - 1000.0 * gt_mask_ex, axis=-1)
+        pred_teacher_part2 = F.softmax(logits_teacher / self.temperature - 1000.0 * gt_mask_ex, axis=-1)
+        pred_student_part2 = F.softmax(logits_student / self.temperature - 1000.0 * gt_mask_ex, axis=-1)
         # differents with dkd
         pred_teacher_part2 = paddle.mean(pred_teacher_part2, axis=1)
         pred_student_part2 = paddle.mean(pred_student_part2, axis=1)
@@ -1009,7 +920,7 @@ class CTCDKDLoss(nn.Layer):
 
 
 class KLCTCLogits(nn.Layer):
-    def __init__(self, weight=1.0, reduction='mean', mode="mean"):
+    def __init__(self, weight=1.0, reduction="mean", mode="mean"):
         super().__init__()
         self.weight = weight
         self.reduction = reduction
@@ -1021,8 +932,7 @@ class KLCTCLogits(nn.Layer):
         self.ctc_dkd_loss = CTCDKDLoss()
 
     def kl_loss(self, p1, p2):  # predict, label
-        loss = paddle.multiply(
-            p2, paddle.log((p2 + self.eps) / (p1 + self.eps) + self.eps))
+        loss = paddle.multiply(p2, paddle.log((p2 + self.eps) / (p1 + self.eps) + self.eps))
         bs = loss.shape[0]
         loss = paddle.sum(loss) / bs
         return loss
@@ -1042,9 +952,7 @@ class KLCTCLogits(nn.Layer):
             # for recognition distillation, log is needed for feature map
             log_out1 = paddle.log(stu_out)
             log_out2 = paddle.log(tea_out)
-            loss = (
-                self._kldiv(log_out1, tea_out) + self._kldiv(log_out2, stu_out)
-            ) / 2.0
+            loss = (self._kldiv(log_out1, tea_out) + self._kldiv(log_out2, stu_out)) / 2.0
 
         return loss
 
@@ -1101,18 +1009,13 @@ class KLCTCLogits(nn.Layer):
             # for recognition distillation, log is needed for feature map
             log_out1 = paddle.log(out1)
             log_out2 = paddle.log(out2)
-            loss = (
-                self._kldiv(log_out1, out2) + self._kldiv(log_out2, out1)) / 2.0
+            loss = (self._kldiv(log_out1, out2) + self._kldiv(log_out2, out1)) / 2.0
 
         return loss
 
 
 class DistillCTCLogits(KLCTCLogits):
-    def __init__(self,
-                 model_name_pairs=[],
-                 key=None,
-                 name="ctc_logits",
-                 reduction="mean"):
+    def __init__(self, model_name_pairs=[], key=None, name="ctc_logits", reduction="mean"):
         super().__init__(reduction=reduction)
         self.model_name_pairs = self._check_model_name_pairs(model_name_pairs)
         self.key = key
@@ -1121,8 +1024,7 @@ class DistillCTCLogits(KLCTCLogits):
     def _check_model_name_pairs(self, model_name_pairs):
         if not isinstance(model_name_pairs, list):
             return []
-        elif isinstance(model_name_pairs[0], list) and isinstance(
-                model_name_pairs[0][0], str):
+        elif isinstance(model_name_pairs[0], list) and isinstance(model_name_pairs[0][0], str):
             return model_name_pairs
         else:
             return [model_name_pairs]
@@ -1134,15 +1036,14 @@ class DistillCTCLogits(KLCTCLogits):
             out2 = predicts[pair[1]]
 
             if self.key is not None:
-                out1 = out1[self.key]['ctc']
-                out2 = out2[self.key]['ctc']
+                out1 = out1[self.key]["ctc"]
+                out2 = out2[self.key]["ctc"]
 
             ctc_label = batch[1]
             loss = super().forward(out1, out2, ctc_label)
             if isinstance(loss, dict):
                 for key in loss:
-                    loss_dict["{}_{}_{}".format(self.name, model_name,
-                                                idx)] = loss[key]
+                    loss_dict["{}_{}_{}".format(self.name, model_name, idx)] = loss[key]
             else:
                 loss_dict["{}_{}".format(self.name, idx)] = loss
         return loss_dict

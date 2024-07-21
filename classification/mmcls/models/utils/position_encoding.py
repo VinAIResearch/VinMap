@@ -18,13 +18,8 @@ class ConditionalPositionEncoding(BaseModule):
     def __init__(self, in_channels, embed_dims=768, stride=1, init_cfg=None):
         super(ConditionalPositionEncoding, self).__init__(init_cfg=init_cfg)
         self.proj = nn.Conv2d(
-            in_channels,
-            embed_dims,
-            kernel_size=3,
-            stride=stride,
-            padding=1,
-            bias=True,
-            groups=embed_dims)
+            in_channels, embed_dims, kernel_size=3, stride=stride, padding=1, bias=True, groups=embed_dims
+        )
         self.stride = stride
 
     def forward(self, x, hw_shape):

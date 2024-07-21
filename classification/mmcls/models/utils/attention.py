@@ -33,15 +33,17 @@ class WindowMSA(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 window_size,
-                 num_heads,
-                 qkv_bias=True,
-                 qk_scale=None,
-                 attn_drop=0.,
-                 proj_drop=0.,
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        window_size,
+        num_heads,
+        qkv_bias=True,
+        qk_scale=None,
+        attn_drop=0.0,
+        proj_drop=0.0,
+        init_cfg=None,
+    ):
 
         super().__init__(init_cfg)
         self.embed_dims = embed_dims
@@ -52,15 +54,15 @@ class WindowMSA(BaseModule):
 
         # define a parameter table of relative position bias
         self.relative_position_bias_table = nn.Parameter(
-            torch.zeros((2 * window_size[0] - 1) * (2 * window_size[1] - 1),
-                        num_heads))  # 2*Wh-1 * 2*Ww-1, nH
+            torch.zeros((2 * window_size[0] - 1) * (2 * window_size[1] - 1), num_heads)
+        )  # 2*Wh-1 * 2*Ww-1, nH
 
         # About 2x faster than original impl
         Wh, Ww = self.window_size
         rel_index_coords = self.double_step_seq(2 * Ww - 1, Wh, 1, Ww)
         rel_position_index = rel_index_coords + rel_index_coords.T
         rel_position_index = rel_position_index.flip(1).contiguous()
-        self.register_buffer('relative_position_index', rel_position_index)
+        self.register_buffer("relative_position_index", rel_position_index)
 
         self.qkv = nn.Linear(embed_dims, embed_dims * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
@@ -83,27 +85,21 @@ class WindowMSA(BaseModule):
                 Wh*Ww), value should be between (-inf, 0].
         """
         B_, N, C = x.shape
-        qkv = self.qkv(x).reshape(B_, N, 3, self.num_heads,
-                                  C // self.num_heads).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[
-            2]  # make torchscript happy (cannot use tensor as tuple)
+        qkv = self.qkv(x).reshape(B_, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
 
         q = q * self.scale
-        attn = (q @ k.transpose(-2, -1))
+        attn = q @ k.transpose(-2, -1)
 
-        relative_position_bias = self.relative_position_bias_table[
-            self.relative_position_index.view(-1)].view(
-                self.window_size[0] * self.window_size[1],
-                self.window_size[0] * self.window_size[1],
-                -1)  # Wh*Ww,Wh*Ww,nH
-        relative_position_bias = relative_position_bias.permute(
-            2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
+        relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
+            self.window_size[0] * self.window_size[1], self.window_size[0] * self.window_size[1], -1
+        )  # Wh*Ww,Wh*Ww,nH
+        relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
         attn = attn + relative_position_bias.unsqueeze(0)
 
         if mask is not None:
             nW = mask.shape[0]
-            attn = attn.view(B_ // nW, nW, self.num_heads, N,
-                             N) + mask.unsqueeze(1).unsqueeze(0)
+            attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, N, N)
             attn = self.softmax(attn)
         else:
@@ -146,17 +142,19 @@ class WindowMSAV2(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 window_size,
-                 num_heads,
-                 qkv_bias=True,
-                 attn_drop=0.,
-                 proj_drop=0.,
-                 cpb_mlp_hidden_dims=512,
-                 pretrained_window_size=(0, 0),
-                 init_cfg=None,
-                 **kwargs):  # accept extra arguments
+    def __init__(
+        self,
+        embed_dims,
+        window_size,
+        num_heads,
+        qkv_bias=True,
+        attn_drop=0.0,
+        proj_drop=0.0,
+        cpb_mlp_hidden_dims=512,
+        pretrained_window_size=(0, 0),
+        init_cfg=None,
+        **kwargs,
+    ):  # accept extra arguments
 
         super().__init__(init_cfg)
         self.embed_dims = embed_dims
@@ -165,63 +163,50 @@ class WindowMSAV2(BaseModule):
 
         # Use small network for continuous relative position bias
         self.cpb_mlp = nn.Sequential(
-            nn.Linear(
-                in_features=2, out_features=cpb_mlp_hidden_dims, bias=True),
+            nn.Linear(in_features=2, out_features=cpb_mlp_hidden_dims, bias=True),
             nn.ReLU(inplace=True),
-            nn.Linear(
-                in_features=cpb_mlp_hidden_dims,
-                out_features=num_heads,
-                bias=False))
+            nn.Linear(in_features=cpb_mlp_hidden_dims, out_features=num_heads, bias=False),
+        )
 
         # Add learnable scalar for cosine attention
-        self.logit_scale = nn.Parameter(
-            torch.log(10 * torch.ones((num_heads, 1, 1))), requires_grad=True)
+        self.logit_scale = nn.Parameter(torch.log(10 * torch.ones((num_heads, 1, 1))), requires_grad=True)
 
         # get relative_coords_table
-        relative_coords_h = torch.arange(
-            -(self.window_size[0] - 1),
-            self.window_size[0],
-            dtype=torch.float32)
-        relative_coords_w = torch.arange(
-            -(self.window_size[1] - 1),
-            self.window_size[1],
-            dtype=torch.float32)
-        relative_coords_table = torch.stack(
-            torch.meshgrid([relative_coords_h, relative_coords_w])).permute(
-                1, 2, 0).contiguous().unsqueeze(0)  # 1, 2*Wh-1, 2*Ww-1, 2
+        relative_coords_h = torch.arange(-(self.window_size[0] - 1), self.window_size[0], dtype=torch.float32)
+        relative_coords_w = torch.arange(-(self.window_size[1] - 1), self.window_size[1], dtype=torch.float32)
+        relative_coords_table = (
+            torch.stack(torch.meshgrid([relative_coords_h, relative_coords_w]))
+            .permute(1, 2, 0)
+            .contiguous()
+            .unsqueeze(0)
+        )  # 1, 2*Wh-1, 2*Ww-1, 2
         if pretrained_window_size[0] > 0:
-            relative_coords_table[:, :, :, 0] /= (
-                pretrained_window_size[0] - 1)
-            relative_coords_table[:, :, :, 1] /= (
-                pretrained_window_size[1] - 1)
+            relative_coords_table[:, :, :, 0] /= pretrained_window_size[0] - 1
+            relative_coords_table[:, :, :, 1] /= pretrained_window_size[1] - 1
         else:
-            relative_coords_table[:, :, :, 0] /= (self.window_size[0] - 1)
-            relative_coords_table[:, :, :, 1] /= (self.window_size[1] - 1)
+            relative_coords_table[:, :, :, 0] /= self.window_size[0] - 1
+            relative_coords_table[:, :, :, 1] /= self.window_size[1] - 1
         relative_coords_table *= 8  # normalize to -8, 8
-        relative_coords_table = torch.sign(relative_coords_table) * torch.log2(
-            torch.abs(relative_coords_table) + 1.0) / np.log2(8)
-        self.register_buffer('relative_coords_table', relative_coords_table)
+        relative_coords_table = (
+            torch.sign(relative_coords_table) * torch.log2(torch.abs(relative_coords_table) + 1.0) / np.log2(8)
+        )
+        self.register_buffer("relative_coords_table", relative_coords_table)
 
         # get pair-wise relative position index
         # for each token inside the window
         indexes_h = torch.arange(self.window_size[0])
         indexes_w = torch.arange(self.window_size[1])
-        coordinates = torch.stack(
-            torch.meshgrid([indexes_h, indexes_w]), dim=0)  # 2, Wh, Ww
+        coordinates = torch.stack(torch.meshgrid([indexes_h, indexes_w]), dim=0)  # 2, Wh, Ww
         coordinates = torch.flatten(coordinates, start_dim=1)  # 2, Wh*Ww
         # 2, Wh*Ww, Wh*Ww
-        relative_coordinates = coordinates[:, :, None] - coordinates[:,
-                                                                     None, :]
-        relative_coordinates = relative_coordinates.permute(
-            1, 2, 0).contiguous()  # Wh*Ww, Wh*Ww, 2
+        relative_coordinates = coordinates[:, :, None] - coordinates[:, None, :]
+        relative_coordinates = relative_coordinates.permute(1, 2, 0).contiguous()  # Wh*Ww, Wh*Ww, 2
 
-        relative_coordinates[:, :, 0] += self.window_size[
-            0] - 1  # shift to start from 0
+        relative_coordinates[:, :, 0] += self.window_size[0] - 1  # shift to start from 0
         relative_coordinates[:, :, 1] += self.window_size[1] - 1
         relative_coordinates[:, :, 0] *= 2 * self.window_size[1] - 1
         relative_position_index = relative_coordinates.sum(-1)  # Wh*Ww, Wh*Ww
-        self.register_buffer('relative_position_index',
-                             relative_position_index)
+        self.register_buffer("relative_position_index", relative_position_index)
 
         self.qkv = nn.Linear(embed_dims, embed_dims * 3, bias=False)
         if qkv_bias:
@@ -247,39 +232,27 @@ class WindowMSAV2(BaseModule):
         B_, N, C = x.shape
         qkv_bias = None
         if self.q_bias is not None:
-            qkv_bias = torch.cat(
-                (self.q_bias,
-                 torch.zeros_like(self.v_bias,
-                                  requires_grad=False), self.v_bias))
+            qkv_bias = torch.cat((self.q_bias, torch.zeros_like(self.v_bias, requires_grad=False), self.v_bias))
         qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
-        qkv = qkv.reshape(B_, N, 3, self.num_heads,
-                          C // self.num_heads).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[
-            2]  # make torchscript happy (cannot use tensor as tuple)
+        qkv = qkv.reshape(B_, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
 
         # cosine attention
-        attn = (
-            F.normalize(q, dim=-1) @ F.normalize(k, dim=-1).transpose(-2, -1))
-        logit_scale = torch.clamp(
-            self.logit_scale, max=np.log(1. / 0.01)).exp()
+        attn = F.normalize(q, dim=-1) @ F.normalize(k, dim=-1).transpose(-2, -1)
+        logit_scale = torch.clamp(self.logit_scale, max=np.log(1.0 / 0.01)).exp()
         attn = attn * logit_scale
 
-        relative_position_bias_table = self.cpb_mlp(
-            self.relative_coords_table).view(-1, self.num_heads)
-        relative_position_bias = relative_position_bias_table[
-            self.relative_position_index.view(-1)].view(
-                self.window_size[0] * self.window_size[1],
-                self.window_size[0] * self.window_size[1],
-                -1)  # Wh*Ww,Wh*Ww,nH
-        relative_position_bias = relative_position_bias.permute(
-            2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
+        relative_position_bias_table = self.cpb_mlp(self.relative_coords_table).view(-1, self.num_heads)
+        relative_position_bias = relative_position_bias_table[self.relative_position_index.view(-1)].view(
+            self.window_size[0] * self.window_size[1], self.window_size[0] * self.window_size[1], -1
+        )  # Wh*Ww,Wh*Ww,nH
+        relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
         relative_position_bias = 16 * torch.sigmoid(relative_position_bias)
         attn = attn + relative_position_bias.unsqueeze(0)
 
         if mask is not None:
             nW = mask.shape[0]
-            attn = attn.view(B_ // nW, nW, self.num_heads, N,
-                             N) + mask.unsqueeze(1).unsqueeze(0)
+            attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, N, N)
             attn = self.softmax(attn)
         else:
@@ -323,38 +296,42 @@ class ShiftWindowMSA(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads,
-                 window_size,
-                 shift_size=0,
-                 qkv_bias=True,
-                 qk_scale=None,
-                 attn_drop=0,
-                 proj_drop=0,
-                 dropout_layer=dict(type='DropPath', drop_prob=0.),
-                 pad_small_map=False,
-                 input_resolution=None,
-                 auto_pad=None,
-                 window_msa=WindowMSA,
-                 msa_cfg=dict(),
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        num_heads,
+        window_size,
+        shift_size=0,
+        qkv_bias=True,
+        qk_scale=None,
+        attn_drop=0,
+        proj_drop=0,
+        dropout_layer=dict(type="DropPath", drop_prob=0.0),
+        pad_small_map=False,
+        input_resolution=None,
+        auto_pad=None,
+        window_msa=WindowMSA,
+        msa_cfg=dict(),
+        init_cfg=None,
+    ):
         super().__init__(init_cfg)
 
         if input_resolution is not None or auto_pad is not None:
             warnings.warn(
-                'The ShiftWindowMSA in new version has supported auto padding '
-                'and dynamic input shape in all condition. And the argument '
-                '`auto_pad` and `input_resolution` have been deprecated.',
-                DeprecationWarning)
+                "The ShiftWindowMSA in new version has supported auto padding "
+                "and dynamic input shape in all condition. And the argument "
+                "`auto_pad` and `input_resolution` have been deprecated.",
+                DeprecationWarning,
+            )
 
         self.shift_size = shift_size
         self.window_size = window_size
         assert 0 <= self.shift_size < self.window_size
 
-        assert issubclass(window_msa, BaseModule), \
-            'Expect Window based multi-head self-attention Module is type of' \
-            f'{type(BaseModule)}, but got {type(window_msa)}.'
+        assert issubclass(window_msa, BaseModule), (
+            "Expect Window based multi-head self-attention Module is type of"
+            f"{type(BaseModule)}, but got {type(window_msa)}."
+        )
         self.w_msa = window_msa(
             embed_dims=embed_dims,
             window_size=to_2tuple(self.window_size),
@@ -372,8 +349,7 @@ class ShiftWindowMSA(BaseModule):
     def forward(self, query, hw_shape):
         B, L, C = query.shape
         H, W = hw_shape
-        assert L == H * W, f"The query length {L} doesn't match the input "\
-            f'shape ({H}, {W}).'
+        assert L == H * W, f"The query length {L} doesn't match the input " f"shape ({H}, {W})."
         query = query.view(B, H, W, C)
 
         window_size = self.window_size
@@ -389,10 +365,11 @@ class ShiftWindowMSA(BaseModule):
             # to the size of feature map. The behavior is different with
             # swin-transformer for downstream tasks. To support dynamic input
             # shape, we don't allow this feature.
-            assert self.pad_small_map, \
-                f'The input shape ({H}, {W}) is smaller than the window ' \
-                f'size ({window_size}). Please set `pad_small_map=True`, or ' \
-                'decrease the `window_size`.'
+            assert self.pad_small_map, (
+                f"The input shape ({H}, {W}) is smaller than the window "
+                f"size ({window_size}). Please set `pad_small_map=True`, or "
+                "decrease the `window_size`."
+            )
 
         pad_r = (window_size - W % window_size) % window_size
         pad_b = (window_size - H % window_size) % window_size
@@ -402,13 +379,11 @@ class ShiftWindowMSA(BaseModule):
 
         # cyclic shift
         if shift_size > 0:
-            query = torch.roll(
-                query, shifts=(-shift_size, -shift_size), dims=(1, 2))
+            query = torch.roll(query, shifts=(-shift_size, -shift_size), dims=(1, 2))
 
-        attn_mask = self.get_attn_mask((H_pad, W_pad),
-                                       window_size=window_size,
-                                       shift_size=shift_size,
-                                       device=query.device)
+        attn_mask = self.get_attn_mask(
+            (H_pad, W_pad), window_size=window_size, shift_size=shift_size, device=query.device
+        )
 
         # nW*B, window_size, window_size, C
         query_windows = self.window_partition(query, window_size)
@@ -422,12 +397,10 @@ class ShiftWindowMSA(BaseModule):
         attn_windows = attn_windows.view(-1, window_size, window_size, C)
 
         # B H' W' C
-        shifted_x = self.window_reverse(attn_windows, H_pad, W_pad,
-                                        window_size)
+        shifted_x = self.window_reverse(attn_windows, H_pad, W_pad, window_size)
         # reverse cyclic shift
         if self.shift_size > 0:
-            x = torch.roll(
-                shifted_x, shifts=(shift_size, shift_size), dims=(1, 2))
+            x = torch.roll(shifted_x, shifts=(shift_size, shift_size), dims=(1, 2))
         else:
             x = shifted_x
 
@@ -443,16 +416,14 @@ class ShiftWindowMSA(BaseModule):
     @staticmethod
     def window_reverse(windows, H, W, window_size):
         B = int(windows.shape[0] / (H * W / window_size / window_size))
-        x = windows.view(B, H // window_size, W // window_size, window_size,
-                         window_size, -1)
+        x = windows.view(B, H // window_size, W // window_size, window_size, window_size, -1)
         x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
         return x
 
     @staticmethod
     def window_partition(x, window_size):
         B, H, W, C = x.shape
-        x = x.view(B, H // window_size, window_size, W // window_size,
-                   window_size, C)
+        x = x.view(B, H // window_size, window_size, W // window_size, window_size, C)
         windows = x.permute(0, 1, 3, 2, 4, 5).contiguous()
         windows = windows.view(-1, window_size, window_size, C)
         return windows
@@ -461,12 +432,8 @@ class ShiftWindowMSA(BaseModule):
     def get_attn_mask(hw_shape, window_size, shift_size, device=None):
         if shift_size > 0:
             img_mask = torch.zeros(1, *hw_shape, 1, device=device)
-            h_slices = (slice(0, -window_size), slice(-window_size,
-                                                      -shift_size),
-                        slice(-shift_size, None))
-            w_slices = (slice(0, -window_size), slice(-window_size,
-                                                      -shift_size),
-                        slice(-shift_size, None))
+            h_slices = (slice(0, -window_size), slice(-window_size, -shift_size), slice(-shift_size, None))
+            w_slices = (slice(0, -window_size), slice(-window_size, -shift_size), slice(-shift_size, None))
             cnt = 0
             for h in h_slices:
                 for w in w_slices:
@@ -474,8 +441,7 @@ class ShiftWindowMSA(BaseModule):
                     cnt += 1
 
             # nW, window_size, window_size, 1
-            mask_windows = ShiftWindowMSA.window_partition(
-                img_mask, window_size)
+            mask_windows = ShiftWindowMSA.window_partition(img_mask, window_size)
             mask_windows = mask_windows.view(-1, window_size * window_size)
             attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
             attn_mask = attn_mask.masked_fill(attn_mask != 0, -100.0)
@@ -516,18 +482,20 @@ class MultiheadAttention(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads,
-                 input_dims=None,
-                 attn_drop=0.,
-                 proj_drop=0.,
-                 dropout_layer=dict(type='Dropout', drop_prob=0.),
-                 qkv_bias=True,
-                 qk_scale=None,
-                 proj_bias=True,
-                 v_shortcut=False,
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        num_heads,
+        input_dims=None,
+        attn_drop=0.0,
+        proj_drop=0.0,
+        dropout_layer=dict(type="Dropout", drop_prob=0.0),
+        qkv_bias=True,
+        qk_scale=None,
+        proj_bias=True,
+        v_shortcut=False,
+        init_cfg=None,
+    ):
         super(MultiheadAttention, self).__init__(init_cfg=init_cfg)
 
         self.input_dims = input_dims or embed_dims
@@ -547,8 +515,7 @@ class MultiheadAttention(BaseModule):
 
     def forward(self, x):
         B, N, _ = x.shape
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads,
-                                  self.head_dims).permute(2, 0, 3, 1, 4)
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dims).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         attn = (q @ k.transpose(-2, -1)) * self.scale

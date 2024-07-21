@@ -15,33 +15,37 @@ class BaseConvertor:
         dict_list (None|list[str]): Character list. If not none, the list
             is of higher priority than dict_type, but lower than dict_file.
     """
+
     start_idx = end_idx = padding_idx = 0
     unknown_idx = None
     lower = False
 
     dicts = dict(
-        DICT36=tuple('0123456789abcdefghijklmnopqrstuvwxyz'),
-        DICT90=tuple('0123456789abcdefghijklmnopqrstuvwxyz'
-                     'ABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()'
-                     '*+,-./:;<=>?@[\\]_`~'),
+        DICT36=tuple("0123456789abcdefghijklmnopqrstuvwxyz"),
+        DICT90=tuple(
+            "0123456789abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()" "*+,-./:;<=>?@[\\]_`~"
+        ),
         # With space character
-        DICT37=tuple('0123456789abcdefghijklmnopqrstuvwxyz '),
-        DICT91=tuple('0123456789abcdefghijklmnopqrstuvwxyz'
-                     'ABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()'
-                     '*+,-./:;<=>?@[\\]_`~ '))
+        DICT37=tuple("0123456789abcdefghijklmnopqrstuvwxyz "),
+        DICT91=tuple(
+            "0123456789abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()" "*+,-./:;<=>?@[\\]_`~ "
+        ),
+    )
 
-    def __init__(self, dict_type='DICT90', dict_file=None, dict_list=None):
+    def __init__(self, dict_type="DICT90", dict_file=None, dict_list=None):
         assert dict_file is None or isinstance(dict_file, str)
         assert dict_list is None or isinstance(dict_list, list)
         self.idx2char = []
         if dict_file is not None:
             for line_num, line in enumerate(list_from_file(dict_file)):
-                line = line.strip('\r\n')
+                line = line.strip("\r\n")
                 if len(line) > 1:
-                    raise ValueError('Expect each line has 0 or 1 character, '
-                                     f'got {len(line)} characters '
-                                     f'at line {line_num + 1}')
-                if line != '':
+                    raise ValueError(
+                        "Expect each line has 0 or 1 character, "
+                        f"got {len(line)} characters "
+                        f"at line {line_num + 1}"
+                    )
+                if line != "":
                     self.idx2char.append(line)
         elif dict_list is not None:
             self.idx2char = list(dict_list)
@@ -49,11 +53,9 @@ class BaseConvertor:
             if dict_type in self.dicts:
                 self.idx2char = list(self.dicts[dict_type])
             else:
-                raise NotImplementedError(f'Dict type {dict_type} is not '
-                                          'supported')
+                raise NotImplementedError(f"Dict type {dict_type} is not " "supported")
 
-        assert len(set(self.idx2char)) == len(self.idx2char), \
-            'Invalid dictionary: Has duplicated characters.'
+        assert len(set(self.idx2char)) == len(self.idx2char), "Invalid dictionary: Has duplicated characters."
 
         self.char2idx = {char: idx for idx, char in enumerate(self.idx2char)}
 
@@ -79,10 +81,12 @@ class BaseConvertor:
             for char in string:
                 char_idx = self.char2idx.get(char, self.unknown_idx)
                 if char_idx is None:
-                    raise Exception(f'Chararcter: {char} not in dict,'
-                                    f' please check gt_label and use'
-                                    f' custom dict file,'
-                                    f' or set "with_unknown=True"')
+                    raise Exception(
+                        f"Chararcter: {char} not in dict,"
+                        f" please check gt_label and use"
+                        f" custom dict file,"
+                        f' or set "with_unknown=True"'
+                    )
                 index.append(char_idx)
             indexes.append(index)
 
@@ -112,7 +116,7 @@ class BaseConvertor:
         strings = []
         for index in indexes:
             string = [self.idx2char[i] for i in index]
-            strings.append(''.join(string))
+            strings.append("".join(string))
 
         return strings
 

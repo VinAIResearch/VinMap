@@ -33,43 +33,30 @@ def convert_annotations(root_path, split, format):
     assert isinstance(split, str)
 
     lines = []
-    with open(
-            osp.join(root_path, 'annotations',
-                     f'Challenge2_{split}_Task3_GT.txt'),
-            'r',
-            encoding='"utf-8-sig') as f:
+    with open(osp.join(root_path, "annotations", f"Challenge2_{split}_Task3_GT.txt"), "r", encoding='"utf-8-sig') as f:
         annos = f.readlines()
     dst_image_root = osp.join(root_path, split.lower())
     for anno in annos:
         # text may contain comma ','
         dst_img_name, word = anno.split(', "')
-        word = word.replace('"\n', '')
+        word = word.replace('"\n', "")
 
-        if format == 'txt':
-            lines.append(f'{osp.basename(dst_image_root)}/{dst_img_name} '
-                         f'{word}')
-        elif format == 'jsonl':
-            lines.append(
-                json.dumps({
-                    'filename':
-                    f'{osp.basename(dst_image_root)}/{dst_img_name}',
-                    'text': word
-                }))
+        if format == "txt":
+            lines.append(f"{osp.basename(dst_image_root)}/{dst_img_name} " f"{word}")
+        elif format == "jsonl":
+            lines.append(json.dumps({"filename": f"{osp.basename(dst_image_root)}/{dst_img_name}", "text": word}))
         else:
             raise NotImplementedError
 
-    list_to_file(osp.join(root_path, f'{split.lower()}_label.{format}'), lines)
+    list_to_file(osp.join(root_path, f"{split.lower()}_label.{format}"), lines)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training and test set of IC13')
-    parser.add_argument('root_path', help='Root dir path of IC13')
+    parser = argparse.ArgumentParser(description="Generate training and test set of IC13")
+    parser.add_argument("root_path", help="Root dir path of IC13")
     parser.add_argument(
-        '--format',
-        default='jsonl',
-        help='Use jsonl or string to format annotations',
-        choices=['jsonl', 'txt'])
+        "--format", default="jsonl", help="Use jsonl or string to format annotations", choices=["jsonl", "txt"]
+    )
     args = parser.parse_args()
     return args
 
@@ -78,10 +65,10 @@ def main():
     args = parse_args()
     root_path = args.root_path
 
-    for split in ['Train', 'Test']:
+    for split in ["Train", "Test"]:
         convert_annotations(root_path, split, args.format)
-        print(f'{split} split converted.')
+        print(f"{split} split converted.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

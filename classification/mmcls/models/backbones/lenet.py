@@ -21,11 +21,15 @@ class LeNet5(BaseBackbone):
         super(LeNet5, self).__init__()
         self.num_classes = num_classes
         self.features = nn.Sequential(
-            nn.Conv2d(1, 6, kernel_size=5, stride=1), nn.Tanh(),
+            nn.Conv2d(1, 6, kernel_size=5, stride=1),
+            nn.Tanh(),
             nn.AvgPool2d(kernel_size=2),
-            nn.Conv2d(6, 16, kernel_size=5, stride=1), nn.Tanh(),
+            nn.Conv2d(6, 16, kernel_size=5, stride=1),
+            nn.Tanh(),
             nn.AvgPool2d(kernel_size=2),
-            nn.Conv2d(16, 120, kernel_size=5, stride=1), nn.Tanh())
+            nn.Conv2d(16, 120, kernel_size=5, stride=1),
+            nn.Tanh(),
+        )
         if self.num_classes > 0:
             self.classifier = nn.Sequential(
                 nn.Linear(120, 84),
@@ -39,4 +43,4 @@ class LeNet5(BaseBackbone):
         if self.num_classes > 0:
             x = self.classifier(x.squeeze())
 
-        return (x, )
+        return (x,)

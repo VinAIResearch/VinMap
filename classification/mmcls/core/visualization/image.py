@@ -4,6 +4,7 @@ import mmcv
 import numpy as np
 from matplotlib.backend_bases import CloseEvent
 
+
 # A small value
 EPS = 1e-2
 
@@ -38,7 +39,7 @@ class BaseFigureContextManager:
     """
 
     def __init__(self, axis=False, fig_save_cfg={}, fig_show_cfg={}) -> None:
-        self.is_inline = 'inline' in plt.get_backend()
+        self.is_inline = "inline" in plt.get_backend()
 
         # Because save and show need different figure size
         # We set two figure and axes to handle save and show
@@ -107,7 +108,7 @@ class BaseFigureContextManager:
         self.ax_show.cla()
         self.ax_show.axis(self.axis)
 
-    def wait_continue(self, timeout=0, continue_key=' ') -> int:
+    def wait_continue(self, timeout=0, continue_key=" ") -> int:
         """Show the image and wait for the user's input.
 
         This implementation refers to
@@ -144,10 +145,7 @@ class BaseFigureContextManager:
                 event = ev if not isinstance(event, CloseEvent) else event
                 self.fig_show.canvas.stop_event_loop()
 
-            cids = [
-                self.fig_show.canvas.mpl_connect(name, handler)
-                for name in ('key_press_event', 'close_event')
-            ]
+            cids = [self.fig_show.canvas.mpl_connect(name, handler) for name in ("key_press_event", "close_event")]
 
             try:
                 self.fig_show.canvas.start_event_loop(timeout)
@@ -188,36 +186,34 @@ class ImshowInfosContextManager(BaseFigureContextManager):
             axis=False,
             # A proper dpi for image save with default font size.
             fig_save_cfg=dict(frameon=False, dpi=36),
-            fig_show_cfg=dict(frameon=False, figsize=fig_size))
+            fig_show_cfg=dict(frameon=False, figsize=fig_size),
+        )
 
     def _put_text(self, ax, text, x, y, text_color, font_size):
         ax.text(
             x,
             y,
-            f'{text}',
-            bbox={
-                'facecolor': 'black',
-                'alpha': 0.7,
-                'pad': 0.2,
-                'edgecolor': 'none',
-                'boxstyle': 'round'
-            },
+            f"{text}",
+            bbox={"facecolor": "black", "alpha": 0.7, "pad": 0.2, "edgecolor": "none", "boxstyle": "round"},
             color=text_color,
             fontsize=font_size,
-            family='monospace',
-            verticalalignment='top',
-            horizontalalignment='left')
+            family="monospace",
+            verticalalignment="top",
+            horizontalalignment="left",
+        )
 
-    def put_img_infos(self,
-                      img,
-                      infos,
-                      text_color='white',
-                      font_size=26,
-                      row_width=20,
-                      win_name='',
-                      show=True,
-                      wait_time=0,
-                      out_file=None):
+    def put_img_infos(
+        self,
+        img,
+        infos,
+        text_color="white",
+        font_size=26,
+        row_width=20,
+        win_name="",
+        show=True,
+        wait_time=0,
+        out_file=None,
+    ):
         """Show image with extra information.
 
         Args:
@@ -250,26 +246,23 @@ class ImshowInfosContextManager(BaseFigureContextManager):
         # add a small EPS to avoid precision lost due to matplotlib's
         # truncation (https://github.com/matplotlib/matplotlib/issues/15363)
         dpi = self.fig_save.get_dpi()
-        self.fig_save.set_size_inches((width + EPS) / dpi,
-                                      (height + EPS) / dpi)
+        self.fig_save.set_size_inches((width + EPS) / dpi, (height + EPS) / dpi)
 
         for k, v in infos.items():
             if isinstance(v, float):
-                v = f'{v:.2f}'
-            label_text = f'{k}: {v}'
-            self._put_text(self.ax_save, label_text, x, y, text_color,
-                           font_size)
+                v = f"{v:.2f}"
+            label_text = f"{k}: {v}"
+            self._put_text(self.ax_save, label_text, x, y, text_color, font_size)
             if show and not self.is_inline:
-                self._put_text(self.ax_show, label_text, x, y, text_color,
-                               font_size)
+                self._put_text(self.ax_show, label_text, x, y, text_color, font_size)
             y += row_width
 
         self.ax_save.imshow(img)
         stream, _ = self.fig_save.canvas.print_to_buffer()
-        buffer = np.frombuffer(stream, dtype='uint8')
+        buffer = np.frombuffer(stream, dtype="uint8")
         img_rgba = buffer.reshape(height, width, 4)
         rgb, _ = np.split(img_rgba, [3], axis=2)
-        img_save = rgb.astype('uint8')
+        img_save = rgb.astype("uint8")
         img_save = mmcv.rgb2bgr(img_save)
 
         if out_file is not None:
@@ -280,12 +273,7 @@ class ImshowInfosContextManager(BaseFigureContextManager):
             # Reserve some space for the tip.
             self.ax_show.set_title(win_name)
             self.ax_show.set_ylim(height + 20)
-            self.ax_show.text(
-                width // 2,
-                height + 18,
-                'Press SPACE to continue.',
-                ha='center',
-                fontsize=font_size)
+            self.ax_show.text(width // 2, height + 18, "Press SPACE to continue.", ha="center", fontsize=font_size)
             self.ax_show.imshow(img)
 
             # Refresh canvas, necessary for Qt5 backend.
@@ -300,16 +288,18 @@ class ImshowInfosContextManager(BaseFigureContextManager):
         return ret, img_save
 
 
-def imshow_infos(img,
-                 infos,
-                 text_color='white',
-                 font_size=26,
-                 row_width=20,
-                 win_name='',
-                 show=True,
-                 fig_size=(15, 10),
-                 wait_time=0,
-                 out_file=None):
+def imshow_infos(
+    img,
+    infos,
+    text_color="white",
+    font_size=26,
+    row_width=20,
+    win_name="",
+    show=True,
+    fig_size=(15, 10),
+    wait_time=0,
+    out_file=None,
+):
     """Show image with extra information.
 
     Args:
@@ -339,5 +329,6 @@ def imshow_infos(img,
             win_name=win_name,
             show=show,
             wait_time=wait_time,
-            out_file=out_file)
+            out_file=out_file,
+        )
     return img

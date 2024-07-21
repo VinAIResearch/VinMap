@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from mmocr.models.builder import LOSSES
 
 
@@ -20,11 +19,7 @@ class SegLoss(nn.Module):
             and does not contribute to the input gradient.
     """
 
-    def __init__(self,
-                 seg_downsample_ratio=0.5,
-                 seg_with_loss_weight=True,
-                 ignore_index=255,
-                 **kwargs):
+    def __init__(self, seg_downsample_ratio=0.5, seg_with_loss_weight=True, ignore_index=255, **kwargs):
         super().__init__()
 
         assert isinstance(seg_downsample_ratio, (int, float))
@@ -38,8 +33,7 @@ class SegLoss(nn.Module):
     def seg_loss(self, out_head, gt_kernels):
         seg_map = out_head  # bsz * num_classes * H/2 * W/2
         seg_target = [
-            item[1].rescale(self.seg_downsample_ratio).to_tensor(
-                torch.long, seg_map.device) for item in gt_kernels
+            item[1].rescale(self.seg_downsample_ratio).to_tensor(torch.long, seg_map.device) for item in gt_kernels
         ]
         seg_target = torch.stack(seg_target).squeeze(1)
 
@@ -51,11 +45,7 @@ class SegLoss(nn.Module):
             loss_weight = torch.ones(seg_map.size(1), device=seg_map.device)
             loss_weight[1:] = weight_val
 
-        loss_seg = F.cross_entropy(
-            seg_map,
-            seg_target,
-            weight=loss_weight,
-            ignore_index=self.ignore_index)
+        loss_seg = F.cross_entropy(seg_map, seg_target, weight=loss_weight, ignore_index=self.ignore_index)
 
         return loss_seg
 
@@ -75,6 +65,6 @@ class SegLoss(nn.Module):
 
         loss_seg = self.seg_loss(out_head, gt_kernels)
 
-        losses['loss_seg'] = loss_seg
+        losses["loss_seg"] = loss_seg
 
         return losses

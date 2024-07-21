@@ -17,40 +17,30 @@ from .base_backbone import BaseBackbone
 class DenseLayer(BaseBackbone):
     """DenseBlock layers."""
 
-    def __init__(self,
-                 in_channels,
-                 growth_rate,
-                 bn_size,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 drop_rate=0.,
-                 memory_efficient=False):
+    def __init__(
+        self,
+        in_channels,
+        growth_rate,
+        bn_size,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        drop_rate=0.0,
+        memory_efficient=False,
+    ):
         super(DenseLayer, self).__init__()
 
         self.norm1 = build_norm_layer(norm_cfg, in_channels)[1]
-        self.conv1 = nn.Conv2d(
-            in_channels,
-            bn_size * growth_rate,
-            kernel_size=1,
-            stride=1,
-            bias=False)
+        self.conv1 = nn.Conv2d(in_channels, bn_size * growth_rate, kernel_size=1, stride=1, bias=False)
         self.act = build_activation_layer(act_cfg)
         self.norm2 = build_norm_layer(norm_cfg, bn_size * growth_rate)[1]
-        self.conv2 = nn.Conv2d(
-            bn_size * growth_rate,
-            growth_rate,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False)
+        self.conv2 = nn.Conv2d(bn_size * growth_rate, growth_rate, kernel_size=3, stride=1, padding=1, bias=False)
         self.drop_rate = float(drop_rate)
         self.memory_efficient = memory_efficient
 
     def bottleneck_fn(self, xs):
         # type: (List[torch.Tensor]) -> torch.Tensor
         concated_features = torch.cat(xs, 1)
-        bottleneck_output = self.conv1(
-            self.act(self.norm1(concated_features)))  # noqa: T484
+        bottleneck_output = self.conv1(self.act(self.norm1(concated_features)))  # noqa: T484
         return bottleneck_output
 
     # todo: rewrite when torchscript supports any
@@ -81,41 +71,46 @@ class DenseLayer(BaseBackbone):
 
         if self.memory_efficient and self.any_requires_grad(x):
             if torch.jit.is_scripting():
-                raise Exception('Memory Efficient not supported in JIT')
+                raise Exception("Memory Efficient not supported in JIT")
             bottleneck_output = self.call_checkpoint_bottleneck(x)
         else:
             bottleneck_output = self.bottleneck_fn(x)
 
         new_features = self.conv2(self.act(self.norm2(bottleneck_output)))
         if self.drop_rate > 0:
-            new_features = F.dropout(
-                new_features, p=self.drop_rate, training=self.training)
+            new_features = F.dropout(new_features, p=self.drop_rate, training=self.training)
         return new_features
 
 
 class DenseBlock(nn.Module):
     """DenseNet Blocks."""
 
-    def __init__(self,
-                 num_layers,
-                 in_channels,
-                 bn_size,
-                 growth_rate,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 drop_rate=0.,
-                 memory_efficient=False):
+    def __init__(
+        self,
+        num_layers,
+        in_channels,
+        bn_size,
+        growth_rate,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        drop_rate=0.0,
+        memory_efficient=False,
+    ):
         super(DenseBlock, self).__init__()
-        self.block = nn.ModuleList([
-            DenseLayer(
-                in_channels + i * growth_rate,
-                growth_rate=growth_rate,
-                bn_size=bn_size,
-                norm_cfg=norm_cfg,
-                act_cfg=act_cfg,
-                drop_rate=drop_rate,
-                memory_efficient=memory_efficient) for i in range(num_layers)
-        ])
+        self.block = nn.ModuleList(
+            [
+                DenseLayer(
+                    in_channels + i * growth_rate,
+                    growth_rate=growth_rate,
+                    bn_size=bn_size,
+                    norm_cfg=norm_cfg,
+                    act_cfg=act_cfg,
+                    drop_rate=drop_rate,
+                    memory_efficient=memory_efficient,
+                )
+                for i in range(num_layers)
+            ]
+        )
 
     def forward(self, init_features):
         features = [init_features]
@@ -128,20 +123,12 @@ class DenseBlock(nn.Module):
 class DenseTransition(nn.Sequential):
     """DenseNet Transition Layers."""
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU')):
+    def __init__(self, in_channels, out_channels, norm_cfg=dict(type="BN"), act_cfg=dict(type="ReLU")):
         super(DenseTransition, self).__init__()
-        self.add_module('norm', build_norm_layer(norm_cfg, in_channels)[1])
-        self.add_module('act', build_activation_layer(act_cfg))
-        self.add_module(
-            'conv',
-            nn.Conv2d(
-                in_channels, out_channels, kernel_size=1, stride=1,
-                bias=False))
-        self.add_module('pool', nn.AvgPool2d(kernel_size=2, stride=2))
+        self.add_module("norm", build_norm_layer(norm_cfg, in_channels)[1])
+        self.add_module("act", build_activation_layer(act_cfg))
+        self.add_module("conv", nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, bias=False))
+        self.add_module("pool", nn.AvgPool2d(kernel_size=2, stride=2))
 
 
 @BACKBONES.register_module()
@@ -186,56 +173,60 @@ class DenseNet(BaseBackbone):
             Defaults to 0, which means not freezing any parameters.
         init_cfg (dict, optional): Initialization config dict.
     """
+
     arch_settings = {
-        '121': {
-            'growth_rate': 32,
-            'depths': [6, 12, 24, 16],
-            'init_channels': 64,
+        "121": {
+            "growth_rate": 32,
+            "depths": [6, 12, 24, 16],
+            "init_channels": 64,
         },
-        '169': {
-            'growth_rate': 32,
-            'depths': [6, 12, 32, 32],
-            'init_channels': 64,
+        "169": {
+            "growth_rate": 32,
+            "depths": [6, 12, 32, 32],
+            "init_channels": 64,
         },
-        '201': {
-            'growth_rate': 32,
-            'depths': [6, 12, 48, 32],
-            'init_channels': 64,
+        "201": {
+            "growth_rate": 32,
+            "depths": [6, 12, 48, 32],
+            "init_channels": 64,
         },
-        '161': {
-            'growth_rate': 48,
-            'depths': [6, 12, 36, 24],
-            'init_channels': 96,
+        "161": {
+            "growth_rate": 48,
+            "depths": [6, 12, 36, 24],
+            "init_channels": 96,
         },
     }
 
-    def __init__(self,
-                 arch='121',
-                 in_channels=3,
-                 bn_size=4,
-                 drop_rate=0,
-                 compression_factor=0.5,
-                 memory_efficient=False,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 out_indices=-1,
-                 frozen_stages=0,
-                 init_cfg=None):
+    def __init__(
+        self,
+        arch="121",
+        in_channels=3,
+        bn_size=4,
+        drop_rate=0,
+        compression_factor=0.5,
+        memory_efficient=False,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        out_indices=-1,
+        frozen_stages=0,
+        init_cfg=None,
+    ):
         super().__init__(init_cfg=init_cfg)
 
         if isinstance(arch, str):
-            assert arch in self.arch_settings, \
-                f'Unavailable arch, please choose from ' \
-                f'({set(self.arch_settings)}) or pass a dict.'
+            assert arch in self.arch_settings, (
+                f"Unavailable arch, please choose from " f"({set(self.arch_settings)}) or pass a dict."
+            )
             arch = self.arch_settings[arch]
         elif isinstance(arch, dict):
-            essential_keys = {'growth_rate', 'depths', 'init_channels'}
-            assert isinstance(arch, dict) and essential_keys <= set(arch), \
-                f'Custom arch needs a dict with keys {essential_keys}'
+            essential_keys = {"growth_rate", "depths", "init_channels"}
+            assert isinstance(arch, dict) and essential_keys <= set(
+                arch
+            ), f"Custom arch needs a dict with keys {essential_keys}"
 
-        self.growth_rate = arch['growth_rate']
-        self.depths = arch['depths']
-        self.init_channels = arch['init_channels']
+        self.growth_rate = arch["growth_rate"]
+        self.depths = arch["depths"]
+        self.init_channels = arch["init_channels"]
         self.act = build_activation_layer(act_cfg)
 
         self.num_stages = len(self.depths)
@@ -243,27 +234,23 @@ class DenseNet(BaseBackbone):
         # check out indices and frozen stages
         if isinstance(out_indices, int):
             out_indices = [out_indices]
-        assert isinstance(out_indices, Sequence), \
-            f'"out_indices" must by a sequence or int, ' \
-            f'get {type(out_indices)} instead.'
+        assert isinstance(out_indices, Sequence), (
+            f'"out_indices" must by a sequence or int, ' f"get {type(out_indices)} instead."
+        )
         for i, index in enumerate(out_indices):
             if index < 0:
                 out_indices[i] = self.num_stages + index
-                assert out_indices[i] >= 0, f'Invalid out_indices {index}'
+                assert out_indices[i] >= 0, f"Invalid out_indices {index}"
         self.out_indices = out_indices
         self.frozen_stages = frozen_stages
 
         # Set stem layers
         self.stem = nn.Sequential(
-            nn.Conv2d(
-                in_channels,
-                self.init_channels,
-                kernel_size=7,
-                stride=2,
-                padding=3,
-                bias=False),
-            build_norm_layer(norm_cfg, self.init_channels)[1], self.act,
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+            nn.Conv2d(in_channels, self.init_channels, kernel_size=7, stride=2, padding=3, bias=False),
+            build_norm_layer(norm_cfg, self.init_channels)[1],
+            self.act,
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+        )
 
         # Repetitions of DenseNet Blocks
         self.stages = nn.ModuleList()
@@ -281,7 +268,8 @@ class DenseNet(BaseBackbone):
                 norm_cfg=norm_cfg,
                 act_cfg=act_cfg,
                 drop_rate=drop_rate,
-                memory_efficient=memory_efficient)
+                memory_efficient=memory_efficient,
+            )
             self.stages.append(stage)
             channels += depth * self.growth_rate
 
@@ -323,8 +311,7 @@ class DenseNet(BaseBackbone):
             stage = self.stages[i]
             downsample_layer.eval()
             stage.eval()
-            for param in chain(downsample_layer.parameters(),
-                               stage.parameters()):
+            for param in chain(downsample_layer.parameters(), stage.parameters()):
                 param.requires_grad = False
 
     def train(self, mode=True):

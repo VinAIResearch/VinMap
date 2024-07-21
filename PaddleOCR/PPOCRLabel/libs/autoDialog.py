@@ -1,18 +1,19 @@
 try:
-    from PyQt5.QtGui import *
     from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
     from PyQt5.QtWidgets import *
 except ImportError:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
 
-import time
 import datetime
 import json
+import time
+
 import cv2
 import numpy as np
-
 from libs.utils import newIcon
+
 
 BB = QDialogButtonBox
 
@@ -29,7 +30,7 @@ class Worker(QThread):
         self.mImgList = mImgList
         self.mainThread = mainThread
         self.model = model
-        self.setStackSize(1024*1024)
+        self.setStackSize(1024 * 1024)
 
     def run(self):
         try:
@@ -37,32 +38,39 @@ class Worker(QThread):
             for Imgpath in self.mImgList:
                 if self.handle == 0:
                     self.listValue.emit(Imgpath)
-                    if self.model == 'paddle':
+                    if self.model == "paddle":
                         h, w, _ = cv2.imdecode(np.fromfile(Imgpath, dtype=np.uint8), 1).shape
                         if h > 32 and w > 32:
                             self.result_dic = self.ocr.ocr(Imgpath, cls=True, det=True)[0]
                         else:
-                            print('The size of', Imgpath, 'is too small to be recognised')
+                            print("The size of", Imgpath, "is too small to be recognised")
                             self.result_dic = None
 
                     # 结果保存
                     if self.result_dic is None or len(self.result_dic) == 0:
-                        print('Can not recognise file', Imgpath)
+                        print("Can not recognise file", Imgpath)
                         pass
                     else:
-                        strs = ''
+                        strs = ""
                         for res in self.result_dic:
                             chars = res[1][0]
                             cond = res[1][1]
                             posi = res[0]
-                            strs += "Transcription: " + chars + " Probability: " + str(cond) + \
-                                    " Location: " + json.dumps(posi) +'\n'
+                            strs += (
+                                "Transcription: "
+                                + chars
+                                + " Probability: "
+                                + str(cond)
+                                + " Location: "
+                                + json.dumps(posi)
+                                + "\n"
+                            )
                         # Sending large amounts of data repeatedly through pyqtSignal may affect the program efficiency
                         self.listValue.emit(strs)
                         self.mainThread.result_dic = self.result_dic
                         self.mainThread.filePath = Imgpath
                         # 保存
-                        self.mainThread.saveFile(mode='Auto')
+                        self.mainThread.saveFile(mode="Auto")
                     findex += 1
                     self.progressBarValue.emit(findex)
                 else:
@@ -89,13 +97,13 @@ class AutoDialog(QDialog):
 
         layout = QVBoxLayout()
         layout.addWidget(self.pb)
-        self.model = 'paddle'
+        self.model = "paddle"
         self.listWidget = QListWidget(self)
         layout.addWidget(self.listWidget)
 
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
-        bb.button(BB.Ok).setIcon(newIcon('done'))
-        bb.button(BB.Cancel).setIcon(newIcon('undo'))
+        bb.button(BB.Ok).setIcon(newIcon("done"))
+        bb.button(BB.Cancel).setIcon(newIcon("undo"))
         bb.accepted.connect(self.validate)
         bb.rejected.connect(self.reject)
         layout.addWidget(bb)
@@ -107,7 +115,7 @@ class AutoDialog(QDialog):
 
         # self.setWindowFlags(Qt.WindowCloseButtonHint)
 
-        self.thread_1 = Worker(self.ocr, self.mImgList, self.parent, 'paddle')
+        self.thread_1 = Worker(self.ocr, self.mImgList, self.parent, "paddle")
         self.thread_1.progressBarValue.connect(self.handleProgressBarSingal)
         self.thread_1.listValue.connect(self.handleListWidgetSingal)
         self.thread_1.endsignal.connect(self.handleEndsignalSignal)

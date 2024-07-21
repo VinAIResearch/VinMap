@@ -1,12 +1,11 @@
 import re
 
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from PyQt5 import QtWidgets
+from libs.utils import labelValidator, newIcon
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.Qt import QT_VERSION_STR
-from libs.utils import newIcon, labelValidator
 
-QT5 = QT_VERSION_STR[0] == '5'
+
+QT5 = QT_VERSION_STR[0] == "5"
 
 
 # TODO(unknown):
@@ -26,15 +25,15 @@ class KeyQLineEdit(QtWidgets.QLineEdit):
 
 class KeyDialog(QtWidgets.QDialog):
     def __init__(
-            self,
-            text="Enter object label",
-            parent=None,
-            labels=None,
-            sort_labels=True,
-            show_text_field=True,
-            completion="startswith",
-            fit_to_content=None,
-            flags=None,
+        self,
+        text="Enter object label",
+        parent=None,
+        labels=None,
+        sort_labels=True,
+        show_text_field=True,
+        completion="startswith",
+        fit_to_content=None,
+        flags=None,
     ):
         if fit_to_content is None:
             fit_to_content = {"row": False, "column": True}
@@ -67,22 +66,16 @@ class KeyDialog(QtWidgets.QDialog):
         # label_list
         self.labelList = QtWidgets.QListWidget()
         if self._fit_to_content["row"]:
-            self.labelList.setHorizontalScrollBarPolicy(
-                QtCore.Qt.ScrollBarAlwaysOff
-            )
+            self.labelList.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         if self._fit_to_content["column"]:
-            self.labelList.setVerticalScrollBarPolicy(
-                QtCore.Qt.ScrollBarAlwaysOff
-            )
+            self.labelList.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self._sort_labels = sort_labels
         if labels:
             self.labelList.addItems(labels)
         if self._sort_labels:
             self.labelList.sortItems()
         else:
-            self.labelList.setDragDropMode(
-                QtWidgets.QAbstractItemView.InternalMove
-            )
+            self.labelList.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
         self.labelList.currentItemChanged.connect(self.labelSelected)
         self.labelList.itemDoubleClicked.connect(self.labelDoubleClicked)
         self.edit.setListWidget(self.labelList)
@@ -184,13 +177,9 @@ class KeyDialog(QtWidgets.QDialog):
 
     def popUp(self, text=None, move=True, flags=None):
         if self._fit_to_content["row"]:
-            self.labelList.setMinimumHeight(
-                self.labelList.sizeHintForRow(0) * self.labelList.count() + 2
-            )
+            self.labelList.setMinimumHeight(self.labelList.sizeHintForRow(0) * self.labelList.count() + 2)
         if self._fit_to_content["column"]:
-            self.labelList.setMinimumWidth(
-                self.labelList.sizeHintForColumn(0) + 2
-            )
+            self.labelList.setMinimumWidth(self.labelList.sizeHintForColumn(0) + 2)
         # if text is None, the previous label in self.edit is kept
         if text is None:
             text = self.edit.text()

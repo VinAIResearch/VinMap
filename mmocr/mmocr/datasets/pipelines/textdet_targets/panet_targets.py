@@ -34,32 +34,28 @@ class PANetTargets(BaseTextDetTargets):
 
         assert isinstance(results, dict)
 
-        polygon_masks = results['gt_masks'].masks
-        polygon_masks_ignore = results['gt_masks_ignore'].masks
+        polygon_masks = results["gt_masks"].masks
+        polygon_masks_ignore = results["gt_masks_ignore"].masks
 
-        h, w, _ = results['img_shape']
+        h, w, _ = results["img_shape"]
         gt_kernels = []
         for ratio in self.shrink_ratio:
-            mask, _ = self.generate_kernels((h, w),
-                                            polygon_masks,
-                                            ratio,
-                                            max_shrink=self.max_shrink,
-                                            ignore_tags=None)
+            mask, _ = self.generate_kernels((h, w), polygon_masks, ratio, max_shrink=self.max_shrink, ignore_tags=None)
             gt_kernels.append(mask)
         gt_mask = self.generate_effective_mask((h, w), polygon_masks_ignore)
 
-        results['mask_fields'].clear()  # rm gt_masks encoded by polygons
-        if 'bbox_fields' in results:
-            results['bbox_fields'].clear()
-        results.pop('gt_labels', None)
-        results.pop('gt_masks', None)
-        results.pop('gt_bboxes', None)
-        results.pop('gt_bboxes_ignore', None)
+        results["mask_fields"].clear()  # rm gt_masks encoded by polygons
+        if "bbox_fields" in results:
+            results["bbox_fields"].clear()
+        results.pop("gt_labels", None)
+        results.pop("gt_masks", None)
+        results.pop("gt_bboxes", None)
+        results.pop("gt_bboxes_ignore", None)
 
-        mapping = {'gt_kernels': gt_kernels, 'gt_mask': gt_mask}
+        mapping = {"gt_kernels": gt_kernels, "gt_mask": gt_mask}
         for key, value in mapping.items():
             value = value if isinstance(value, list) else [value]
             results[key] = BitmapMasks(value, h, w)
-            results['mask_fields'].append(key)
+            results["mask_fields"].append(key)
 
         return results

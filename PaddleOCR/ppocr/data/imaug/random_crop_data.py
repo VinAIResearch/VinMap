@@ -16,14 +16,12 @@ This code is refer from:
 https://github.com/WenmuZhou/DBNet.pytorch/blob/master/data_loader/modules/random_crop_data.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-import numpy as np
-import cv2
 import random
+
+import cv2
+import numpy as np
 
 
 def is_poly_in_rect(poly, x, y, w, h):
@@ -113,8 +111,7 @@ def crop_area(im, text_polys, min_crop_side_ratio, max_tries):
             continue
         num_poly_in_rect = 0
         for poly in text_polys:
-            if not is_poly_outside_rect(poly, xmin, ymin, xmax - xmin,
-                                        ymax - ymin):
+            if not is_poly_outside_rect(poly, xmin, ymin, xmax - xmin, ymax - ymin):
                 num_poly_in_rect += 1
                 break
 
@@ -125,28 +122,20 @@ def crop_area(im, text_polys, min_crop_side_ratio, max_tries):
 
 
 class EastRandomCropData(object):
-    def __init__(self,
-                 size=(640, 640),
-                 max_tries=10,
-                 min_crop_side_ratio=0.1,
-                 keep_ratio=True,
-                 **kwargs):
+    def __init__(self, size=(640, 640), max_tries=10, min_crop_side_ratio=0.1, keep_ratio=True, **kwargs):
         self.size = size
         self.max_tries = max_tries
         self.min_crop_side_ratio = min_crop_side_ratio
         self.keep_ratio = keep_ratio
 
     def __call__(self, data):
-        img = data['image']
-        text_polys = data['polys']
-        ignore_tags = data['ignore_tags']
-        texts = data['texts']
-        all_care_polys = [
-            text_polys[i] for i, tag in enumerate(ignore_tags) if not tag
-        ]
+        img = data["image"]
+        text_polys = data["polys"]
+        ignore_tags = data["ignore_tags"]
+        texts = data["texts"]
+        all_care_polys = [text_polys[i] for i, tag in enumerate(ignore_tags) if not tag]
         # 计算crop区域
-        crop_x, crop_y, crop_w, crop_h = crop_area(
-            img, all_care_polys, self.min_crop_side_ratio, self.max_tries)
+        crop_x, crop_y, crop_w, crop_h = crop_area(img, all_care_polys, self.min_crop_side_ratio, self.max_tries)
         # crop 图片 保持比例填充
         scale_w = self.size[0] / crop_w
         scale_h = self.size[1] / crop_h
@@ -154,15 +143,11 @@ class EastRandomCropData(object):
         h = int(crop_h * scale)
         w = int(crop_w * scale)
         if self.keep_ratio:
-            padimg = np.zeros((self.size[1], self.size[0], img.shape[2]),
-                              img.dtype)
-            padimg[:h, :w] = cv2.resize(
-                img[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w], (w, h))
+            padimg = np.zeros((self.size[1], self.size[0], img.shape[2]), img.dtype)
+            padimg[:h, :w] = cv2.resize(img[crop_y : crop_y + crop_h, crop_x : crop_x + crop_w], (w, h))
             img = padimg
         else:
-            img = cv2.resize(
-                img[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w],
-                tuple(self.size))
+            img = cv2.resize(img[crop_y : crop_y + crop_h, crop_x : crop_x + crop_w], tuple(self.size))
         # crop 文本框
         text_polys_crop = []
         ignore_tags_crop = []
@@ -173,10 +158,10 @@ class EastRandomCropData(object):
                 text_polys_crop.append(poly)
                 ignore_tags_crop.append(tag)
                 texts_crop.append(text)
-        data['image'] = img
-        data['polys'] = np.array(text_polys_crop)
-        data['ignore_tags'] = ignore_tags_crop
-        data['texts'] = texts_crop
+        data["image"] = img
+        data["polys"] = np.array(text_polys_crop)
+        data["ignore_tags"] = ignore_tags_crop
+        data["texts"] = texts_crop
         return data
 
 
@@ -188,7 +173,7 @@ class RandomCropImgMask(object):
         self.p = p
 
     def __call__(self, data):
-        image = data['image']
+        image = data["image"]
 
         h, w = image.shape[0:2]
         th, tw = self.size
@@ -217,17 +202,17 @@ class RandomCropImgMask(object):
             if k in self.crop_keys:
                 if len(data[k].shape) == 3:
                     if np.argmin(data[k].shape) == 0:
-                        img = data[k][:, i:i + th, j:j + tw]
+                        img = data[k][:, i : i + th, j : j + tw]
                         if img.shape[1] != img.shape[2]:
                             a = 1
                     elif np.argmin(data[k].shape) == 2:
-                        img = data[k][i:i + th, j:j + tw, :]
+                        img = data[k][i : i + th, j : j + tw, :]
                         if img.shape[1] != img.shape[0]:
                             a = 1
                     else:
                         img = data[k]
                 else:
-                    img = data[k][i:i + th, j:j + tw]
+                    img = data[k][i : i + th, j : j + tw]
                     if img.shape[0] != img.shape[1]:
                         a = 1
                 data[k] = img

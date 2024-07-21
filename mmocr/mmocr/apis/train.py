@@ -6,25 +6,23 @@ import numpy as np
 import torch
 import torch.distributed as dist
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import (DistSamplerSeedHook, EpochBasedRunner,
-                         Fp16OptimizerHook, OptimizerHook, build_optimizer,
-                         build_runner, get_dist_info)
+from mmcv.runner import (
+    DistSamplerSeedHook,
+    EpochBasedRunner,
+    Fp16OptimizerHook,
+    OptimizerHook,
+    build_optimizer,
+    build_runner,
+    get_dist_info,
+)
 from mmdet.core import DistEvalHook, EvalHook
 from mmdet.datasets import build_dataloader, build_dataset
-
 from mmocr import digit_version
-from mmocr.apis.utils import (disable_text_recog_aug_test,
-                              replace_image_to_tensor)
+from mmocr.apis.utils import disable_text_recog_aug_test, replace_image_to_tensor
 from mmocr.utils import get_root_logger
 
 
-def train_detector(model,
-                   dataset,
-                   cfg,
-                   distributed=False,
-                   validate=False,
-                   timestamp=None,
-                   meta=None):
+def train_detector(model, dataset, cfg, distributed=False, validate=False, timestamp=None, meta=None):
     logger = get_root_logger(cfg.log_level)
 
     # prepare data loaders
@@ -34,78 +32,76 @@ def train_detector(model,
         **dict(
             num_gpus=len(cfg.gpu_ids),
             dist=distributed,
-            seed=cfg.get('seed'),
+            seed=cfg.get("seed"),
             drop_last=False,
-            persistent_workers=False),
-        **({} if torch.__version__ != 'parrots' else dict(
-               prefetch_num=2,
-               pin_memory=False,
-           )),
+            persistent_workers=False,
+        ),
+        **(
+            {}
+            if torch.__version__ != "parrots"
+            else dict(
+                prefetch_num=2,
+                pin_memory=False,
+            )
+        ),
     }
     # update overall dataloader(for train, val and test) setting
-    default_loader_cfg.update({
-        k: v
-        for k, v in cfg.data.items() if k not in [
-            'train', 'val', 'test', 'train_dataloader', 'val_dataloader',
-            'test_dataloader'
-        ]
-    })
+    default_loader_cfg.update(
+        {
+            k: v
+            for k, v in cfg.data.items()
+            if k not in ["train", "val", "test", "train_dataloader", "val_dataloader", "test_dataloader"]
+        }
+    )
 
     # step 2: cfg.data.train_dataloader has highest priority
-    train_loader_cfg = dict(default_loader_cfg,
-                            **cfg.data.get('train_dataloader', {}))
+    train_loader_cfg = dict(default_loader_cfg, **cfg.data.get("train_dataloader", {}))
 
     data_loaders = [build_dataloader(ds, **train_loader_cfg) for ds in dataset]
 
     # put model on gpus
     if distributed:
-        find_unused_parameters = cfg.get('find_unused_parameters', False)
+        find_unused_parameters = cfg.get("find_unused_parameters", False)
         # Sets the `find_unused_parameters` parameter in
         # torch.nn.parallel.DistributedDataParallel
         model = MMDistributedDataParallel(
             model.cuda(),
             device_ids=[torch.cuda.current_device()],
             broadcast_buffers=False,
-            find_unused_parameters=find_unused_parameters)
+            find_unused_parameters=find_unused_parameters,
+        )
     else:
         if not torch.cuda.is_available():
-            assert digit_version(mmcv.__version__) >= digit_version('1.4.4'), \
-                'Please use MMCV >= 1.4.4 for CPU training!'
+            assert digit_version(mmcv.__version__) >= digit_version(
+                "1.4.4"
+            ), "Please use MMCV >= 1.4.4 for CPU training!"
         model = MMDataParallel(model, device_ids=cfg.gpu_ids)
 
     # build runner
     optimizer = build_optimizer(model, cfg.optimizer)
 
-    if 'runner' not in cfg:
-        cfg.runner = {
-            'type': 'EpochBasedRunner',
-            'max_epochs': cfg.total_epochs
-        }
+    if "runner" not in cfg:
+        cfg.runner = {"type": "EpochBasedRunner", "max_epochs": cfg.total_epochs}
         warnings.warn(
-            'config is now expected to have a `runner` section, '
-            'please set `runner` in your config.', UserWarning)
+            "config is now expected to have a `runner` section, " "please set `runner` in your config.", UserWarning
+        )
     else:
-        if 'total_epochs' in cfg:
+        if "total_epochs" in cfg:
             assert cfg.total_epochs == cfg.runner.max_epochs
 
     runner = build_runner(
         cfg.runner,
-        default_args=dict(
-            model=model,
-            optimizer=optimizer,
-            work_dir=cfg.work_dir,
-            logger=logger,
-            meta=meta))
+        default_args=dict(model=model, optimizer=optimizer, work_dir=cfg.work_dir, logger=logger, meta=meta),
+    )
 
     # an ugly workaround to make .log and .log.json filenames the same
     runner.timestamp = timestamp
 
     # fp16 setting
-    fp16_cfg = cfg.get('fp16', None)
+    fp16_cfg = cfg.get("fp16", None)
     if fp16_cfg is not None:
-        optimizer_config = Fp16OptimizerHook(
-            **cfg.optimizer_config, **fp16_cfg, distributed=distributed)
-    elif distributed and 'type' not in cfg.optimizer_config:
+        optimizer_config = Fp16OptimizerHook(**cfg.optimizer_config, **fp16_cfg, distributed=distributed)
+    elif distributed and "type" not in cfg.optimizer_config:
         optimizer_config = OptimizerHook(**cfg.optimizer_config)
     else:
         optimizer_config = cfg.optimizer_config
@@ -116,16 +112,18 @@ def train_detector(model,
         optimizer_config,
         cfg.checkpoint_config,
         cfg.log_config,
-        cfg.get('momentum_config', None),
-        custom_hooks_config=cfg.get('custom_hooks', None))
+        cfg.get("momentum_config", None),
+        custom_hooks_config=cfg.get("custom_hooks", None),
+    )
     if distributed:
         if isinstance(runner, EpochBasedRunner):
             runner.register_hook(DistSamplerSeedHook())
 
     # register eval hooks
     if validate:
-        val_samples_per_gpu = (cfg.data.get('val_dataloader', {})).get(
-            'samples_per_gpu', cfg.data.get('samples_per_gpu', 1))
+        val_samples_per_gpu = (cfg.data.get("val_dataloader", {})).get(
+            "samples_per_gpu", cfg.data.get("samples_per_gpu", 1)
+        )
         if val_samples_per_gpu > 1:
             # Support batch_size > 1 in test for text recognition
             # by disable MultiRotateAugOCR since it is useless for most case
@@ -137,14 +135,14 @@ def train_detector(model,
         val_loader_cfg = {
             **default_loader_cfg,
             **dict(shuffle=False, drop_last=False),
-            **cfg.data.get('val_dataloader', {}),
-            **dict(samples_per_gpu=val_samples_per_gpu)
+            **cfg.data.get("val_dataloader", {}),
+            **dict(samples_per_gpu=val_samples_per_gpu),
         }
 
         val_dataloader = build_dataloader(val_dataset, **val_loader_cfg)
 
-        eval_cfg = cfg.get('evaluation', {})
-        eval_cfg['by_epoch'] = cfg.runner['type'] != 'IterBasedRunner'
+        eval_cfg = cfg.get("evaluation", {})
+        eval_cfg["by_epoch"] = cfg.runner["type"] != "IterBasedRunner"
         eval_hook = DistEvalHook if distributed else EvalHook
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 
@@ -155,7 +153,7 @@ def train_detector(model,
     runner.run(data_loaders, cfg.workflow)
 
 
-def init_random_seed(seed=None, device='cuda'):
+def init_random_seed(seed=None, device="cuda"):
     """Initialize random seed. If the seed is None, it will be replaced by a
     random number, and then broadcasted to all processes.
 

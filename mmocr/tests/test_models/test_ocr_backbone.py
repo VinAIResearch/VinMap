@@ -1,9 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pytest
 import torch
-
-from mmocr.models.textrecog.backbones import (ResNet, ResNet31OCR, ResNetABI,
-                                              ShallowCNN, VeryDeepVgg)
+from mmocr.models.textrecog.backbones import ResNet, ResNet31OCR, ResNetABI, ShallowCNN, VeryDeepVgg
 
 
 def test_resnet31_ocr_backbone():
@@ -78,78 +76,91 @@ def test_resnet():
     resnet45_aster = ResNet(
         in_channels=3,
         stem_channels=[64, 128],
-        block_cfgs=dict(type='BasicBlock', use_conv1x1='True'),
+        block_cfgs=dict(type="BasicBlock", use_conv1x1="True"),
         arch_layers=[3, 4, 6, 6, 3],
         arch_channels=[32, 64, 128, 256, 512],
-        strides=[(2, 2), (2, 2), (2, 1), (2, 1), (2, 1)])
+        strides=[(2, 2), (2, 2), (2, 1), (2, 1), (2, 1)],
+    )
 
     resnet45_abi = ResNet(
         in_channels=3,
         stem_channels=32,
-        block_cfgs=dict(type='BasicBlock', use_conv1x1='True'),
+        block_cfgs=dict(type="BasicBlock", use_conv1x1="True"),
         arch_layers=[3, 4, 6, 6, 3],
         arch_channels=[32, 64, 128, 256, 512],
-        strides=[2, 1, 2, 1, 1])
+        strides=[2, 1, 2, 1, 1],
+    )
 
     resnet_31 = ResNet(
         in_channels=3,
         stem_channels=[64, 128],
-        block_cfgs=dict(type='BasicBlock'),
+        block_cfgs=dict(type="BasicBlock"),
         arch_layers=[1, 2, 5, 3],
         arch_channels=[256, 256, 512, 512],
         strides=[1, 1, 1, 1],
         plugins=[
             dict(
-                cfg=dict(type='Maxpool2d', kernel_size=2, stride=(2, 2)),
+                cfg=dict(type="Maxpool2d", kernel_size=2, stride=(2, 2)),
                 stages=(True, True, False, False),
-                position='before_stage'),
+                position="before_stage",
+            ),
             dict(
-                cfg=dict(type='Maxpool2d', kernel_size=(2, 1), stride=(2, 1)),
+                cfg=dict(type="Maxpool2d", kernel_size=(2, 1), stride=(2, 1)),
                 stages=(False, False, True, False),
-                position='before_stage'),
+                position="before_stage",
+            ),
             dict(
                 cfg=dict(
-                    type='ConvModule',
+                    type="ConvModule",
                     kernel_size=3,
                     stride=1,
                     padding=1,
-                    norm_cfg=dict(type='BN'),
-                    act_cfg=dict(type='ReLU')),
+                    norm_cfg=dict(type="BN"),
+                    act_cfg=dict(type="ReLU"),
+                ),
                 stages=(True, True, True, True),
-                position='after_stage')
-        ])
+                position="after_stage",
+            ),
+        ],
+    )
 
     resnet31_master = ResNet(
         in_channels=3,
         stem_channels=[64, 128],
-        block_cfgs=dict(type='BasicBlock'),
+        block_cfgs=dict(type="BasicBlock"),
         arch_layers=[1, 2, 5, 3],
         arch_channels=[256, 256, 512, 512],
         strides=[1, 1, 1, 1],
         plugins=[
             dict(
-                cfg=dict(type='Maxpool2d', kernel_size=2, stride=(2, 2)),
+                cfg=dict(type="Maxpool2d", kernel_size=2, stride=(2, 2)),
                 stages=(True, True, False, False),
-                position='before_stage'),
+                position="before_stage",
+            ),
             dict(
-                cfg=dict(type='Maxpool2d', kernel_size=(2, 1), stride=(2, 1)),
+                cfg=dict(type="Maxpool2d", kernel_size=(2, 1), stride=(2, 1)),
                 stages=(False, False, True, False),
-                position='before_stage'),
+                position="before_stage",
+            ),
             dict(
-                cfg=dict(type='GCAModule', ratio=0.0625, n_head=1),
+                cfg=dict(type="GCAModule", ratio=0.0625, n_head=1),
                 stages=[True, True, True, True],
-                position='after_stage'),
+                position="after_stage",
+            ),
             dict(
                 cfg=dict(
-                    type='ConvModule',
+                    type="ConvModule",
                     kernel_size=3,
                     stride=1,
                     padding=1,
-                    norm_cfg=dict(type='BN'),
-                    act_cfg=dict(type='ReLU')),
+                    norm_cfg=dict(type="BN"),
+                    act_cfg=dict(type="ReLU"),
+                ),
                 stages=(True, True, True, True),
-                position='after_stage')
-        ])
+                position="after_stage",
+            ),
+        ],
+    )
     img = torch.rand(1, 3, 32, 100)
 
     assert resnet45_aster(img).shape == torch.Size([1, 512, 1, 25])

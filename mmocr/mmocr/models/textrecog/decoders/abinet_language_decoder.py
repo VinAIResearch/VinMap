@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 from mmcv.cnn.bricks.transformer import BaseTransformerLayer
 from mmcv.runner import ModuleList
-
 from mmocr.models.builder import DECODERS
 from mmocr.models.common.modules import PositionalEncoding
+
 from .base_decoder import BaseDecoder
 
 
@@ -35,19 +35,21 @@ class ABILanguageDecoder(BaseDecoder):
         init_cfg (dict): Specifies the initialization method for model layers.
     """
 
-    def __init__(self,
-                 d_model=512,
-                 n_head=8,
-                 d_inner=2048,
-                 n_layers=4,
-                 max_seq_len=40,
-                 dropout=0.1,
-                 detach_tokens=True,
-                 num_chars=90,
-                 use_self_attn=False,
-                 pad_idx=0,
-                 init_cfg=None,
-                 **kwargs):
+    def __init__(
+        self,
+        d_model=512,
+        n_head=8,
+        d_inner=2048,
+        n_layers=4,
+        max_seq_len=40,
+        dropout=0.1,
+        detach_tokens=True,
+        num_chars=90,
+        use_self_attn=False,
+        pad_idx=0,
+        init_cfg=None,
+        **kwargs
+    ):
         super().__init__(init_cfg=init_cfg)
         self.detach_tokens = detach_tokens
 
@@ -55,37 +57,33 @@ class ABILanguageDecoder(BaseDecoder):
         self.max_seq_len = max_seq_len
 
         self.proj = nn.Linear(num_chars, d_model, False)
-        self.token_encoder = PositionalEncoding(
-            d_model, n_position=self.max_seq_len, dropout=0.1)
-        self.pos_encoder = PositionalEncoding(
-            d_model, n_position=self.max_seq_len)
+        self.token_encoder = PositionalEncoding(d_model, n_position=self.max_seq_len, dropout=0.1)
+        self.pos_encoder = PositionalEncoding(d_model, n_position=self.max_seq_len)
         self.pad_idx = pad_idx
 
         if use_self_attn:
-            operation_order = ('self_attn', 'norm', 'cross_attn', 'norm',
-                               'ffn', 'norm')
+            operation_order = ("self_attn", "norm", "cross_attn", "norm", "ffn", "norm")
         else:
-            operation_order = ('cross_attn', 'norm', 'ffn', 'norm')
+            operation_order = ("cross_attn", "norm", "ffn", "norm")
 
         decoder_layer = BaseTransformerLayer(
             operation_order=operation_order,
             attn_cfgs=dict(
-                type='MultiheadAttention',
+                type="MultiheadAttention",
                 embed_dims=d_model,
                 num_heads=n_head,
                 attn_drop=dropout,
-                dropout_layer=dict(type='Dropout', drop_prob=dropout),
+                dropout_layer=dict(type="Dropout", drop_prob=dropout),
             ),
             ffn_cfgs=dict(
-                type='FFN',
+                type="FFN",
                 embed_dims=d_model,
                 feedforward_channels=d_inner,
                 ffn_drop=dropout,
             ),
-            norm_cfg=dict(type='LN'),
+            norm_cfg=dict(type="LN"),
         )
-        self.decoder_layers = ModuleList(
-            [copy.deepcopy(decoder_layer) for _ in range(n_layers)])
+        self.decoder_layers = ModuleList([copy.deepcopy(decoder_layer) for _ in range(n_layers)])
 
         self.cls = nn.Linear(d_model, num_chars)
 
@@ -114,20 +112,14 @@ class ABILanguageDecoder(BaseDecoder):
         query = self.pos_encoder(zeros)
         query = query.permute(1, 0, 2)  # (T, N, E)
         embed = embed.permute(1, 0, 2)
-        location_mask = self._get_location_mask(self.max_seq_len,
-                                                tokens.device)
+        location_mask = self._get_location_mask(self.max_seq_len, tokens.device)
         output = query
         for m in self.decoder_layers:
-            output = m(
-                query=output,
-                key=embed,
-                value=embed,
-                attn_masks=location_mask,
-                key_padding_mask=padding_mask)
+            output = m(query=output, key=embed, value=embed, attn_masks=location_mask, key_padding_mask=padding_mask)
         output = output.permute(1, 0, 2)  # (N, T, E)
 
         logits = self.cls(output)  # (N, T, C)
-        return {'feature': output, 'logits': logits}
+        return {"feature": output, "logits": logits}
 
     def forward_test(self, feat, out_enc, img_metas):
         return self.forward_train(feat, out_enc, None, img_metas)
@@ -139,7 +131,7 @@ class ABILanguageDecoder(BaseDecoder):
         tensor otherwise.
         """
         # out as a boolean vector indicating the existence of end token(s)
-        out = (logit.argmax(dim=-1) == self.pad_idx)
+        out = logit.argmax(dim=-1) == self.pad_idx
         abn = out.any(dim)
         # Get the first index of end token
         out = ((out.cumsum(dim) == 1) & out).max(dim)[1]
@@ -161,7 +153,7 @@ class ABILanguageDecoder(BaseDecoder):
             diagonal and zeros elsewhere.
         """
         mask = torch.eye(seq_len, device=device)
-        mask = mask.float().masked_fill(mask == 1, float('-inf'))
+        mask = mask.float().masked_fill(mask == 1, float("-inf"))
         return mask
 
     @staticmethod

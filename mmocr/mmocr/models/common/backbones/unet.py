@@ -5,9 +5,7 @@ import torch.utils.checkpoint as cp
 from mmcv.cnn import ConvModule, build_norm_layer
 from mmcv.runner import BaseModule
 from mmcv.utils.parrots_wrapper import _BatchNorm
-
-from mmocr.models.builder import (BACKBONES, UPSAMPLE_LAYERS,
-                                  build_activation_layer, build_upsample_layer)
+from mmocr.models.builder import BACKBONES, UPSAMPLE_LAYERS, build_activation_layer, build_upsample_layer
 
 
 class UpConvBlock(nn.Module):
@@ -48,24 +46,26 @@ class UpConvBlock(nn.Module):
         plugins (dict): plugins for convolutional layers. Default: None.
     """
 
-    def __init__(self,
-                 conv_block,
-                 in_channels,
-                 skip_channels,
-                 out_channels,
-                 num_convs=2,
-                 stride=1,
-                 dilation=1,
-                 with_cp=False,
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 upsample_cfg=dict(type='InterpConv'),
-                 dcn=None,
-                 plugins=None):
+    def __init__(
+        self,
+        conv_block,
+        in_channels,
+        skip_channels,
+        out_channels,
+        num_convs=2,
+        stride=1,
+        dilation=1,
+        with_cp=False,
+        conv_cfg=None,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        upsample_cfg=dict(type="InterpConv"),
+        dcn=None,
+        plugins=None,
+    ):
         super().__init__()
-        assert dcn is None, 'Not implemented yet.'
-        assert plugins is None, 'Not implemented yet.'
+        assert dcn is None, "Not implemented yet."
+        assert plugins is None, "Not implemented yet."
 
         self.conv_block = conv_block(
             in_channels=2 * skip_channels,
@@ -78,7 +78,8 @@ class UpConvBlock(nn.Module):
             norm_cfg=norm_cfg,
             act_cfg=act_cfg,
             dcn=None,
-            plugins=None)
+            plugins=None,
+        )
         if upsample_cfg is not None:
             self.upsample = build_upsample_layer(
                 cfg=upsample_cfg,
@@ -86,7 +87,8 @@ class UpConvBlock(nn.Module):
                 out_channels=skip_channels,
                 with_cp=with_cp,
                 norm_cfg=norm_cfg,
-                act_cfg=act_cfg)
+                act_cfg=act_cfg,
+            )
         else:
             self.upsample = ConvModule(
                 in_channels,
@@ -96,7 +98,8 @@ class UpConvBlock(nn.Module):
                 padding=0,
                 conv_cfg=conv_cfg,
                 norm_cfg=norm_cfg,
-                act_cfg=act_cfg)
+                act_cfg=act_cfg,
+            )
 
     def forward(self, skip, x):
         """Forward function."""
@@ -138,21 +141,23 @@ class BasicConvBlock(nn.Module):
         plugins (dict): plugins for convolutional layers. Default: None.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 num_convs=2,
-                 stride=1,
-                 dilation=1,
-                 with_cp=False,
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 dcn=None,
-                 plugins=None):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        num_convs=2,
+        stride=1,
+        dilation=1,
+        with_cp=False,
+        conv_cfg=None,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        dcn=None,
+        plugins=None,
+    ):
         super().__init__()
-        assert dcn is None, 'Not implemented yet.'
-        assert plugins is None, 'Not implemented yet.'
+        assert dcn is None, "Not implemented yet."
+        assert plugins is None, "Not implemented yet."
 
         self.with_cp = with_cp
         convs = []
@@ -167,7 +172,9 @@ class BasicConvBlock(nn.Module):
                     padding=1 if i == 0 else dilation,
                     conv_cfg=conv_cfg,
                     norm_cfg=norm_cfg,
-                    act_cfg=act_cfg))
+                    act_cfg=act_cfg,
+                )
+            )
 
         self.convs = nn.Sequential(*convs)
 
@@ -200,34 +207,30 @@ class DeconvModule(nn.Module):
         kernel_size (int): Kernel size of the convolutional layer. Default: 4.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 with_cp=False,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 *,
-                 kernel_size=4,
-                 scale_factor=2):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        with_cp=False,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        *,
+        kernel_size=4,
+        scale_factor=2,
+    ):
         super().__init__()
 
-        assert (
-            kernel_size - scale_factor >= 0
-            and (kernel_size - scale_factor) % 2 == 0), (
-                f'kernel_size should be greater than or equal to scale_factor '
-                f'and (kernel_size - scale_factor) should be even numbers, '
-                f'while the kernel size is {kernel_size} and scale_factor is '
-                f'{scale_factor}.')
+        assert kernel_size - scale_factor >= 0 and (kernel_size - scale_factor) % 2 == 0, (
+            f"kernel_size should be greater than or equal to scale_factor "
+            f"and (kernel_size - scale_factor) should be even numbers, "
+            f"while the kernel size is {kernel_size} and scale_factor is "
+            f"{scale_factor}."
+        )
 
         stride = scale_factor
         padding = (kernel_size - scale_factor) // 2
         self.with_cp = with_cp
-        deconv = nn.ConvTranspose2d(
-            in_channels,
-            out_channels,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding)
+        deconv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding)
 
         _, norm = build_norm_layer(norm_cfg, out_channels)
         activate = build_activation_layer(act_cfg)
@@ -275,20 +278,21 @@ class InterpConv(nn.Module):
                 scale_factor=2, mode='bilinear', align_corners=False).
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 with_cp=False,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 *,
-                 conv_cfg=None,
-                 conv_first=False,
-                 kernel_size=1,
-                 stride=1,
-                 padding=0,
-                 upsample_cfg=dict(
-                     scale_factor=2, mode='bilinear', align_corners=False)):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        with_cp=False,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        *,
+        conv_cfg=None,
+        conv_first=False,
+        kernel_size=1,
+        stride=1,
+        padding=0,
+        upsample_cfg=dict(scale_factor=2, mode="bilinear", align_corners=False),
+    ):
         super().__init__()
 
         self.with_cp = with_cp
@@ -300,7 +304,8 @@ class InterpConv(nn.Module):
             padding=padding,
             conv_cfg=conv_cfg,
             norm_cfg=norm_cfg,
-            act_cfg=act_cfg)
+            act_cfg=act_cfg,
+        )
         upsample = nn.Upsample(**upsample_cfg)
         if conv_first:
             self.interp_upsample = nn.Sequential(conv, upsample)
@@ -373,64 +378,69 @@ class UNet(BaseModule):
 
     """
 
-    def __init__(self,
-                 in_channels=3,
-                 base_channels=64,
-                 num_stages=5,
-                 strides=(1, 1, 1, 1, 1),
-                 enc_num_convs=(2, 2, 2, 2, 2),
-                 dec_num_convs=(2, 2, 2, 2),
-                 downsamples=(True, True, True, True),
-                 enc_dilations=(1, 1, 1, 1, 1),
-                 dec_dilations=(1, 1, 1, 1),
-                 with_cp=False,
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 upsample_cfg=dict(type='InterpConv'),
-                 norm_eval=False,
-                 dcn=None,
-                 plugins=None,
-                 init_cfg=[
-                     dict(type='Kaiming', layer='Conv2d'),
-                     dict(
-                         type='Constant',
-                         layer=['_BatchNorm', 'GroupNorm'],
-                         val=1)
-                 ]):
+    def __init__(
+        self,
+        in_channels=3,
+        base_channels=64,
+        num_stages=5,
+        strides=(1, 1, 1, 1, 1),
+        enc_num_convs=(2, 2, 2, 2, 2),
+        dec_num_convs=(2, 2, 2, 2),
+        downsamples=(True, True, True, True),
+        enc_dilations=(1, 1, 1, 1, 1),
+        dec_dilations=(1, 1, 1, 1),
+        with_cp=False,
+        conv_cfg=None,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        upsample_cfg=dict(type="InterpConv"),
+        norm_eval=False,
+        dcn=None,
+        plugins=None,
+        init_cfg=[
+            dict(type="Kaiming", layer="Conv2d"),
+            dict(type="Constant", layer=["_BatchNorm", "GroupNorm"], val=1),
+        ],
+    ):
         super().__init__(init_cfg=init_cfg)
-        assert dcn is None, 'Not implemented yet.'
-        assert plugins is None, 'Not implemented yet.'
+        assert dcn is None, "Not implemented yet."
+        assert plugins is None, "Not implemented yet."
         assert len(strides) == num_stages, (
-            'The length of strides should be equal to num_stages, '
-            f'while the strides is {strides}, the length of '
-            f'strides is {len(strides)}, and the num_stages is '
-            f'{num_stages}.')
+            "The length of strides should be equal to num_stages, "
+            f"while the strides is {strides}, the length of "
+            f"strides is {len(strides)}, and the num_stages is "
+            f"{num_stages}."
+        )
         assert len(enc_num_convs) == num_stages, (
-            'The length of enc_num_convs should be equal to num_stages, '
-            f'while the enc_num_convs is {enc_num_convs}, the length of '
-            f'enc_num_convs is {len(enc_num_convs)}, and the num_stages is '
-            f'{num_stages}.')
+            "The length of enc_num_convs should be equal to num_stages, "
+            f"while the enc_num_convs is {enc_num_convs}, the length of "
+            f"enc_num_convs is {len(enc_num_convs)}, and the num_stages is "
+            f"{num_stages}."
+        )
         assert len(dec_num_convs) == (num_stages - 1), (
-            'The length of dec_num_convs should be equal to (num_stages-1), '
-            f'while the dec_num_convs is {dec_num_convs}, the length of '
-            f'dec_num_convs is {len(dec_num_convs)}, and the num_stages is '
-            f'{num_stages}.')
+            "The length of dec_num_convs should be equal to (num_stages-1), "
+            f"while the dec_num_convs is {dec_num_convs}, the length of "
+            f"dec_num_convs is {len(dec_num_convs)}, and the num_stages is "
+            f"{num_stages}."
+        )
         assert len(downsamples) == (num_stages - 1), (
-            'The length of downsamples should be equal to (num_stages-1), '
-            f'while the downsamples is {downsamples}, the length of '
-            f'downsamples is {len(downsamples)}, and the num_stages is '
-            f'{num_stages}.')
+            "The length of downsamples should be equal to (num_stages-1), "
+            f"while the downsamples is {downsamples}, the length of "
+            f"downsamples is {len(downsamples)}, and the num_stages is "
+            f"{num_stages}."
+        )
         assert len(enc_dilations) == num_stages, (
-            'The length of enc_dilations should be equal to num_stages, '
-            f'while the enc_dilations is {enc_dilations}, the length of '
-            f'enc_dilations is {len(enc_dilations)}, and the num_stages is '
-            f'{num_stages}.')
+            "The length of enc_dilations should be equal to num_stages, "
+            f"while the enc_dilations is {enc_dilations}, the length of "
+            f"enc_dilations is {len(enc_dilations)}, and the num_stages is "
+            f"{num_stages}."
+        )
         assert len(dec_dilations) == (num_stages - 1), (
-            'The length of dec_dilations should be equal to (num_stages-1), '
-            f'while the dec_dilations is {dec_dilations}, the length of '
-            f'dec_dilations is {len(dec_dilations)}, and the num_stages is '
-            f'{num_stages}.')
+            "The length of dec_dilations should be equal to (num_stages-1), "
+            f"while the dec_dilations is {dec_dilations}, the length of "
+            f"dec_dilations is {len(dec_dilations)}, and the num_stages is "
+            f"{num_stages}."
+        )
         self.num_stages = num_stages
         self.strides = strides
         self.downsamples = downsamples
@@ -445,13 +455,13 @@ class UNet(BaseModule):
             if i != 0:
                 if strides[i] == 1 and downsamples[i - 1]:
                     enc_conv_block.append(nn.MaxPool2d(kernel_size=2))
-                upsample = (strides[i] != 1 or downsamples[i - 1])
+                upsample = strides[i] != 1 or downsamples[i - 1]
                 self.decoder.append(
                     UpConvBlock(
                         conv_block=BasicConvBlock,
                         in_channels=base_channels * 2**i,
-                        skip_channels=base_channels * 2**(i - 1),
-                        out_channels=base_channels * 2**(i - 1),
+                        skip_channels=base_channels * 2 ** (i - 1),
+                        out_channels=base_channels * 2 ** (i - 1),
                         num_convs=dec_num_convs[i - 1],
                         stride=1,
                         dilation=dec_dilations[i - 1],
@@ -461,7 +471,9 @@ class UNet(BaseModule):
                         act_cfg=act_cfg,
                         upsample_cfg=upsample_cfg if upsample else None,
                         dcn=None,
-                        plugins=None))
+                        plugins=None,
+                    )
+                )
 
             enc_conv_block.append(
                 BasicConvBlock(
@@ -475,7 +487,9 @@ class UNet(BaseModule):
                     norm_cfg=norm_cfg,
                     act_cfg=act_cfg,
                     dcn=None,
-                    plugins=None))
+                    plugins=None,
+                )
+            )
             self.encoder.append((nn.Sequential(*enc_conv_block)))
             in_channels = base_channels * 2**i
 
@@ -508,9 +522,9 @@ class UNet(BaseModule):
         for i in range(1, self.num_stages):
             if self.strides[i] == 2 or self.downsamples[i - 1]:
                 whole_downsample_rate *= 2
-        assert (
-            h % whole_downsample_rate == 0 and w % whole_downsample_rate == 0
-        ), (f'The input image size {(h, w)} should be divisible by the whole '
-            f'downsample rate {whole_downsample_rate}, when num_stages is '
-            f'{self.num_stages}, strides is {self.strides}, and downsamples '
-            f'is {self.downsamples}.')
+        assert h % whole_downsample_rate == 0 and w % whole_downsample_rate == 0, (
+            f"The input image size {(h, w)} should be divisible by the whole "
+            f"downsample rate {whole_downsample_rate}, when num_stages is "
+            f"{self.num_stages}, strides is {self.strides}, and downsamples "
+            f"is {self.downsamples}."
+        )

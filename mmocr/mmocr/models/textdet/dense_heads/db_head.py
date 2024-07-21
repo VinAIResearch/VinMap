@@ -4,8 +4,8 @@ import warnings
 import torch
 import torch.nn as nn
 from mmcv.runner import BaseModule, Sequential
-
 from mmocr.models.builder import HEADS
+
 from .head_mixin import HeadMixin
 
 
@@ -24,28 +24,28 @@ class DBHead(HeadMixin, BaseModule):
     """
 
     def __init__(
-            self,
-            in_channels,
-            with_bias=False,
-            downsample_ratio=1.0,
-            loss=dict(type='DBLoss'),
-            postprocessor=dict(type='DBPostprocessor', text_repr_type='quad'),
-            init_cfg=[
-                dict(type='Kaiming', layer='Conv'),
-                dict(type='Constant', layer='BatchNorm', val=1., bias=1e-4)
-            ],
-            train_cfg=None,
-            test_cfg=None,
-            **kwargs):
-        old_keys = ['text_repr_type', 'decoding_type']
+        self,
+        in_channels,
+        with_bias=False,
+        downsample_ratio=1.0,
+        loss=dict(type="DBLoss"),
+        postprocessor=dict(type="DBPostprocessor", text_repr_type="quad"),
+        init_cfg=[dict(type="Kaiming", layer="Conv"), dict(type="Constant", layer="BatchNorm", val=1.0, bias=1e-4)],
+        train_cfg=None,
+        test_cfg=None,
+        **kwargs,
+    ):
+        old_keys = ["text_repr_type", "decoding_type"]
         for key in old_keys:
             if kwargs.get(key, None):
                 postprocessor[key] = kwargs.get(key)
                 warnings.warn(
-                    f'{key} is deprecated, please specify '
-                    'it in postprocessor config dict. See '
-                    'https://github.com/open-mmlab/mmocr/pull/640'
-                    ' for details.', UserWarning)
+                    f"{key} is deprecated, please specify "
+                    "it in postprocessor config dict. See "
+                    "https://github.com/open-mmlab/mmocr/pull/640"
+                    " for details.",
+                    UserWarning,
+                )
         BaseModule.__init__(self, init_cfg=init_cfg)
         HeadMixin.__init__(self, loss, postprocessor)
 
@@ -57,12 +57,15 @@ class DBHead(HeadMixin, BaseModule):
         self.downsample_ratio = downsample_ratio
 
         self.binarize = Sequential(
-            nn.Conv2d(
-                in_channels, in_channels // 4, 3, bias=with_bias, padding=1),
-            nn.BatchNorm2d(in_channels // 4), nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels, in_channels // 4, 3, bias=with_bias, padding=1),
+            nn.BatchNorm2d(in_channels // 4),
+            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels // 4, in_channels // 4, 2, 2),
-            nn.BatchNorm2d(in_channels // 4), nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(in_channels // 4, 1, 2, 2), nn.Sigmoid())
+            nn.BatchNorm2d(in_channels // 4),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(in_channels // 4, 1, 2, 2),
+            nn.Sigmoid(),
+        )
 
         self.threshold = self._init_thr(in_channels)
 
@@ -86,10 +89,13 @@ class DBHead(HeadMixin, BaseModule):
     def _init_thr(self, inner_channels, bias=False):
         in_channels = inner_channels
         seq = Sequential(
-            nn.Conv2d(
-                in_channels, inner_channels // 4, 3, padding=1, bias=bias),
-            nn.BatchNorm2d(inner_channels // 4), nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels, inner_channels // 4, 3, padding=1, bias=bias),
+            nn.BatchNorm2d(inner_channels // 4),
+            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(inner_channels // 4, inner_channels // 4, 2, 2),
-            nn.BatchNorm2d(inner_channels // 4), nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(inner_channels // 4, 1, 2, 2), nn.Sigmoid())
+            nn.BatchNorm2d(inner_channels // 4),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(inner_channels // 4, 1, 2, 2),
+            nn.Sigmoid(),
+        )
         return seq

@@ -6,7 +6,6 @@ import os
 import os.path as osp
 
 import mmcv
-
 from mmocr.datasets.pipelines.crop import crop_img
 from mmocr.utils.fileio import list_to_file
 
@@ -29,11 +28,11 @@ def collect_files(img_dir, gt_dir):
     ann_list, imgs_list = [], []
     for gt_file in os.listdir(gt_dir):
         ann_list.append(osp.join(gt_dir, gt_file))
-        imgs_list.append(osp.join(img_dir, gt_file.replace('.json', '.png')))
+        imgs_list.append(osp.join(img_dir, gt_file.replace(".json", ".png")))
 
     files = list(zip(sorted(imgs_list), sorted(ann_list)))
-    assert len(files), f'No images found in {img_dir}'
-    print(f'Loaded {len(files)} images from {img_dir}')
+    assert len(files), f"No images found in {img_dir}"
+    print(f"Loaded {len(files)} images from {img_dir}")
 
     return files
 
@@ -52,8 +51,7 @@ def collect_annotations(files, nproc=1):
     assert isinstance(nproc, int)
 
     if nproc > 1:
-        images = mmcv.track_parallel_progress(
-            load_img_info, files, nproc=nproc)
+        images = mmcv.track_parallel_progress(load_img_info, files, nproc=nproc)
     else:
         images = mmcv.track_progress(load_img_info, files)
 
@@ -72,18 +70,18 @@ def load_img_info(files):
     assert isinstance(files, tuple)
 
     img_file, gt_file = files
-    assert osp.basename(gt_file).split('.')[0] == osp.basename(img_file).split(
-        '.')[0]
+    assert osp.basename(gt_file).split(".")[0] == osp.basename(img_file).split(".")[0]
     # read imgs while ignoring orientations
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
 
     img_info = dict(
         file_name=osp.join(osp.basename(img_file)),
         height=img.shape[0],
         width=img.shape[1],
-        segm_file=osp.join(osp.basename(gt_file)))
+        segm_file=osp.join(osp.basename(gt_file)),
+    )
 
-    if osp.splitext(gt_file)[1] == '.json':
+    if osp.splitext(gt_file)[1] == ".json":
         img_info = load_json_info(gt_file, img_info)
     else:
         raise NotImplementedError
@@ -104,19 +102,19 @@ def load_json_info(gt_file, img_info):
 
     annotation = mmcv.load(gt_file)
     anno_info = []
-    for form in annotation['form']:
-        for ann in form['words']:
+    for form in annotation["form"]:
+        for ann in form["words"]:
 
             # Ignore illegible samples
-            if len(ann['text']) == 0:
+            if len(ann["text"]) == 0:
                 continue
 
-            x1, y1, x2, y2 = ann['box']
+            x1, y1, x2, y2 = ann["box"]
             x = max(0, min(math.floor(x1), math.floor(x2)))
             y = max(0, min(math.floor(y1), math.floor(y2)))
             w, h = math.ceil(abs(x2 - x1)), math.ceil(abs(y2 - y1))
             bbox = [x, y, x + w, y, x + w, y + h, x, y + h]
-            word = ann['text']
+            word = ann["text"]
 
             anno = dict(bbox=bbox, word=word)
             anno_info.append(anno)
@@ -138,23 +136,23 @@ def generate_ann(root_path, split, image_infos, preserve_vertical, format):
         format (str): Using jsonl(dict) or str to format annotations
     """
 
-    dst_image_root = osp.join(root_path, 'dst_imgs', split)
-    if split == 'training':
-        dst_label_file = osp.join(root_path, f'train_label.{format}')
-    elif split == 'test':
-        dst_label_file = osp.join(root_path, f'test_label.{format}')
+    dst_image_root = osp.join(root_path, "dst_imgs", split)
+    if split == "training":
+        dst_label_file = osp.join(root_path, f"train_label.{format}")
+    elif split == "test":
+        dst_label_file = osp.join(root_path, f"test_label.{format}")
     os.makedirs(dst_image_root, exist_ok=True)
 
     lines = []
     for image_info in image_infos:
         index = 1
-        src_img_path = osp.join(root_path, 'imgs', image_info['file_name'])
+        src_img_path = osp.join(root_path, "imgs", image_info["file_name"])
         image = mmcv.imread(src_img_path)
-        src_img_root = image_info['file_name'].split('.')[0]
+        src_img_root = image_info["file_name"].split(".")[0]
 
-        for anno in image_info['anno_info']:
-            word = anno['word']
-            dst_img = crop_img(image, anno['bbox'])
+        for anno in image_info["anno_info"]:
+            word = anno["word"]
+            dst_img = crop_img(image, anno["bbox"])
             h, w, _ = dst_img.shape
 
             # Skip invalid annotations
@@ -164,22 +162,19 @@ def generate_ann(root_path, split, image_infos, preserve_vertical, format):
             if not preserve_vertical and h / w > 2:
                 continue
 
-            dst_img_name = f'{src_img_root}_{index}.png'
+            dst_img_name = f"{src_img_root}_{index}.png"
             index += 1
             dst_img_path = osp.join(dst_image_root, dst_img_name)
             mmcv.imwrite(dst_img, dst_img_path)
-            if format == 'txt':
-                lines.append(f'{osp.basename(dst_image_root)}/{dst_img_name} '
-                             f'{word}')
-            elif format == 'jsonl':
+            if format == "txt":
+                lines.append(f"{osp.basename(dst_image_root)}/{dst_img_name} " f"{word}")
+            elif format == "jsonl":
                 lines.append(
                     json.dumps(
-                        {
-                            'filename':
-                            f'{osp.basename(dst_image_root)}/{dst_img_name}',
-                            'text': word
-                        },
-                        ensure_ascii=False))
+                        {"filename": f"{osp.basename(dst_image_root)}/{dst_img_name}", "text": word},
+                        ensure_ascii=False,
+                    )
+                )
             else:
                 raise NotImplementedError
 
@@ -187,20 +182,13 @@ def generate_ann(root_path, split, image_infos, preserve_vertical, format):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training and test set of FUNSD ')
-    parser.add_argument('root_path', help='Root dir path of FUNSD')
+    parser = argparse.ArgumentParser(description="Generate training and test set of FUNSD ")
+    parser.add_argument("root_path", help="Root dir path of FUNSD")
+    parser.add_argument("--preserve_vertical", help="Preserve samples containing vertical texts", action="store_true")
+    parser.add_argument("--nproc", default=1, type=int, help="Number of processes")
     parser.add_argument(
-        '--preserve_vertical',
-        help='Preserve samples containing vertical texts',
-        action='store_true')
-    parser.add_argument(
-        '--nproc', default=1, type=int, help='Number of processes')
-    parser.add_argument(
-        '--format',
-        default='jsonl',
-        help='Use jsonl or string to format annotations',
-        choices=['jsonl', 'txt'])
+        "--format", default="jsonl", help="Use jsonl or string to format annotations", choices=["jsonl", "txt"]
+    )
     args = parser.parse_args()
     return args
 
@@ -209,16 +197,13 @@ def main():
     args = parse_args()
     root_path = args.root_path
 
-    for split in ['training', 'test']:
-        print(f'Processing {split} set...')
-        with mmcv.Timer(print_tmpl='It takes {}s to convert FUNSD annotation'):
-            files = collect_files(
-                osp.join(root_path, 'imgs'),
-                osp.join(root_path, 'annotations', split))
+    for split in ["training", "test"]:
+        print(f"Processing {split} set...")
+        with mmcv.Timer(print_tmpl="It takes {}s to convert FUNSD annotation"):
+            files = collect_files(osp.join(root_path, "imgs"), osp.join(root_path, "annotations", split))
             image_infos = collect_annotations(files, nproc=args.nproc)
-            generate_ann(root_path, split, image_infos, args.preserve_vertical,
-                         args.format)
+            generate_ann(root_path, split, image_infos, args.preserve_vertical, args.format)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

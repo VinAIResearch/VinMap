@@ -14,13 +14,9 @@ class MultiLabelClsHead(BaseHead):
         loss (dict): Config of classification loss.
     """
 
-    def __init__(self,
-                 loss=dict(
-                     type='CrossEntropyLoss',
-                     use_sigmoid=True,
-                     reduction='mean',
-                     loss_weight=1.0),
-                 init_cfg=None):
+    def __init__(
+        self, loss=dict(type="CrossEntropyLoss", use_sigmoid=True, reduction="mean", loss_weight=1.0), init_cfg=None
+    ):
         super(MultiLabelClsHead, self).__init__(init_cfg=init_cfg)
 
         assert isinstance(loss, dict)
@@ -36,7 +32,7 @@ class MultiLabelClsHead(BaseHead):
         _gt_label = torch.abs(gt_label)
         # compute loss
         loss = self.compute_loss(cls_score, _gt_label, avg_factor=num_samples)
-        losses['loss'] = loss
+        losses["loss"] = loss
         return losses
 
     def forward_train(self, cls_score, gt_label, **kwargs):
@@ -51,10 +47,11 @@ class MultiLabelClsHead(BaseHead):
             x = x[-1]
 
         from mmcls.utils import get_root_logger
+
         logger = get_root_logger()
         logger.warning(
-            'The input of MultiLabelClsHead should be already logits. '
-            'Please modify the backbone if you want to get pre-logits feature.'
+            "The input of MultiLabelClsHead should be already logits. "
+            "Please modify the backbone if you want to get pre-logits feature."
         )
         return x
 

@@ -1,8 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
-
-from mmocr.models.common import (PositionalEncoding, TFDecoderLayer,
-                                 TFEncoderLayer)
+from mmocr.models.common import PositionalEncoding, TFDecoderLayer, TFEncoderLayer
 from mmocr.models.textrecog.layers import BasicBlock, Bottleneck
 from mmocr.models.textrecog.layers.conv_layer import conv3x3
 
@@ -39,9 +37,7 @@ def test_transformer_layer():
     out_dec = decoder_layer(in_dec, out_enc)
     assert out_dec.shape == torch.Size([1, 30, 512])
 
-    decoder_layer = TFDecoderLayer(
-        operation_order=('self_attn', 'norm', 'enc_dec_attn', 'norm', 'ffn',
-                         'norm'))
+    decoder_layer = TFDecoderLayer(operation_order=("self_attn", "norm", "enc_dec_attn", "norm", "ffn", "norm"))
     out_dec = decoder_layer(in_dec, out_enc)
     assert out_dec.shape == torch.Size([1, 30, 512])
 
@@ -57,7 +53,6 @@ def test_transformer_layer():
     out_enc = encoder_layer(in_enc)
     assert out_dec.shape == torch.Size([1, 30, 512])
 
-    encoder_layer = TFEncoderLayer(
-        operation_order=('self_attn', 'norm', 'ffn', 'norm'))
+    encoder_layer = TFEncoderLayer(operation_order=("self_attn", "norm", "ffn", "norm"))
     out_enc = encoder_layer(in_enc)
     assert out_dec.shape == torch.Size([1, 30, 512])

@@ -1,8 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import cv2
-import numpy as np
-
 import mmocr.utils as utils
+import numpy as np
 
 
 def points2boundary(points, text_repr_type, text_score=None, min_width=-1):
@@ -21,17 +20,17 @@ def points2boundary(points, text_repr_type, text_score=None, min_width=-1):
     """
     assert isinstance(points, np.ndarray)
     assert points.shape[1] == 2
-    assert text_repr_type in ['quad', 'poly']
+    assert text_repr_type in ["quad", "poly"]
     assert text_score is None or 0 <= text_score <= 1
 
-    if text_repr_type == 'quad':
+    if text_repr_type == "quad":
         rect = cv2.minAreaRect(points)
         vertices = cv2.boxPoints(rect)
         boundary = []
         if min(rect[1]) > min_width:
             boundary = [p for p in vertices.flatten().tolist()]
 
-    elif text_repr_type == 'poly':
+    elif text_repr_type == "poly":
 
         height = np.max(points[:, 1]) + 10
         width = np.max(points[:, 0]) + 10
@@ -39,8 +38,7 @@ def points2boundary(points, text_repr_type, text_score=None, min_width=-1):
         mask = np.zeros((height, width), np.uint8)
         mask[points[:, 1], points[:, 0]] = 255
 
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL,
-                                       cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         boundary = list(contours[0].flatten().tolist())
 
     if text_score is not None:
@@ -91,9 +89,9 @@ def extract_boundary(result):
         scores (list[float]): The boundary score list.
     """
     assert isinstance(result, dict)
-    assert 'boundary_result' in result.keys()
+    assert "boundary_result" in result.keys()
 
-    boundaries_with_scores = result['boundary_result']
+    boundaries_with_scores = result["boundary_result"]
     assert utils.is_2dlist(boundaries_with_scores)
 
     boundaries = [b[:-1] for b in boundaries_with_scores]

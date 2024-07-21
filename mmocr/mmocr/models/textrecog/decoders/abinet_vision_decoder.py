@@ -2,9 +2,9 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import ConvModule
-
 from mmocr.models.builder import DECODERS
 from mmocr.models.common.modules import PositionalEncoding
+
 from .base_decoder import BaseDecoder
 
 
@@ -32,16 +32,18 @@ class ABIVisionDecoder(BaseDecoder):
         init_cfg (dict): Specifies the initialization method for model layers.
     """
 
-    def __init__(self,
-                 in_channels=512,
-                 num_channels=64,
-                 attn_height=8,
-                 attn_width=32,
-                 attn_mode='nearest',
-                 max_seq_len=40,
-                 num_chars=90,
-                 init_cfg=dict(type='Xavier', layer='Conv2d'),
-                 **kwargs):
+    def __init__(
+        self,
+        in_channels=512,
+        num_channels=64,
+        attn_height=8,
+        attn_width=32,
+        attn_mode="nearest",
+        max_seq_len=40,
+        num_chars=90,
+        init_cfg=dict(type="Xavier", layer="Conv2d"),
+        **kwargs
+    ):
         super().__init__(init_cfg=init_cfg)
 
         self.max_seq_len = max_seq_len
@@ -51,30 +53,21 @@ class ABIVisionDecoder(BaseDecoder):
             self._encoder_layer(in_channels, num_channels, stride=(1, 2)),
             self._encoder_layer(num_channels, num_channels, stride=(2, 2)),
             self._encoder_layer(num_channels, num_channels, stride=(2, 2)),
-            self._encoder_layer(num_channels, num_channels, stride=(2, 2)))
+            self._encoder_layer(num_channels, num_channels, stride=(2, 2)),
+        )
 
         self.k_decoder = nn.Sequential(
-            self._decoder_layer(
-                num_channels, num_channels, scale_factor=2, mode=attn_mode),
-            self._decoder_layer(
-                num_channels, num_channels, scale_factor=2, mode=attn_mode),
-            self._decoder_layer(
-                num_channels, num_channels, scale_factor=2, mode=attn_mode),
-            self._decoder_layer(
-                num_channels,
-                in_channels,
-                size=(attn_height, attn_width),
-                mode=attn_mode))
+            self._decoder_layer(num_channels, num_channels, scale_factor=2, mode=attn_mode),
+            self._decoder_layer(num_channels, num_channels, scale_factor=2, mode=attn_mode),
+            self._decoder_layer(num_channels, num_channels, scale_factor=2, mode=attn_mode),
+            self._decoder_layer(num_channels, in_channels, size=(attn_height, attn_width), mode=attn_mode),
+        )
 
         self.pos_encoder = PositionalEncoding(in_channels, max_seq_len)
         self.project = nn.Linear(in_channels, in_channels)
         self.cls = nn.Linear(in_channels, num_chars)
 
-    def forward_train(self,
-                      feat,
-                      out_enc=None,
-                      targets_dict=None,
-                      img_metas=None):
+    def forward_train(self, feat, out_enc=None, targets_dict=None, img_metas=None):
         """
         Args:
             feat (Tensor): Image features of shape (N, E, H, W).
@@ -116,52 +109,44 @@ class ABIVisionDecoder(BaseDecoder):
         attn_vecs = torch.bmm(attn_scores, v)  # (N, T, E)
 
         logits = self.cls(attn_vecs)
-        result = {
-            'feature': attn_vecs,
-            'logits': logits,
-            'attn_scores': attn_scores.view(N, -1, H, W)
-        }
+        result = {"feature": attn_vecs, "logits": logits, "attn_scores": attn_scores.view(N, -1, H, W)}
         return result
 
     def forward_test(self, feat, out_enc=None, img_metas=None):
         return self.forward_train(feat, out_enc=out_enc, img_metas=img_metas)
 
-    def _encoder_layer(self,
-                       in_channels,
-                       out_channels,
-                       kernel_size=3,
-                       stride=2,
-                       padding=1):
+    def _encoder_layer(self, in_channels, out_channels, kernel_size=3, stride=2, padding=1):
         return ConvModule(
             in_channels,
             out_channels,
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
-            norm_cfg=dict(type='BN'),
-            act_cfg=dict(type='ReLU'))
+            norm_cfg=dict(type="BN"),
+            act_cfg=dict(type="ReLU"),
+        )
 
-    def _decoder_layer(self,
-                       in_channels,
-                       out_channels,
-                       kernel_size=3,
-                       stride=1,
-                       padding=1,
-                       mode='nearest',
-                       scale_factor=None,
-                       size=None):
-        align_corners = None if mode == 'nearest' else True
+    def _decoder_layer(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=3,
+        stride=1,
+        padding=1,
+        mode="nearest",
+        scale_factor=None,
+        size=None,
+    ):
+        align_corners = None if mode == "nearest" else True
         return nn.Sequential(
-            nn.Upsample(
-                size=size,
-                scale_factor=scale_factor,
-                mode=mode,
-                align_corners=align_corners),
+            nn.Upsample(size=size, scale_factor=scale_factor, mode=mode, align_corners=align_corners),
             ConvModule(
                 in_channels,
                 out_channels,
                 kernel_size=kernel_size,
                 stride=stride,
                 padding=padding,
-                norm_cfg=dict(type='BN'),
-                act_cfg=dict(type='ReLU')))
+                norm_cfg=dict(type="BN"),
+                act_cfg=dict(type="ReLU"),
+            ),
+        )

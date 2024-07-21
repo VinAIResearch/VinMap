@@ -3,9 +3,8 @@
 # @Author  : zhoujun
 import paddle
 import paddle.nn.functional as F
-from paddle import nn
-
 from models.basic import ConvBnRelu
+from paddle import nn
 
 
 class FPN(nn.Layer):
@@ -19,43 +18,20 @@ class FPN(nn.Layer):
         self.conv_out = inner_channels
         inner_channels = inner_channels // 4
         # reduce layers
-        self.reduce_conv_c2 = ConvBnRelu(
-            in_channels[0], inner_channels, kernel_size=1, inplace=inplace)
-        self.reduce_conv_c3 = ConvBnRelu(
-            in_channels[1], inner_channels, kernel_size=1, inplace=inplace)
-        self.reduce_conv_c4 = ConvBnRelu(
-            in_channels[2], inner_channels, kernel_size=1, inplace=inplace)
-        self.reduce_conv_c5 = ConvBnRelu(
-            in_channels[3], inner_channels, kernel_size=1, inplace=inplace)
+        self.reduce_conv_c2 = ConvBnRelu(in_channels[0], inner_channels, kernel_size=1, inplace=inplace)
+        self.reduce_conv_c3 = ConvBnRelu(in_channels[1], inner_channels, kernel_size=1, inplace=inplace)
+        self.reduce_conv_c4 = ConvBnRelu(in_channels[2], inner_channels, kernel_size=1, inplace=inplace)
+        self.reduce_conv_c5 = ConvBnRelu(in_channels[3], inner_channels, kernel_size=1, inplace=inplace)
         # Smooth layers
-        self.smooth_p4 = ConvBnRelu(
-            inner_channels,
-            inner_channels,
-            kernel_size=3,
-            padding=1,
-            inplace=inplace)
-        self.smooth_p3 = ConvBnRelu(
-            inner_channels,
-            inner_channels,
-            kernel_size=3,
-            padding=1,
-            inplace=inplace)
-        self.smooth_p2 = ConvBnRelu(
-            inner_channels,
-            inner_channels,
-            kernel_size=3,
-            padding=1,
-            inplace=inplace)
+        self.smooth_p4 = ConvBnRelu(inner_channels, inner_channels, kernel_size=3, padding=1, inplace=inplace)
+        self.smooth_p3 = ConvBnRelu(inner_channels, inner_channels, kernel_size=3, padding=1, inplace=inplace)
+        self.smooth_p2 = ConvBnRelu(inner_channels, inner_channels, kernel_size=3, padding=1, inplace=inplace)
 
         self.conv = nn.Sequential(
-            nn.Conv2D(
-                self.conv_out,
-                self.conv_out,
-                kernel_size=3,
-                padding=1,
-                stride=1),
+            nn.Conv2D(self.conv_out, self.conv_out, kernel_size=3, padding=1, stride=1),
             nn.BatchNorm2D(self.conv_out),
-            nn.ReLU())
+            nn.ReLU(),
+        )
         self.out_channels = self.conv_out
 
     def forward(self, x):

@@ -3,10 +3,9 @@ import math
 
 import torch
 import torch.nn as nn
-
 from mmocr.models.builder import DECODERS
-from mmocr.models.textrecog.layers import (DotProductAttentionLayer,
-                                           PositionAwareLayer)
+from mmocr.models.textrecog.layers import DotProductAttentionLayer, PositionAwareLayer
+
 from .base_decoder import BaseDecoder
 
 
@@ -39,16 +38,18 @@ class PositionAttentionDecoder(BaseDecoder):
         :obj:`mmocr.models.textrecog.recognizer.EncodeDecodeRecognizer`.
     """
 
-    def __init__(self,
-                 num_classes=None,
-                 rnn_layers=2,
-                 dim_input=512,
-                 dim_model=128,
-                 max_seq_len=40,
-                 mask=True,
-                 return_feature=False,
-                 encode_value=False,
-                 init_cfg=None):
+    def __init__(
+        self,
+        num_classes=None,
+        rnn_layers=2,
+        dim_input=512,
+        dim_model=128,
+        max_seq_len=40,
+        mask=True,
+        return_feature=False,
+        encode_value=False,
+        init_cfg=None,
+    ):
         super().__init__(init_cfg=init_cfg)
 
         self.num_classes = num_classes
@@ -61,16 +62,14 @@ class PositionAttentionDecoder(BaseDecoder):
 
         self.embedding = nn.Embedding(self.max_seq_len + 1, self.dim_model)
 
-        self.position_aware_module = PositionAwareLayer(
-            self.dim_model, rnn_layers)
+        self.position_aware_module = PositionAwareLayer(self.dim_model, rnn_layers)
 
         self.attention_layer = DotProductAttentionLayer()
 
         self.prediction = None
         if not self.return_feature:
             pred_num_classes = num_classes - 1
-            self.prediction = nn.Linear(
-                dim_model if encode_value else dim_input, pred_num_classes)
+            self.prediction = nn.Linear(dim_model if encode_value else dim_input, pred_num_classes)
 
     def _get_position_index(self, length, batch_size, device=None):
         position_index = torch.arange(0, length, device=device)
@@ -96,11 +95,9 @@ class PositionAttentionDecoder(BaseDecoder):
             before the prediction projection layer, whose shape is
             :math:`(N, T, D_m)`.
         """
-        valid_ratios = [
-            img_meta.get('valid_ratio', 1.0) for img_meta in img_metas
-        ] if self.mask else None
+        valid_ratios = [img_meta.get("valid_ratio", 1.0) for img_meta in img_metas] if self.mask else None
 
-        targets = targets_dict['padded_targets'].to(feat.device)
+        targets = targets_dict["padded_targets"].to(feat.device)
 
         #
         n, c_enc, h, w = out_enc.size()
@@ -154,9 +151,7 @@ class PositionAttentionDecoder(BaseDecoder):
             before the prediction projection layer, whose shape is
             :math:`(N, T, D_m)`.
         """
-        valid_ratios = [
-            img_meta.get('valid_ratio', 1.0) for img_meta in img_metas
-        ] if self.mask else None
+        valid_ratios = [img_meta.get("valid_ratio", 1.0) for img_meta in img_metas] if self.mask else None
 
         seq_len = self.max_seq_len
         n, c_enc, h, w = out_enc.size()

@@ -5,9 +5,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 from mmcv.runner import BaseModule
-
 from mmocr.models.builder import HEADS
 from mmocr.utils import check_argument
+
 from .head_mixin import HeadMixin
 
 
@@ -26,30 +26,29 @@ class PANHead(HeadMixin, BaseModule):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 downsample_ratio=0.25,
-                 loss=dict(type='PANLoss'),
-                 postprocessor=dict(
-                     type='PANPostprocessor', text_repr_type='poly'),
-                 train_cfg=None,
-                 test_cfg=None,
-                 init_cfg=dict(
-                     type='Normal',
-                     mean=0,
-                     std=0.01,
-                     override=dict(name='out_conv')),
-                 **kwargs):
-        old_keys = ['text_repr_type', 'decoding_type']
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        downsample_ratio=0.25,
+        loss=dict(type="PANLoss"),
+        postprocessor=dict(type="PANPostprocessor", text_repr_type="poly"),
+        train_cfg=None,
+        test_cfg=None,
+        init_cfg=dict(type="Normal", mean=0, std=0.01, override=dict(name="out_conv")),
+        **kwargs,
+    ):
+        old_keys = ["text_repr_type", "decoding_type"]
         for key in old_keys:
             if kwargs.get(key, None):
                 postprocessor[key] = kwargs.get(key)
                 warnings.warn(
-                    f'{key} is deprecated, please specify '
-                    'it in postprocessor config dict. See '
-                    'https://github.com/open-mmlab/mmocr/pull/640'
-                    ' for details.', UserWarning)
+                    f"{key} is deprecated, please specify "
+                    "it in postprocessor config dict. See "
+                    "https://github.com/open-mmlab/mmocr/pull/640"
+                    " for details.",
+                    UserWarning,
+                )
 
         BaseModule.__init__(self, init_cfg=init_cfg)
         HeadMixin.__init__(self, loss, postprocessor)
@@ -65,10 +64,7 @@ class PANHead(HeadMixin, BaseModule):
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
 
-        self.out_conv = nn.Conv2d(
-            in_channels=np.sum(np.array(in_channels)),
-            out_channels=out_channels,
-            kernel_size=1)
+        self.out_conv = nn.Conv2d(in_channels=np.sum(np.array(in_channels)), out_channels=out_channels, kernel_size=1)
 
     def forward(self, inputs):
         r"""

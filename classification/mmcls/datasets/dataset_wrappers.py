@@ -33,14 +33,13 @@ class ConcatDataset(_ConcatDataset):
         if not separate_eval:
             if len(set([type(ds) for ds in datasets])) != 1:
                 raise NotImplementedError(
-                    'To evaluate a concat dataset non-separately, '
-                    'all the datasets should have same types')
+                    "To evaluate a concat dataset non-separately, " "all the datasets should have same types"
+                )
 
     def get_cat_ids(self, idx):
         if idx < 0:
             if -idx > len(self):
-                raise ValueError(
-                    'absolute value of index should not exceed dataset length')
+                raise ValueError("absolute value of index should not exceed dataset length")
             idx = len(self) + idx
         dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
         if dataset_idx == 0:
@@ -66,43 +65,37 @@ class ConcatDataset(_ConcatDataset):
         """
         if indices is not None:
             raise NotImplementedError(
-                'Use indices to evaluate speific samples in a ConcatDataset '
-                'is not supported by now.')
+                "Use indices to evaluate speific samples in a ConcatDataset " "is not supported by now."
+            )
 
-        assert len(results) == len(self), \
-            ('Dataset and results have different sizes: '
-             f'{len(self)} v.s. {len(results)}')
+        assert len(results) == len(self), (
+            "Dataset and results have different sizes: " f"{len(self)} v.s. {len(results)}"
+        )
 
         # Check whether all the datasets support evaluation
         for dataset in self.datasets:
-            assert hasattr(dataset, 'evaluate'), \
-                f"{type(dataset)} haven't implemented the evaluate function."
+            assert hasattr(dataset, "evaluate"), f"{type(dataset)} haven't implemented the evaluate function."
 
         if self.separate_eval:
             total_eval_results = dict()
             for dataset_idx, dataset in enumerate(self.datasets):
-                start_idx = 0 if dataset_idx == 0 else \
-                    self.cumulative_sizes[dataset_idx-1]
+                start_idx = 0 if dataset_idx == 0 else self.cumulative_sizes[dataset_idx - 1]
                 end_idx = self.cumulative_sizes[dataset_idx]
 
                 results_per_dataset = results[start_idx:end_idx]
                 print_log(
-                    f'Evaluateing dataset-{dataset_idx} with '
-                    f'{len(results_per_dataset)} images now',
-                    logger=logger)
+                    f"Evaluateing dataset-{dataset_idx} with " f"{len(results_per_dataset)} images now", logger=logger
+                )
 
-                eval_results_per_dataset = dataset.evaluate(
-                    results_per_dataset, *args, logger=logger, **kwargs)
+                eval_results_per_dataset = dataset.evaluate(results_per_dataset, *args, logger=logger, **kwargs)
                 for k, v in eval_results_per_dataset.items():
-                    total_eval_results.update({f'{dataset_idx}_{k}': v})
+                    total_eval_results.update({f"{dataset_idx}_{k}": v})
 
             return total_eval_results
         else:
             original_data_infos = self.datasets[0].data_infos
-            self.datasets[0].data_infos = sum(
-                [dataset.data_infos for dataset in self.datasets], [])
-            eval_results = self.datasets[0].evaluate(
-                results, logger=logger, **kwargs)
+            self.datasets[0].data_infos = sum([dataset.data_infos for dataset in self.datasets], [])
+            eval_results = self.datasets[0].evaluate(results, logger=logger, **kwargs)
             self.datasets[0].data_infos = original_data_infos
             return eval_results
 
@@ -139,15 +132,16 @@ class RepeatDataset(object):
 
     def evaluate(self, *args, **kwargs):
         raise NotImplementedError(
-            'evaluate results on a repeated dataset is weird. '
-            'Please inference and evaluate on the original dataset.')
+            "evaluate results on a repeated dataset is weird. "
+            "Please inference and evaluate on the original dataset."
+        )
 
     def __repr__(self):
         """Print the number of instance number."""
-        dataset_type = 'Test' if self.test_mode else 'Train'
+        dataset_type = "Test" if self.test_mode else "Train"
         result = (
-            f'\n{self.__class__.__name__} ({self.dataset.__class__.__name__}) '
-            f'{dataset_type} dataset with total number of samples {len(self)}.'
+            f"\n{self.__class__.__name__} ({self.dataset.__class__.__name__}) "
+            f"{dataset_type} dataset with total number of samples {len(self)}."
         )
         return result
 
@@ -210,7 +204,7 @@ class ClassBalancedDataset(object):
         self.repeat_indices = repeat_indices
 
         flags = []
-        if hasattr(self.dataset, 'flag'):
+        if hasattr(self.dataset, "flag"):
             for flag, repeat_factor in zip(self.dataset.flag, repeat_factors):
                 flags.extend([flag] * int(math.ceil(repeat_factor)))
             assert len(flags) == len(repeat_indices)
@@ -226,14 +220,13 @@ class ClassBalancedDataset(object):
             for cat_id in cat_ids:
                 category_freq[cat_id] += 1
         for k, v in category_freq.items():
-            assert v > 0, f'caterogy {k} does not contain any images'
+            assert v > 0, f"caterogy {k} does not contain any images"
             category_freq[k] = v / num_images
 
         # 2. For each category c, compute the category-level repeat factor:
         #       r(c) = max(1, sqrt(t/f(c)))
         category_repeat = {
-            cat_id: max(1.0, math.sqrt(repeat_thr / cat_freq))
-            for cat_id, cat_freq in category_freq.items()
+            cat_id: max(1.0, math.sqrt(repeat_thr / cat_freq)) for cat_id, cat_freq in category_freq.items()
         }
 
         # 3. For each image I and its labels L(I), compute the image-level
@@ -242,9 +235,7 @@ class ClassBalancedDataset(object):
         repeat_factors = []
         for idx in range(num_images):
             cat_ids = set(self.dataset.get_cat_ids(idx))
-            repeat_factor = max(
-                {category_repeat[cat_id]
-                 for cat_id in cat_ids})
+            repeat_factor = max({category_repeat[cat_id] for cat_id in cat_ids})
             repeat_factors.append(repeat_factor)
 
         return repeat_factors
@@ -258,15 +249,16 @@ class ClassBalancedDataset(object):
 
     def evaluate(self, *args, **kwargs):
         raise NotImplementedError(
-            'evaluate results on a class-balanced dataset is weird. '
-            'Please inference and evaluate on the original dataset.')
+            "evaluate results on a class-balanced dataset is weird. "
+            "Please inference and evaluate on the original dataset."
+        )
 
     def __repr__(self):
         """Print the number of instance number."""
-        dataset_type = 'Test' if self.test_mode else 'Train'
+        dataset_type = "Test" if self.test_mode else "Train"
         result = (
-            f'\n{self.__class__.__name__} ({self.dataset.__class__.__name__}) '
-            f'{dataset_type} dataset with total number of samples {len(self)}.'
+            f"\n{self.__class__.__name__} ({self.dataset.__class__.__name__}) "
+            f"{dataset_type} dataset with total number of samples {len(self)}."
         )
         return result
 
@@ -289,12 +281,7 @@ class KFoldDataset:
             If None, not shuffle the dataset. Defaults to None.
     """
 
-    def __init__(self,
-                 dataset,
-                 fold=0,
-                 num_splits=5,
-                 test_mode=False,
-                 seed=None):
+    def __init__(self, dataset, fold=0, num_splits=5, test_mode=False, seed=None):
         self.dataset = dataset
         self.CLASSES = dataset.CLASSES
         self.test_mode = test_mode
@@ -328,5 +315,5 @@ class KFoldDataset:
         return len(self.indices)
 
     def evaluate(self, *args, **kwargs):
-        kwargs['indices'] = self.indices
+        kwargs["indices"] = self.indices
         return self.dataset.evaluate(*args, **kwargs)

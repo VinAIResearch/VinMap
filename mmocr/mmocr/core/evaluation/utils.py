@@ -1,8 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import mmocr.utils as utils
 import numpy as np
 from shapely.geometry import Polygon as plg
-
-import mmocr.utils as utils
 
 
 def ignore_pred(pred_boxes, gt_ignored_index, gt_polys, precision_thr):
@@ -109,8 +108,7 @@ def box2polygon(box):
 
     assert isinstance(box, np.ndarray)
     assert box.size == 4
-    boundary = np.array(
-        [box[0], box[1], box[2], box[1], box[2], box[3], box[0], box[3]])
+    boundary = np.array([box[0], box[1], box[2], box[1], box[2], box[3], box[0], box[3]])
 
     point_mat = boundary.reshape([-1, 2])
     return plg(point_mat)
@@ -169,8 +167,7 @@ def poly_intersection(poly_det, poly_gt, invalid_ret=None, return_poly=False):
     """
     assert isinstance(poly_det, plg)
     assert isinstance(poly_gt, plg)
-    assert invalid_ret is None or isinstance(invalid_ret, float) or \
-        isinstance(invalid_ret, int)
+    assert invalid_ret is None or isinstance(invalid_ret, float) or isinstance(invalid_ret, int)
 
     if invalid_ret is None:
         poly_det = poly_make_valid(poly_det)
@@ -205,8 +202,7 @@ def poly_union(poly_det, poly_gt, invalid_ret=None, return_poly=False):
     """
     assert isinstance(poly_det, plg)
     assert isinstance(poly_gt, plg)
-    assert invalid_ret is None or isinstance(invalid_ret, float) or \
-        isinstance(invalid_ret, int)
+    assert invalid_ret is None or isinstance(invalid_ret, float) or isinstance(invalid_ret, int)
 
     if invalid_ret is None:
         poly_det = poly_make_valid(poly_det)
@@ -259,8 +255,7 @@ def poly_iou(poly_det, poly_gt, zero_division=0):
     return area_inters / area_union if area_union != 0 else zero_division
 
 
-def one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat, recall_thr,
-                       precision_thr):
+def one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat, recall_thr, precision_thr):
     """One-to-One match gt and det with icdar2013 standards.
 
     Args:
@@ -284,31 +279,27 @@ def one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat, recall_thr,
 
     cont = 0
     for i in range(recall_mat.shape[1]):
-        if recall_mat[gt_id,
-                      i] > recall_thr and precision_mat[gt_id,
-                                                        i] > precision_thr:
+        if recall_mat[gt_id, i] > recall_thr and precision_mat[gt_id, i] > precision_thr:
             cont += 1
     if cont != 1:
         return False
 
     cont = 0
     for i in range(recall_mat.shape[0]):
-        if recall_mat[i, det_id] > recall_thr and precision_mat[
-                i, det_id] > precision_thr:
+        if recall_mat[i, det_id] > recall_thr and precision_mat[i, det_id] > precision_thr:
             cont += 1
     if cont != 1:
         return False
 
-    if recall_mat[gt_id, det_id] > recall_thr and precision_mat[
-            gt_id, det_id] > precision_thr:
+    if recall_mat[gt_id, det_id] > recall_thr and precision_mat[gt_id, det_id] > precision_thr:
         return True
 
     return False
 
 
-def one2many_match_ic13(gt_id, recall_mat, precision_mat, recall_thr,
-                        precision_thr, gt_match_flag, det_match_flag,
-                        det_ignored_index):
+def one2many_match_ic13(
+    gt_id, recall_mat, precision_mat, recall_thr, precision_thr, gt_match_flag, det_match_flag, det_ignored_index
+):
     """One-to-Many match gt and detections with icdar2013 standards.
 
     Args:
@@ -339,11 +330,10 @@ def one2many_match_ic13(gt_id, recall_mat, precision_mat, recall_thr,
     assert isinstance(det_match_flag, list)
     assert isinstance(det_ignored_index, list)
 
-    many_sum = 0.
+    many_sum = 0.0
     det_ids = []
     for det_id in range(recall_mat.shape[1]):
-        if gt_match_flag[gt_id] == 0 and det_match_flag[
-                det_id] == 0 and det_id not in det_ignored_index:
+        if gt_match_flag[gt_id] == 0 and det_match_flag[det_id] == 0 and det_id not in det_ignored_index:
             if precision_mat[gt_id, det_id] >= precision_thr:
                 many_sum += recall_mat[gt_id, det_id]
                 det_ids.append(det_id)
@@ -352,9 +342,9 @@ def one2many_match_ic13(gt_id, recall_mat, precision_mat, recall_thr,
     return False, []
 
 
-def many2one_match_ic13(det_id, recall_mat, precision_mat, recall_thr,
-                        precision_thr, gt_match_flag, det_match_flag,
-                        gt_ignored_index):
+def many2one_match_ic13(
+    det_id, recall_mat, precision_mat, recall_thr, precision_thr, gt_match_flag, det_match_flag, gt_ignored_index
+):
     """Many-to-One match gt and detections with icdar2013 standards.
 
     Args:
@@ -385,11 +375,10 @@ def many2one_match_ic13(det_id, recall_mat, precision_mat, recall_thr,
     assert isinstance(gt_match_flag, list)
     assert isinstance(det_match_flag, list)
     assert isinstance(gt_ignored_index, list)
-    many_sum = 0.
+    many_sum = 0.0
     gt_ids = []
     for gt_id in range(recall_mat.shape[0]):
-        if gt_match_flag[gt_id] == 0 and det_match_flag[
-                det_id] == 0 and gt_id not in gt_ignored_index:
+        if gt_match_flag[gt_id] == 0 and det_match_flag[det_id] == 0 and gt_id not in gt_ignored_index:
             if recall_mat[gt_id, det_id] >= recall_thr:
                 many_sum += precision_mat[gt_id, det_id]
                 gt_ids.append(gt_id)
@@ -504,10 +493,7 @@ def select_top_boundary(boundaries_list, scores_list, score_thr):
     for boundary, scores in zip(boundaries_list, scores_list):
         if len(scores) > 0:
             assert len(scores) == len(boundary)
-            inds = [
-                iter for iter in range(len(scores))
-                if scores[iter] >= score_thr
-            ]
+            inds = [iter for iter in range(len(scores)) if scores[iter] >= score_thr]
             selected_boundaries.append([boundary[i] for i in inds])
         else:
             selected_boundaries.append(boundary)
@@ -537,10 +523,7 @@ def select_bboxes_via_score(bboxes_list, scores_list, score_thr):
     for bboxes, scores in zip(bboxes_list, scores_list):
         if len(scores) > 0:
             assert len(scores) == bboxes.shape[0]
-            inds = [
-                iter for iter in range(len(scores))
-                if scores[iter] >= score_thr
-            ]
+            inds = [iter for iter in range(len(scores)) if scores[iter] >= score_thr]
             selected_bboxes.append(bboxes[inds, :])
         else:
             selected_bboxes.append(bboxes)

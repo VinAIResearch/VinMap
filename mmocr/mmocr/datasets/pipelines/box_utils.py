@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import numpy as np
-
 import mmocr.utils as utils
+import numpy as np
 
 
 def sort_vertex(points_x, points_y):

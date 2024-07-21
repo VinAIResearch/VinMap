@@ -1,9 +1,9 @@
-_base_ = './deit-small_pt-4xb256_in1k.py'
+_base_ = "./deit-small_pt-4xb256_in1k.py"
 
 # model settings
 model = dict(
-    backbone=dict(type='DistilledVisionTransformer', arch='deit-base'),
-    head=dict(type='DeiTClsHead', in_channels=768),
+    backbone=dict(type="DistilledVisionTransformer", arch="deit-base"),
+    head=dict(type="DeiTClsHead", in_channels=768),
 )
 
 # data settings

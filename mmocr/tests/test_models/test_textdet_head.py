@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
 import torch
-
 from mmocr.models.textdet.dense_heads import DRRGHead
 
 
@@ -63,20 +62,20 @@ def test_drrg_head():
     y1 = np.ones(10) * 2
     y2 = y1 + 2
     comp_scores = np.ones(10, dtype=np.float32) * 0.9
-    text_comps = np.stack([x1, y1, x2, y1, x2, y2, x1, y2,
-                           comp_scores]).transpose()
+    text_comps = np.stack([x1, y1, x2, y1, x2, y2, x1, y2, comp_scores]).transpose()
     outlier = np.array([50, 50, 52, 50, 52, 52, 50, 52, 0.9])
     text_comps = np.vstack([text_comps, outlier])
 
     (C, H, W) = (10, 128, 128)
-    img_metas = [{
-        'img_shape': (H, W, C),
-        'ori_shape': (H, W, C),
-        'pad_shape': (H, W, C),
-        'filename': '<demo>.png',
-        'scale_factor': np.array([1, 1, 1, 1]),
-        'flip': False,
-    }]
-    results = drrg_head.get_boundary(
-        edges, scores, text_comps, img_metas, rescale=True)
-    assert 'boundary_result' in results.keys()
+    img_metas = [
+        {
+            "img_shape": (H, W, C),
+            "ori_shape": (H, W, C),
+            "pad_shape": (H, W, C),
+            "filename": "<demo>.png",
+            "scale_factor": np.array([1, 1, 1, 1]),
+            "flip": False,
+        }
+    ]
+    results = drrg_head.get_boundary(edges, scores, text_comps, img_metas, rescale=True)
+    assert "boundary_result" in results.keys()

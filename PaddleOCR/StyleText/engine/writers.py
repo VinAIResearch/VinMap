@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import cv2
 import glob
+import os
 
+import cv2
 from utils.logging import get_logger
 
 
@@ -52,16 +52,14 @@ class SimpleWriter(object):
         for image_path in self.label_dict:
             label = self.label_dict[image_path]
             label_raw += "{}\t{}\n".format(image_path, label)
-        label_file_path = os.path.join(label_home,
-                                       "{}_label.txt".format(self.tag))
+        label_file_path = os.path.join(label_home, "{}_label.txt".format(self.tag))
         with open(label_file_path, "w") as f:
             f.write(label_raw)
         self.label_file_index += 1
 
     def merge_label(self):
         label_raw = ""
-        label_file_regex = os.path.join(self.output_dir, "label",
-                                        "*_label.txt")
+        label_file_regex = os.path.join(self.output_dir, "label", "*_label.txt")
         label_file_list = glob.glob(label_file_regex)
         for label_file_i in label_file_list:
             with open(label_file_i, "r") as f:

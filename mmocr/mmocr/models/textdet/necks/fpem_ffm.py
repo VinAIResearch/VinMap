@@ -1,9 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch.nn.functional as F
 from mmcv.runner import BaseModule, ModuleList
-from torch import nn
-
 from mmocr.models.builder import NECKS
+from torch import nn
 
 
 class FPEM(BaseModule):
@@ -58,9 +57,9 @@ class SeparableConv2d(BaseModule):
             kernel_size=3,
             padding=1,
             stride=stride,
-            groups=in_channels)
-        self.pointwise_conv = nn.Conv2d(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=1)
+            groups=in_channels,
+        )
+        self.pointwise_conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1)
         self.bn = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU()
 
@@ -85,35 +84,36 @@ class FPEM_FFM(BaseModule):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 in_channels,
-                 conv_out=128,
-                 fpem_repeat=2,
-                 align_corners=False,
-                 init_cfg=dict(
-                     type='Xavier', layer='Conv2d', distribution='uniform')):
+    def __init__(
+        self,
+        in_channels,
+        conv_out=128,
+        fpem_repeat=2,
+        align_corners=False,
+        init_cfg=dict(type="Xavier", layer="Conv2d", distribution="uniform"),
+    ):
         super().__init__(init_cfg=init_cfg)
         # reduce layers
         self.reduce_conv_c2 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels[0],
-                out_channels=conv_out,
-                kernel_size=1), nn.BatchNorm2d(conv_out), nn.ReLU())
+            nn.Conv2d(in_channels=in_channels[0], out_channels=conv_out, kernel_size=1),
+            nn.BatchNorm2d(conv_out),
+            nn.ReLU(),
+        )
         self.reduce_conv_c3 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels[1],
-                out_channels=conv_out,
-                kernel_size=1), nn.BatchNorm2d(conv_out), nn.ReLU())
+            nn.Conv2d(in_channels=in_channels[1], out_channels=conv_out, kernel_size=1),
+            nn.BatchNorm2d(conv_out),
+            nn.ReLU(),
+        )
         self.reduce_conv_c4 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels[2],
-                out_channels=conv_out,
-                kernel_size=1), nn.BatchNorm2d(conv_out), nn.ReLU())
+            nn.Conv2d(in_channels=in_channels[2], out_channels=conv_out, kernel_size=1),
+            nn.BatchNorm2d(conv_out),
+            nn.ReLU(),
+        )
         self.reduce_conv_c5 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels[3],
-                out_channels=conv_out,
-                kernel_size=1), nn.BatchNorm2d(conv_out), nn.ReLU())
+            nn.Conv2d(in_channels=in_channels[3], out_channels=conv_out, kernel_size=1),
+            nn.BatchNorm2d(conv_out),
+            nn.ReLU(),
+        )
         self.align_corners = align_corners
         self.fpems = ModuleList()
         for _ in range(fpem_repeat):
@@ -154,20 +154,8 @@ class FPEM_FFM(BaseModule):
                 c5_ffm = c5_ffm + c5
 
         # FFM
-        c5 = F.interpolate(
-            c5_ffm,
-            c2_ffm.size()[-2:],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        c4 = F.interpolate(
-            c4_ffm,
-            c2_ffm.size()[-2:],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        c3 = F.interpolate(
-            c3_ffm,
-            c2_ffm.size()[-2:],
-            mode='bilinear',
-            align_corners=self.align_corners)
+        c5 = F.interpolate(c5_ffm, c2_ffm.size()[-2:], mode="bilinear", align_corners=self.align_corners)
+        c4 = F.interpolate(c4_ffm, c2_ffm.size()[-2:], mode="bilinear", align_corners=self.align_corners)
+        c3 = F.interpolate(c3_ffm, c2_ffm.size()[-2:], mode="bilinear", align_corners=self.align_corners)
         outs = [c2_ffm, c3, c4, c5]
         return tuple(outs)

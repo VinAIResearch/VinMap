@@ -7,7 +7,6 @@ import mmcv
 import torch
 import torch.distributed as dist
 from mmcv.runner import BaseModule, auto_fp16
-
 from mmocr.core import imshow_text_label
 
 
@@ -63,15 +62,15 @@ class BaseRecognizer(BaseModule, metaclass=ABCMeta):
         """
         if isinstance(imgs, list):
             assert len(imgs) > 0
-            assert imgs[0].size(0) == 1, ('aug test does not support '
-                                          f'inference with batch size '
-                                          f'{imgs[0].size(0)}')
+            assert imgs[0].size(0) == 1, (
+                "aug test does not support " f"inference with batch size " f"{imgs[0].size(0)}"
+            )
             assert len(imgs) == len(img_metas)
             return self.aug_test(imgs, img_metas, **kwargs)
 
         return self.simple_test(imgs, img_metas, **kwargs)
 
-    @auto_fp16(apply_to=('img', ))
+    @auto_fp16(apply_to=("img",))
     def forward(self, img, img_metas, return_loss=True, **kwargs):
         """Calls either :func:`forward_train` or :func:`forward_test` depending
         on whether ``return_loss`` is ``True``.
@@ -112,13 +111,11 @@ class BaseRecognizer(BaseModule, metaclass=ABCMeta):
             elif isinstance(loss_value, list):
                 log_vars[loss_name] = sum(_loss.mean() for _loss in loss_value)
             else:
-                raise TypeError(
-                    f'{loss_name} is not a tensor or list of tensors')
+                raise TypeError(f"{loss_name} is not a tensor or list of tensors")
 
-        loss = sum(_value for _key, _value in log_vars.items()
-                   if 'loss' in _key)
+        loss = sum(_value for _key, _value in log_vars.items() if "loss" in _key)
 
-        log_vars['loss'] = loss
+        log_vars["loss"] = loss
         for loss_name, loss_value in log_vars.items():
             # reduce loss when distributed training
             if dist.is_available() and dist.is_initialized():
@@ -158,8 +155,7 @@ class BaseRecognizer(BaseModule, metaclass=ABCMeta):
         losses = self(**data)
         loss, log_vars = self._parse_losses(losses)
 
-        outputs = dict(
-            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
+        outputs = dict(loss=loss, log_vars=log_vars, num_samples=len(data["img_metas"]))
 
         return outputs
 
@@ -173,20 +169,12 @@ class BaseRecognizer(BaseModule, metaclass=ABCMeta):
         losses = self(**data)
         loss, log_vars = self._parse_losses(losses)
 
-        outputs = dict(
-            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
+        outputs = dict(loss=loss, log_vars=log_vars, num_samples=len(data["img_metas"]))
 
         return outputs
 
     @staticmethod
-    def show_result(img,
-                    result,
-                    gt_label='',
-                    win_name='',
-                    show=False,
-                    wait_time=0,
-                    out_file=None,
-                    **kwargs):
+    def show_result(img, result, gt_label="", win_name="", show=False, wait_time=0, out_file=None, **kwargs):
         """Draw `result` on `img`.
 
         Args:
@@ -207,8 +195,8 @@ class BaseRecognizer(BaseModule, metaclass=ABCMeta):
         img = mmcv.imread(img)
         img = img.copy()
         pred_label = None
-        if 'text' in result.keys():
-            pred_label = result['text']
+        if "text" in result.keys():
+            pred_label = result["text"]
 
         # if out_file specified, do not show image in window
         if out_file is not None:
@@ -216,17 +204,11 @@ class BaseRecognizer(BaseModule, metaclass=ABCMeta):
         # draw text label
         if pred_label is not None:
             img = imshow_text_label(
-                img,
-                pred_label,
-                gt_label,
-                show=show,
-                win_name=win_name,
-                wait_time=wait_time,
-                out_file=out_file)
+                img, pred_label, gt_label, show=show, win_name=win_name, wait_time=wait_time, out_file=out_file
+            )
 
         if not (show or out_file):
-            warnings.warn('show==False and out_file is not specified, only '
-                          'result image will be returned')
+            warnings.warn("show==False and out_file is not specified, only " "result image will be returned")
             return img
 
         return img

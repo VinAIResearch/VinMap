@@ -4,7 +4,6 @@ import operator
 from functools import reduce
 
 import numpy as np
-
 from mmocr.utils.check_argument import is_2dlist, is_type_list
 
 
@@ -39,8 +38,7 @@ def is_on_same_line(box_a, box_b, min_y_overlap_ratio=0.8):
             overlap = sorted_y[1] - sorted_y[0]
             min_a_overlap = (a_y_max - a_y_min) * min_y_overlap_ratio
             min_b_overlap = (b_y_max - b_y_min) * min_y_overlap_ratio
-            return overlap >= min_a_overlap or \
-                overlap >= min_b_overlap
+            return overlap >= min_a_overlap or overlap >= min_b_overlap
         else:
             return True
     return False
@@ -69,7 +67,7 @@ def stitch_boxes_into_lines(boxes, max_x_dist=10, min_y_overlap_ratio=0.8):
     merged_boxes = []
 
     # sort groups based on the x_min coordinate of boxes
-    x_sorted_boxes = sorted(boxes, key=lambda x: np.min(x['box'][::2]))
+    x_sorted_boxes = sorted(boxes, key=lambda x: np.min(x["box"][::2]))
     # store indexes of boxes which are already parts of other lines
     skip_idxs = set()
 
@@ -84,8 +82,9 @@ def stitch_boxes_into_lines(boxes, max_x_dist=10, min_y_overlap_ratio=0.8):
         for j in range(i + 1, len(x_sorted_boxes)):
             if j in skip_idxs:
                 continue
-            if is_on_same_line(x_sorted_boxes[rightmost_box_idx]['box'],
-                               x_sorted_boxes[j]['box'], min_y_overlap_ratio):
+            if is_on_same_line(
+                x_sorted_boxes[rightmost_box_idx]["box"], x_sorted_boxes[j]["box"], min_y_overlap_ratio
+            ):
                 line.append(j)
                 skip_idxs.add(j)
                 rightmost_box_idx = j
@@ -98,7 +97,7 @@ def stitch_boxes_into_lines(boxes, max_x_dist=10, min_y_overlap_ratio=0.8):
         for k in range(1, len(line)):
             curr_box = x_sorted_boxes[line[k]]
             prev_box = x_sorted_boxes[line[k - 1]]
-            dist = np.min(curr_box['box'][::2]) - np.max(prev_box['box'][::2])
+            dist = np.min(curr_box["box"][::2]) - np.max(prev_box["box"][::2])
             if dist > max_x_dist:
                 line_idx += 1
                 lines.append([])
@@ -107,18 +106,15 @@ def stitch_boxes_into_lines(boxes, max_x_dist=10, min_y_overlap_ratio=0.8):
         # Get merged boxes
         for box_group in lines:
             merged_box = {}
-            merged_box['text'] = ' '.join(
-                [x_sorted_boxes[idx]['text'] for idx in box_group])
-            x_min, y_min = float('inf'), float('inf')
-            x_max, y_max = float('-inf'), float('-inf')
+            merged_box["text"] = " ".join([x_sorted_boxes[idx]["text"] for idx in box_group])
+            x_min, y_min = float("inf"), float("inf")
+            x_max, y_max = float("-inf"), float("-inf")
             for idx in box_group:
-                x_max = max(np.max(x_sorted_boxes[idx]['box'][::2]), x_max)
-                x_min = min(np.min(x_sorted_boxes[idx]['box'][::2]), x_min)
-                y_max = max(np.max(x_sorted_boxes[idx]['box'][1::2]), y_max)
-                y_min = min(np.min(x_sorted_boxes[idx]['box'][1::2]), y_min)
-            merged_box['box'] = [
-                x_min, y_min, x_max, y_min, x_max, y_max, x_min, y_max
-            ]
+                x_max = max(np.max(x_sorted_boxes[idx]["box"][::2]), x_max)
+                x_min = min(np.min(x_sorted_boxes[idx]["box"][::2]), x_min)
+                y_max = max(np.max(x_sorted_boxes[idx]["box"][1::2]), y_max)
+                y_min = min(np.min(x_sorted_boxes[idx]["box"][1::2]), y_min)
+            merged_box["box"] = [x_min, y_min, x_max, y_min, x_max, y_max, x_min, y_max]
             merged_boxes.append(merged_box)
 
     return merged_boxes
@@ -145,16 +141,17 @@ def bezier_to_polygon(bezier_points, num_sample=20):
     assert num_sample > 0
 
     bezier_points = np.asarray(bezier_points)
-    assert np.prod(
-        bezier_points.shape) == 16, 'Need 8 Bezier control points to continue!'
+    assert np.prod(bezier_points.shape) == 16, "Need 8 Bezier control points to continue!"
 
     bezier = bezier_points.reshape(2, 4, 2).transpose(0, 2, 1).reshape(4, 4)
     u = np.linspace(0, 1, num_sample)
 
-    points = np.outer((1 - u) ** 3, bezier[:, 0]) \
-        + np.outer(3 * u * ((1 - u) ** 2), bezier[:, 1]) \
-        + np.outer(3 * (u ** 2) * (1 - u), bezier[:, 2]) \
-        + np.outer(u ** 3, bezier[:, 3])
+    points = (
+        np.outer((1 - u) ** 3, bezier[:, 0])
+        + np.outer(3 * u * ((1 - u) ** 2), bezier[:, 1])
+        + np.outer(3 * (u**2) * (1 - u), bezier[:, 2])
+        + np.outer(u**3, bezier[:, 3])
+    )
 
     # Convert points to polygon
     points = np.concatenate((points[:, :2], points[:, 2:]), axis=0)
@@ -178,13 +175,11 @@ def sort_points(points):
     Returns:
         list[ndarray]: A list of points sorted in clockwise order.
     """
-    assert is_type_list(points, np.ndarray) or isinstance(points, np.ndarray) \
-        or is_2dlist(points)
+    assert is_type_list(points, np.ndarray) or isinstance(points, np.ndarray) or is_2dlist(points)
     center_point = tuple(
-        map(operator.truediv,
-            reduce(lambda x, y: map(operator.add, x, y), points),
-            [len(points)] * 2))
+        map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), points), [len(points)] * 2)
+    )
     return sorted(
         points,
-        key=lambda coord: (180 + math.degrees(
-            math.atan2(*tuple(map(operator.sub, coord, center_point))))) % 360)
+        key=lambda coord: (180 + math.degrees(math.atan2(*tuple(map(operator.sub, coord, center_point))))) % 360,
+    )

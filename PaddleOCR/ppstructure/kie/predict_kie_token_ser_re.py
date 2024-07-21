@@ -14,25 +14,27 @@
 import os
 import sys
 
+
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(__dir__)
-sys.path.insert(0, os.path.abspath(os.path.join(__dir__, '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(__dir__, "../..")))
 
-os.environ["FLAGS_allocator_strategy"] = 'auto_growth'
+os.environ["FLAGS_allocator_strategy"] = "auto_growth"
 
-import cv2
 import json
-import numpy as np
 import time
 
+import cv2
+import numpy as np
 import tools.infer.utility as utility
-from tools.infer_kie_token_ser_re import make_input
 from ppocr.postprocess import build_post_process
 from ppocr.utils.logging import get_logger
-from ppocr.utils.visual import draw_ser_results, draw_re_results
-from ppocr.utils.utility import get_image_file_list, check_and_read
-from ppstructure.utility import parse_args
+from ppocr.utils.utility import check_and_read, get_image_file_list
+from ppocr.utils.visual import draw_re_results, draw_ser_results
 from ppstructure.kie.predict_kie_token_ser import SerPredictor
+from ppstructure.utility import parse_args
+from tools.infer_kie_token_ser_re import make_input
+
 
 logger = get_logger()
 
@@ -42,10 +44,11 @@ class SerRePredictor(object):
         self.use_visual_backbone = args.use_visual_backbone
         self.ser_engine = SerPredictor(args)
         if args.re_model_dir is not None:
-            postprocess_params = {'name': 'VQAReTokenLayoutLMPostProcess'}
+            postprocess_params = {"name": "VQAReTokenLayoutLMPostProcess"}
             self.postprocess_op = build_post_process(postprocess_params)
-            self.predictor, self.input_tensor, self.output_tensors, self.config = \
-                utility.create_predictor(args, 're', logger)
+            self.predictor, self.input_tensor, self.output_tensors, self.config = utility.create_predictor(
+                args, "re", logger
+            )
         else:
             self.predictor = None
 
@@ -69,12 +72,10 @@ class SerRePredictor(object):
         preds = dict(
             loss=outputs[1],
             pred_relations=outputs[2],
-            hidden_states=outputs[0], )
+            hidden_states=outputs[0],
+        )
 
-        post_result = self.postprocess_op(
-            preds,
-            ser_results=ser_results,
-            entity_idx_dict_batch=entity_idx_dict_batch)
+        post_result = self.postprocess_op(preds, ser_results=ser_results, entity_idx_dict_batch=entity_idx_dict_batch)
 
         elapse = time.time() - starttime
         return post_result, elapse
@@ -87,9 +88,7 @@ def main(args):
     total_time = 0
 
     os.makedirs(args.output, exist_ok=True)
-    with open(
-            os.path.join(args.output, 'infer.txt'), mode='w',
-            encoding='utf-8') as f_w:
+    with open(os.path.join(args.output, "infer.txt"), mode="w", encoding="utf-8") as f_w:
         for image_file in image_file_list:
             img, flag, _ = check_and_read(image_file)
             if not flag:
@@ -101,27 +100,26 @@ def main(args):
             re_res, elapse = ser_re_predictor(img)
             re_res = re_res[0]
 
-            res_str = '{}\t{}\n'.format(
+            res_str = "{}\t{}\n".format(
                 image_file,
                 json.dumps(
                     {
                         "ocr_info": re_res,
-                    }, ensure_ascii=False))
+                    },
+                    ensure_ascii=False,
+                ),
+            )
             f_w.write(res_str)
             if ser_re_predictor.predictor is not None:
-                img_res = draw_re_results(
-                    image_file, re_res, font_path=args.vis_font_path)
+                img_res = draw_re_results(image_file, re_res, font_path=args.vis_font_path)
                 img_save_path = os.path.join(
-                    args.output,
-                    os.path.splitext(os.path.basename(image_file))[0] +
-                    "_ser_re.jpg")
+                    args.output, os.path.splitext(os.path.basename(image_file))[0] + "_ser_re.jpg"
+                )
             else:
-                img_res = draw_ser_results(
-                    image_file, re_res, font_path=args.vis_font_path)
+                img_res = draw_ser_results(image_file, re_res, font_path=args.vis_font_path)
                 img_save_path = os.path.join(
-                    args.output,
-                    os.path.splitext(os.path.basename(image_file))[0] +
-                    "_ser.jpg")
+                    args.output, os.path.splitext(os.path.basename(image_file))[0] + "_ser.jpg"
+                )
 
             cv2.imwrite(img_save_path, img_res)
             logger.info("save vis result to {}".format(img_save_path))

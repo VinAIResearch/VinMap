@@ -1,10 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 """Tests the utils of evaluation."""
+import mmocr.core.evaluation.utils as utils
 import numpy as np
 import pytest
 from shapely.geometry import MultiPolygon, Polygon
-
-import mmocr.core.evaluation.utils as utils
 
 
 def test_ignore_pred():
@@ -18,34 +17,27 @@ def test_ignore_pred():
 
     with pytest.raises(AssertionError):
         det_boxes_tmp = 1
-        utils.ignore_pred(det_boxes_tmp, gt_dont_care_index, gt_polys,
-                          precision_thr)
+        utils.ignore_pred(det_boxes_tmp, gt_dont_care_index, gt_polys, precision_thr)
     with pytest.raises(AssertionError):
         gt_dont_care_index_tmp = 1
-        utils.ignore_pred(det_boxes, gt_dont_care_index_tmp, gt_polys,
-                          precision_thr)
+        utils.ignore_pred(det_boxes, gt_dont_care_index_tmp, gt_polys, precision_thr)
     with pytest.raises(AssertionError):
         gt_polys_tmp = 1
-        utils.ignore_pred(det_boxes, gt_dont_care_index, gt_polys_tmp,
-                          precision_thr)
+        utils.ignore_pred(det_boxes, gt_dont_care_index, gt_polys_tmp, precision_thr)
     with pytest.raises(AssertionError):
         precision_thr_tmp = 1.1
-        utils.ignore_pred(det_boxes, gt_dont_care_index, gt_polys,
-                          precision_thr_tmp)
+        utils.ignore_pred(det_boxes, gt_dont_care_index, gt_polys, precision_thr_tmp)
 
     # test ignored cases
-    result = utils.ignore_pred(det_boxes, gt_dont_care_index, gt_polys,
-                               precision_thr)
+    result = utils.ignore_pred(det_boxes, gt_dont_care_index, gt_polys, precision_thr)
     assert result[2] == [0]
     # test unignored cases
     gt_dont_care_index_tmp = []
-    result = utils.ignore_pred(det_boxes, gt_dont_care_index_tmp, gt_polys,
-                               precision_thr)
+    result = utils.ignore_pred(det_boxes, gt_dont_care_index_tmp, gt_polys, precision_thr)
     assert result[2] == []
 
     det_boxes_tmp = [[10, 10, 15, 10, 15, 15, 10, 15]]
-    result = utils.ignore_pred(det_boxes_tmp, gt_dont_care_index, gt_polys,
-                               precision_thr)
+    result = utils.ignore_pred(det_boxes_tmp, gt_dont_care_index, gt_polys, precision_thr)
     assert result[2] == []
 
 
@@ -139,11 +131,9 @@ def test_poly_intersection():
     # test poly return
     _, poly = utils.poly_intersection(poly, poly4, return_poly=True)
     assert isinstance(poly, Polygon)
-    _, poly = utils.poly_intersection(
-        poly3, poly3, invalid_ret=None, return_poly=True)
+    _, poly = utils.poly_intersection(poly3, poly3, invalid_ret=None, return_poly=True)
     assert isinstance(poly, Polygon)
-    _, poly = utils.poly_intersection(
-        poly2, poly3, invalid_ret=1, return_poly=True)
+    _, poly = utils.poly_intersection(poly2, poly3, invalid_ret=1, return_poly=True)
     assert poly is None
 
 
@@ -290,34 +280,25 @@ def test_one2one_match_ic13():
     precision_thr = 0.5
     # test invalid arguments.
     with pytest.raises(AssertionError):
-        utils.one2one_match_ic13(0.0, det_id, recall_mat, precision_mat,
-                                 recall_thr, precision_thr)
+        utils.one2one_match_ic13(0.0, det_id, recall_mat, precision_mat, recall_thr, precision_thr)
     with pytest.raises(AssertionError):
-        utils.one2one_match_ic13(gt_id, 0.0, recall_mat, precision_mat,
-                                 recall_thr, precision_thr)
+        utils.one2one_match_ic13(gt_id, 0.0, recall_mat, precision_mat, recall_thr, precision_thr)
     with pytest.raises(AssertionError):
-        utils.one2one_match_ic13(gt_id, det_id, [0, 0], precision_mat,
-                                 recall_thr, precision_thr)
+        utils.one2one_match_ic13(gt_id, det_id, [0, 0], precision_mat, recall_thr, precision_thr)
     with pytest.raises(AssertionError):
-        utils.one2one_match_ic13(gt_id, det_id, recall_mat, [0, 0], recall_thr,
-                                 precision_thr)
+        utils.one2one_match_ic13(gt_id, det_id, recall_mat, [0, 0], recall_thr, precision_thr)
     with pytest.raises(AssertionError):
-        utils.one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat, 1.1,
-                                 precision_thr)
+        utils.one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat, 1.1, precision_thr)
     with pytest.raises(AssertionError):
-        utils.one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat,
-                                 recall_thr, 1.1)
+        utils.one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat, recall_thr, 1.1)
 
-    assert utils.one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat,
-                                    recall_thr, precision_thr)
+    assert utils.one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat, recall_thr, precision_thr)
     recall_mat = np.array([[1, 0], [0.6, 0]])
     precision_mat = np.array([[1, 0], [0.6, 0]])
-    assert not utils.one2one_match_ic13(
-        gt_id, det_id, recall_mat, precision_mat, recall_thr, precision_thr)
+    assert not utils.one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat, recall_thr, precision_thr)
     recall_mat = np.array([[1, 0.6], [0, 0]])
     precision_mat = np.array([[1, 0.6], [0, 0]])
-    assert not utils.one2one_match_ic13(
-        gt_id, det_id, recall_mat, precision_mat, recall_thr, precision_thr)
+    assert not utils.one2one_match_ic13(gt_id, det_id, recall_mat, precision_mat, recall_thr, precision_thr)
 
 
 def test_one2many_match_ic13():
@@ -332,60 +313,107 @@ def test_one2many_match_ic13():
     # test invalid arguments.
     with pytest.raises(AssertionError):
         gt_id_tmp = 0.0
-        utils.one2many_match_ic13(gt_id_tmp, recall_mat, precision_mat,
-                                  recall_thr, precision_thr, gt_match_flag,
-                                  det_match_flag, det_dont_care_index)
+        utils.one2many_match_ic13(
+            gt_id_tmp,
+            recall_mat,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag,
+            det_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         recall_mat_tmp = [1, 0]
-        utils.one2many_match_ic13(gt_id, recall_mat_tmp, precision_mat,
-                                  recall_thr, precision_thr, gt_match_flag,
-                                  det_match_flag, det_dont_care_index)
+        utils.one2many_match_ic13(
+            gt_id,
+            recall_mat_tmp,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag,
+            det_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         precision_mat_tmp = [1, 0]
-        utils.one2many_match_ic13(gt_id, recall_mat, precision_mat_tmp,
-                                  recall_thr, precision_thr, gt_match_flag,
-                                  det_match_flag, det_dont_care_index)
+        utils.one2many_match_ic13(
+            gt_id,
+            recall_mat,
+            precision_mat_tmp,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag,
+            det_dont_care_index,
+        )
     with pytest.raises(AssertionError):
 
-        utils.one2many_match_ic13(gt_id, recall_mat, precision_mat, 1.1,
-                                  precision_thr, gt_match_flag, det_match_flag,
-                                  det_dont_care_index)
+        utils.one2many_match_ic13(
+            gt_id, recall_mat, precision_mat, 1.1, precision_thr, gt_match_flag, det_match_flag, det_dont_care_index
+        )
     with pytest.raises(AssertionError):
 
-        utils.one2many_match_ic13(gt_id, recall_mat, precision_mat, recall_thr,
-                                  1.1, gt_match_flag, det_match_flag,
-                                  det_dont_care_index)
+        utils.one2many_match_ic13(
+            gt_id, recall_mat, precision_mat, recall_thr, 1.1, gt_match_flag, det_match_flag, det_dont_care_index
+        )
     with pytest.raises(AssertionError):
         gt_match_flag_tmp = np.array([0, 1])
-        utils.one2many_match_ic13(gt_id, recall_mat, precision_mat, recall_thr,
-                                  precision_thr, gt_match_flag_tmp,
-                                  det_match_flag, det_dont_care_index)
+        utils.one2many_match_ic13(
+            gt_id,
+            recall_mat,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag_tmp,
+            det_match_flag,
+            det_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         det_match_flag_tmp = np.array([0, 1])
-        utils.one2many_match_ic13(gt_id, recall_mat, precision_mat, recall_thr,
-                                  precision_thr, gt_match_flag,
-                                  det_match_flag_tmp, det_dont_care_index)
+        utils.one2many_match_ic13(
+            gt_id,
+            recall_mat,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag_tmp,
+            det_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         det_dont_care_index_tmp = np.array([0, 1])
-        utils.one2many_match_ic13(gt_id, recall_mat, precision_mat, recall_thr,
-                                  precision_thr, gt_match_flag, det_match_flag,
-                                  det_dont_care_index_tmp)
+        utils.one2many_match_ic13(
+            gt_id,
+            recall_mat,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag,
+            det_dont_care_index_tmp,
+        )
 
     # test matched case
 
-    result = utils.one2many_match_ic13(gt_id, recall_mat, precision_mat,
-                                       recall_thr, precision_thr,
-                                       gt_match_flag, det_match_flag,
-                                       det_dont_care_index)
+    result = utils.one2many_match_ic13(
+        gt_id, recall_mat, precision_mat, recall_thr, precision_thr, gt_match_flag, det_match_flag, det_dont_care_index
+    )
     assert result[0]
     assert result[1] == [0]
 
     # test unmatched case
     gt_match_flag_tmp = [1, 0]
-    result = utils.one2many_match_ic13(gt_id, recall_mat, precision_mat,
-                                       recall_thr, precision_thr,
-                                       gt_match_flag_tmp, det_match_flag,
-                                       det_dont_care_index)
+    result = utils.one2many_match_ic13(
+        gt_id,
+        recall_mat,
+        precision_mat,
+        recall_thr,
+        precision_thr,
+        gt_match_flag_tmp,
+        det_match_flag,
+        det_dont_care_index,
+    )
     assert not result[0]
     assert result[1] == []
 
@@ -402,51 +430,106 @@ def test_many2one_match_ic13():
     # test invalid arguments.
     with pytest.raises(AssertionError):
         det_id_tmp = 1.0
-        utils.many2one_match_ic13(det_id_tmp, recall_mat, precision_mat,
-                                  recall_thr, precision_thr, gt_match_flag,
-                                  det_match_flag, gt_dont_care_index)
+        utils.many2one_match_ic13(
+            det_id_tmp,
+            recall_mat,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag,
+            gt_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         recall_mat_tmp = [[1, 0], [0, 0]]
-        utils.many2one_match_ic13(det_id, recall_mat_tmp, precision_mat,
-                                  recall_thr, precision_thr, gt_match_flag,
-                                  det_match_flag, gt_dont_care_index)
+        utils.many2one_match_ic13(
+            det_id,
+            recall_mat_tmp,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag,
+            gt_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         precision_mat_tmp = [[1, 0], [0, 0]]
-        utils.many2one_match_ic13(det_id, recall_mat, precision_mat_tmp,
-                                  recall_thr, precision_thr, gt_match_flag,
-                                  det_match_flag, gt_dont_care_index)
+        utils.many2one_match_ic13(
+            det_id,
+            recall_mat,
+            precision_mat_tmp,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag,
+            gt_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         recall_thr_tmp = 1.1
-        utils.many2one_match_ic13(det_id, recall_mat, precision_mat,
-                                  recall_thr_tmp, precision_thr, gt_match_flag,
-                                  det_match_flag, gt_dont_care_index)
+        utils.many2one_match_ic13(
+            det_id,
+            recall_mat,
+            precision_mat,
+            recall_thr_tmp,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag,
+            gt_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         precision_thr_tmp = 1.1
-        utils.many2one_match_ic13(det_id, recall_mat, precision_mat,
-                                  recall_thr, precision_thr_tmp, gt_match_flag,
-                                  det_match_flag, gt_dont_care_index)
+        utils.many2one_match_ic13(
+            det_id,
+            recall_mat,
+            precision_mat,
+            recall_thr,
+            precision_thr_tmp,
+            gt_match_flag,
+            det_match_flag,
+            gt_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         gt_match_flag_tmp = np.array([0, 1])
-        utils.many2one_match_ic13(det_id, recall_mat, precision_mat,
-                                  recall_thr, precision_thr, gt_match_flag_tmp,
-                                  det_match_flag, gt_dont_care_index)
+        utils.many2one_match_ic13(
+            det_id,
+            recall_mat,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag_tmp,
+            det_match_flag,
+            gt_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         det_match_flag_tmp = np.array([0, 1])
-        utils.many2one_match_ic13(det_id, recall_mat, precision_mat,
-                                  recall_thr, precision_thr, gt_match_flag,
-                                  det_match_flag_tmp, gt_dont_care_index)
+        utils.many2one_match_ic13(
+            det_id,
+            recall_mat,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag_tmp,
+            gt_dont_care_index,
+        )
     with pytest.raises(AssertionError):
         gt_dont_care_index_tmp = np.array([0, 1])
-        utils.many2one_match_ic13(det_id, recall_mat, precision_mat,
-                                  recall_thr, precision_thr, gt_match_flag,
-                                  det_match_flag, gt_dont_care_index_tmp)
+        utils.many2one_match_ic13(
+            det_id,
+            recall_mat,
+            precision_mat,
+            recall_thr,
+            precision_thr,
+            gt_match_flag,
+            det_match_flag,
+            gt_dont_care_index_tmp,
+        )
 
     # test matched cases
 
-    result = utils.many2one_match_ic13(det_id, recall_mat, precision_mat,
-                                       recall_thr, precision_thr,
-                                       gt_match_flag, det_match_flag,
-                                       gt_dont_care_index)
+    result = utils.many2one_match_ic13(
+        det_id, recall_mat, precision_mat, recall_thr, precision_thr, gt_match_flag, det_match_flag, gt_dont_care_index
+    )
     assert result[0]
     assert result[1] == [0]
 
@@ -454,9 +537,8 @@ def test_many2one_match_ic13():
 
     gt_dont_care_index = [0]
 
-    result = utils.many2one_match_ic13(det_id, recall_mat, precision_mat,
-                                       recall_thr, precision_thr,
-                                       gt_match_flag, det_match_flag,
-                                       gt_dont_care_index)
+    result = utils.many2one_match_ic13(
+        det_id, recall_mat, precision_mat, recall_thr, precision_thr, gt_match_flag, det_match_flag, gt_dont_care_index
+    )
     assert not result[0]
     assert result[1] == []

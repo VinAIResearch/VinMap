@@ -1,8 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import mmocr.utils as utils
 from mmcv.cnn import ConvModule, build_plugin_layer
 from mmcv.runner import BaseModule, Sequential
-
-import mmocr.utils as utils
 from mmocr.models.builder import BACKBONES
 from mmocr.models.textrecog.layers import BasicBlock
 
@@ -26,27 +25,27 @@ class ResNet(BaseModule):
         init_cfg (dict or list[dict], optional): Initialization config dict.
     """
 
-    def __init__(self,
-                 in_channels,
-                 stem_channels,
-                 block_cfgs,
-                 arch_layers,
-                 arch_channels,
-                 strides,
-                 out_indices=None,
-                 plugins=None,
-                 init_cfg=[
-                     dict(type='Xavier', layer='Conv2d'),
-                     dict(type='Constant', val=1, layer='BatchNorm2d'),
-                 ]):
+    def __init__(
+        self,
+        in_channels,
+        stem_channels,
+        block_cfgs,
+        arch_layers,
+        arch_channels,
+        strides,
+        out_indices=None,
+        plugins=None,
+        init_cfg=[
+            dict(type="Xavier", layer="Conv2d"),
+            dict(type="Constant", val=1, layer="BatchNorm2d"),
+        ],
+    ):
         super().__init__(init_cfg=init_cfg)
         assert isinstance(in_channels, int)
-        assert isinstance(stem_channels, int) or utils.is_type_list(
-            stem_channels, int)
+        assert isinstance(stem_channels, int) or utils.is_type_list(stem_channels, int)
         assert utils.is_type_list(arch_layers, int)
         assert utils.is_type_list(arch_channels, int)
-        assert utils.is_type_list(strides, tuple) or utils.is_type_list(
-            strides, int)
+        assert utils.is_type_list(strides, tuple) or utils.is_type_list(strides, int)
         assert len(arch_layers) == len(arch_channels) == len(strides)
         assert out_indices is None or isinstance(out_indices, (list, tuple))
 
@@ -75,7 +74,7 @@ class ResNet(BaseModule):
                 stride=stride,
             )
             self.inplanes = channel
-            layer_name = f'layer{i + 1}'
+            layer_name = f"layer{i + 1}"
             self.add_module(layer_name, res_layer)
             self.res_layers.append(layer_name)
 
@@ -87,27 +86,15 @@ class ResNet(BaseModule):
             stride = (stride, stride)
 
         if stride[0] != 1 or stride[1] != 1 or inplanes != planes:
-            downsample = ConvModule(
-                inplanes,
-                planes,
-                1,
-                stride,
-                norm_cfg=dict(type='BN'),
-                act_cfg=None)
+            downsample = ConvModule(inplanes, planes, 1, stride, norm_cfg=dict(type="BN"), act_cfg=None)
 
-        if block_cfgs_['type'] == 'BasicBlock':
+        if block_cfgs_["type"] == "BasicBlock":
             block = BasicBlock
-            block_cfgs_.pop('type')
+            block_cfgs_.pop("type")
         else:
-            raise ValueError('{} not implement yet'.format(block['type']))
+            raise ValueError("{} not implement yet".format(block["type"]))
 
-        layers.append(
-            block(
-                inplanes,
-                planes,
-                stride=stride,
-                downsample=downsample,
-                **block_cfgs_))
+        layers.append(block(inplanes, planes, stride=stride, downsample=downsample, **block_cfgs_))
         inplanes = planes
         for _ in range(1, blocks):
             layers.append(block(inplanes, planes, **block_cfgs_))
@@ -126,8 +113,9 @@ class ResNet(BaseModule):
                 stride=1,
                 padding=1,
                 bias=False,
-                norm_cfg=dict(type='BN'),
-                act_cfg=dict(type='ReLU'))
+                norm_cfg=dict(type="BN"),
+                act_cfg=dict(type="ReLU"),
+            )
             in_channels = channels
             stem_layers.append(stem_layer)
         self.stem_layers = Sequential(*stem_layers)
@@ -176,28 +164,27 @@ class ResNet(BaseModule):
         self.plugin_after_names.append([])
         for plugin in plugins:
             plugin = plugin.copy()
-            stages = plugin.pop('stages', None)
-            position = plugin.pop('position', None)
+            stages = plugin.pop("stages", None)
+            position = plugin.pop("position", None)
             assert stages is None or len(stages) == self.num_stages
             if stages[stage_idx]:
-                if position == 'before_stage':
+                if position == "before_stage":
                     name, layer = build_plugin_layer(
-                        plugin['cfg'],
-                        f'_before_stage_{stage_idx+1}',
+                        plugin["cfg"],
+                        f"_before_stage_{stage_idx+1}",
                         in_channels=in_channels,
-                        out_channels=in_channels)
+                        out_channels=in_channels,
+                    )
                     self.plugin_ahead_names[stage_idx].append(name)
                     self.add_module(name, layer)
-                elif position == 'after_stage':
+                elif position == "after_stage":
                     name, layer = build_plugin_layer(
-                        plugin['cfg'],
-                        f'_after_stage_{stage_idx+1}',
-                        in_channels=in_channels,
-                        out_channels=in_channels)
+                        plugin["cfg"], f"_after_stage_{stage_idx+1}", in_channels=in_channels, out_channels=in_channels
+                    )
                     self.plugin_after_names[stage_idx].append(name)
                     self.add_module(name, layer)
                 else:
-                    raise ValueError('uncorrect plugin position')
+                    raise ValueError("uncorrect plugin position")
 
     def forward_plugin(self, x, plugin_name):
         out = x

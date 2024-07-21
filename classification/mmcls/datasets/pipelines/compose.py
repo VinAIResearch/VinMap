@@ -25,8 +25,7 @@ class Compose(object):
             elif callable(transform):
                 self.transforms.append(transform)
             else:
-                raise TypeError('transform must be callable or a dict, but got'
-                                f' {type(transform)}')
+                raise TypeError("transform must be callable or a dict, but got" f" {type(transform)}")
 
     def __call__(self, data):
         for t in self.transforms:
@@ -36,8 +35,8 @@ class Compose(object):
         return data
 
     def __repr__(self):
-        format_string = self.__class__.__name__ + '('
+        format_string = self.__class__.__name__ + "("
         for t in self.transforms:
-            format_string += f'\n    {t}'
-        format_string += '\n)'
+            format_string += f"\n    {t}"
+        format_string += "\n)"
         return format_string

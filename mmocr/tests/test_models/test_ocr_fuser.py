@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
-
 from mmocr.models.textrecog.fusers import ABIFuser
 
 
@@ -9,4 +8,4 @@ def test_base_alignment():
     l_feat = torch.randn(1, 40, 512)
     v_feat = torch.randn(1, 40, 512)
     result = model(l_feat, v_feat)
-    assert result['logits'].shape == torch.Size([1, 40, 90])
+    assert result["logits"].shape == torch.Size([1, 40, 90])

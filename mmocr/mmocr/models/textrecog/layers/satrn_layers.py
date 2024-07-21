@@ -4,29 +4,18 @@ import torch
 import torch.nn as nn
 from mmcv.cnn import ConvModule
 from mmcv.runner import BaseModule
-
 from mmocr.models.common import MultiHeadAttention
 
 
 class SatrnEncoderLayer(BaseModule):
     """"""
 
-    def __init__(self,
-                 d_model=512,
-                 d_inner=512,
-                 n_head=8,
-                 d_k=64,
-                 d_v=64,
-                 dropout=0.1,
-                 qkv_bias=False,
-                 init_cfg=None):
+    def __init__(self, d_model=512, d_inner=512, n_head=8, d_k=64, d_v=64, dropout=0.1, qkv_bias=False, init_cfg=None):
         super().__init__(init_cfg=init_cfg)
         self.norm1 = nn.LayerNorm(d_model)
-        self.attn = MultiHeadAttention(
-            n_head, d_model, d_k, d_v, qkv_bias=qkv_bias, dropout=dropout)
+        self.attn = MultiHeadAttention(n_head, d_model, d_k, d_v, qkv_bias=qkv_bias, dropout=dropout)
         self.norm2 = nn.LayerNorm(d_model)
-        self.feed_forward = LocalityAwareFeedforward(
-            d_model, d_inner, dropout=dropout)
+        self.feed_forward = LocalityAwareFeedforward(d_model, d_inner, dropout=dropout)
 
     def forward(self, x, h, w, mask=None):
         n, hw, c = x.size()
@@ -48,23 +37,17 @@ class LocalityAwareFeedforward(BaseModule):
     <https://arxiv.org/abs/1910.04396>`_
     """
 
-    def __init__(self,
-                 d_in,
-                 d_hid,
-                 dropout=0.1,
-                 init_cfg=[
-                     dict(type='Xavier', layer='Conv2d'),
-                     dict(type='Constant', layer='BatchNorm2d', val=1, bias=0)
-                 ]):
+    def __init__(
+        self,
+        d_in,
+        d_hid,
+        dropout=0.1,
+        init_cfg=[dict(type="Xavier", layer="Conv2d"), dict(type="Constant", layer="BatchNorm2d", val=1, bias=0)],
+    ):
         super().__init__(init_cfg=init_cfg)
         self.conv1 = ConvModule(
-            d_in,
-            d_hid,
-            kernel_size=1,
-            padding=0,
-            bias=False,
-            norm_cfg=dict(type='BN'),
-            act_cfg=dict(type='ReLU'))
+            d_in, d_hid, kernel_size=1, padding=0, bias=False, norm_cfg=dict(type="BN"), act_cfg=dict(type="ReLU")
+        )
 
         self.depthwise_conv = ConvModule(
             d_hid,
@@ -73,17 +56,13 @@ class LocalityAwareFeedforward(BaseModule):
             padding=1,
             bias=False,
             groups=d_hid,
-            norm_cfg=dict(type='BN'),
-            act_cfg=dict(type='ReLU'))
+            norm_cfg=dict(type="BN"),
+            act_cfg=dict(type="ReLU"),
+        )
 
         self.conv2 = ConvModule(
-            d_hid,
-            d_in,
-            kernel_size=1,
-            padding=0,
-            bias=False,
-            norm_cfg=dict(type='BN'),
-            act_cfg=dict(type='ReLU'))
+            d_hid, d_in, kernel_size=1, padding=0, bias=False, norm_cfg=dict(type="BN"), act_cfg=dict(type="ReLU")
+        )
 
     def forward(self, x):
         x = self.conv1(x)
@@ -105,12 +84,9 @@ class Adaptive2DPositionalEncoding(BaseModule):
         dropout (int): Size of hidden layers of the model.
     """
 
-    def __init__(self,
-                 d_hid=512,
-                 n_height=100,
-                 n_width=100,
-                 dropout=0.1,
-                 init_cfg=[dict(type='Xavier', layer='Conv2d')]):
+    def __init__(
+        self, d_hid=512, n_height=100, n_width=100, dropout=0.1, init_cfg=[dict(type="Xavier", layer="Conv2d")]
+    ):
         super().__init__(init_cfg=init_cfg)
 
         h_position_encoder = self._get_sinusoid_encoding_table(n_height, d_hid)
@@ -121,8 +97,8 @@ class Adaptive2DPositionalEncoding(BaseModule):
         w_position_encoder = w_position_encoder.transpose(0, 1)
         w_position_encoder = w_position_encoder.view(1, d_hid, 1, n_width)
 
-        self.register_buffer('h_position_encoder', h_position_encoder)
-        self.register_buffer('w_position_encoder', w_position_encoder)
+        self.register_buffer("h_position_encoder", h_position_encoder)
+        self.register_buffer("w_position_encoder", w_position_encoder)
 
         self.h_scale = self.scale_factor_generate(d_hid)
         self.w_scale = self.scale_factor_generate(d_hid)
@@ -131,10 +107,7 @@ class Adaptive2DPositionalEncoding(BaseModule):
 
     def _get_sinusoid_encoding_table(self, n_position, d_hid):
         """Sinusoid position encoding table."""
-        denominator = torch.Tensor([
-            1.0 / np.power(10000, 2 * (hid_j // 2) / d_hid)
-            for hid_j in range(d_hid)
-        ])
+        denominator = torch.Tensor([1.0 / np.power(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)])
         denominator = denominator.view(1, -1)
         pos_tensor = torch.arange(n_position).unsqueeze(-1).float()
         sinusoid_table = pos_tensor * denominator
@@ -145,8 +118,11 @@ class Adaptive2DPositionalEncoding(BaseModule):
 
     def scale_factor_generate(self, d_hid):
         scale_factor = nn.Sequential(
-            nn.Conv2d(d_hid, d_hid, kernel_size=1), nn.ReLU(inplace=True),
-            nn.Conv2d(d_hid, d_hid, kernel_size=1), nn.Sigmoid())
+            nn.Conv2d(d_hid, d_hid, kernel_size=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(d_hid, d_hid, kernel_size=1),
+            nn.Sigmoid(),
+        )
 
         return scale_factor
 
@@ -155,10 +131,8 @@ class Adaptive2DPositionalEncoding(BaseModule):
 
         avg_pool = self.pool(x)
 
-        h_pos_encoding = \
-            self.h_scale(avg_pool) * self.h_position_encoder[:, :, :h, :]
-        w_pos_encoding = \
-            self.w_scale(avg_pool) * self.w_position_encoder[:, :, :, :w]
+        h_pos_encoding = self.h_scale(avg_pool) * self.h_position_encoder[:, :, :h, :]
+        w_pos_encoding = self.w_scale(avg_pool) * self.w_position_encoder[:, :, :, :w]
 
         out = x + h_pos_encoding + w_pos_encoding
 

@@ -1,6 +1,6 @@
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
 import cv2
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from utils.logging import get_logger
 
 
@@ -28,16 +28,11 @@ class StdTextDrawer(object):
         if font_height <= self.height - 4:
             return self.height - 4
         else:
-            return int((self.height - 4)**2 / font_height)
+            return int((self.height - 4) ** 2 / font_height)
 
-    def draw_text(self,
-                  corpus,
-                  language="en",
-                  crop=True,
-                  style_input_width=None):
+    def draw_text(self, corpus, language="en", crop=True, style_input_width=None):
         if language not in self.support_languages:
-            self.logger.warning(
-                "language {} not supported, use en instead.".format(language))
+            self.logger.warning("language {} not supported, use en instead.".format(language))
             language = "en"
         if crop:
             width = min(self.max_width, len(corpus) * self.height) + 4

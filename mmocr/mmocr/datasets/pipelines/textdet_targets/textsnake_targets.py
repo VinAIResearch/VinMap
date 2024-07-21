@@ -1,11 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import cv2
+import mmocr.utils.check_argument as check_argument
 import numpy as np
 from mmdet.core import BitmapMasks
 from mmdet.datasets.builder import PIPELINES
 from numpy.linalg import norm
 
-import mmocr.utils.check_argument as check_argument
 from . import BaseTextDetTargets
 
 
@@ -23,10 +23,7 @@ class TextSnakeTargets(BaseTextDetTargets):
             of a quadrangle.
     """
 
-    def __init__(self,
-                 orientation_thr=2.0,
-                 resample_step=4.0,
-                 center_region_shrink_ratio=0.3):
+    def __init__(self, orientation_thr=2.0, resample_step=4.0, center_region_shrink_ratio=0.3):
 
         super().__init__()
         self.orientation_thr = orientation_thr
@@ -36,17 +33,14 @@ class TextSnakeTargets(BaseTextDetTargets):
 
     def vector_angle(self, vec1, vec2):
         if vec1.ndim > 1:
-            unit_vec1 = vec1 / (norm(vec1, axis=-1) + self.eps).reshape(
-                (-1, 1))
+            unit_vec1 = vec1 / (norm(vec1, axis=-1) + self.eps).reshape((-1, 1))
         else:
             unit_vec1 = vec1 / (norm(vec1, axis=-1) + self.eps)
         if vec2.ndim > 1:
-            unit_vec2 = vec2 / (norm(vec2, axis=-1) + self.eps).reshape(
-                (-1, 1))
+            unit_vec2 = vec2 / (norm(vec2, axis=-1) + self.eps).reshape((-1, 1))
         else:
             unit_vec2 = vec2 / (norm(vec2, axis=-1) + self.eps)
-        return np.arccos(
-            np.clip(np.sum(unit_vec1 * unit_vec2, axis=-1), -1.0, 1.0))
+        return np.arccos(np.clip(np.sum(unit_vec1 * unit_vec2, axis=-1), -1.0, 1.0))
 
     def vector_slope(self, vec):
         assert len(vec) == 2
@@ -88,18 +82,16 @@ class TextSnakeTargets(BaseTextDetTargets):
             for i, edge_vec1 in enumerate(edge_vec):
                 adjacent_ind = [x % len(edge_vec) for x in [i - 1, i + 1]]
                 adjacent_edge_vec = edge_vec[adjacent_ind]
-                temp_theta_sum = np.sum(
-                    self.vector_angle(edge_vec1, adjacent_edge_vec))
-                temp_adjacent_theta = self.vector_angle(
-                    adjacent_edge_vec[0], adjacent_edge_vec[1])
+                temp_theta_sum = np.sum(self.vector_angle(edge_vec1, adjacent_edge_vec))
+                temp_adjacent_theta = self.vector_angle(adjacent_edge_vec[0], adjacent_edge_vec[1])
                 theta_sum.append(temp_theta_sum)
                 adjacent_vec_theta.append(temp_adjacent_theta)
             theta_sum_score = np.array(theta_sum) / np.pi
             adjacent_theta_score = np.array(adjacent_vec_theta) / np.pi
             poly_center = np.mean(points, axis=0)
             edge_dist = np.maximum(
-                norm(pad_points[1:] - poly_center, axis=-1),
-                norm(pad_points[:-1] - poly_center, axis=-1))
+                norm(pad_points[1:] - poly_center, axis=-1), norm(pad_points[:-1] - poly_center, axis=-1)
+            )
             dist_score = edge_dist / (np.max(edge_dist) + self.eps)
             position_score = np.zeros(len(edge_vec))
             score = 0.5 * theta_sum_score + 0.15 * adjacent_theta_score
@@ -111,15 +103,12 @@ class TextSnakeTargets(BaseTextDetTargets):
             pad_score = np.concatenate([score, score])
             score_matrix = np.zeros((len(score), len(score) - 3))
             x = np.arange(len(score) - 3) / float(len(score) - 4)
-            gaussian = 1. / (np.sqrt(2. * np.pi) * 0.5) * np.exp(-np.power(
-                (x - 0.5) / 0.5, 2.) / 2)
+            gaussian = 1.0 / (np.sqrt(2.0 * np.pi) * 0.5) * np.exp(-np.power((x - 0.5) / 0.5, 2.0) / 2)
             gaussian = gaussian / np.max(gaussian)
             for i in range(len(score)):
-                score_matrix[i, :] = score[i] + pad_score[
-                    (i + 2):(i + len(score) - 1)] * gaussian * 0.3
+                score_matrix[i, :] = score[i] + pad_score[(i + 2) : (i + len(score) - 1)] * gaussian * 0.3
 
-            head_start, tail_increment = np.unravel_index(
-                score_matrix.argmax(), score_matrix.shape)
+            head_start, tail_increment = np.unravel_index(score_matrix.argmax(), score_matrix.shape)
             tail_start = (head_start + tail_increment + 2) % len(points)
             head_end = (head_start + 1) % len(points)
             tail_end = (tail_start + 1) % len(points)
@@ -130,25 +119,21 @@ class TextSnakeTargets(BaseTextDetTargets):
             head_inds = [head_start, head_end]
             tail_inds = [tail_start, tail_end]
         else:
-            if self.vector_slope(points[1] - points[0]) + self.vector_slope(
-                    points[3] - points[2]) < self.vector_slope(
-                        points[2] - points[1]) + self.vector_slope(points[0] -
-                                                                   points[3]):
+            if self.vector_slope(points[1] - points[0]) + self.vector_slope(points[3] - points[2]) < self.vector_slope(
+                points[2] - points[1]
+            ) + self.vector_slope(points[0] - points[3]):
                 horizontal_edge_inds = [[0, 1], [2, 3]]
                 vertical_edge_inds = [[3, 0], [1, 2]]
             else:
                 horizontal_edge_inds = [[3, 0], [1, 2]]
                 vertical_edge_inds = [[0, 1], [2, 3]]
 
-            vertical_len_sum = norm(points[vertical_edge_inds[0][0]] -
-                                    points[vertical_edge_inds[0][1]]) + norm(
-                                        points[vertical_edge_inds[1][0]] -
-                                        points[vertical_edge_inds[1][1]])
-            horizontal_len_sum = norm(
-                points[horizontal_edge_inds[0][0]] -
-                points[horizontal_edge_inds[0][1]]) + norm(
-                    points[horizontal_edge_inds[1][0]] -
-                    points[horizontal_edge_inds[1][1]])
+            vertical_len_sum = norm(points[vertical_edge_inds[0][0]] - points[vertical_edge_inds[0][1]]) + norm(
+                points[vertical_edge_inds[1][0]] - points[vertical_edge_inds[1][1]]
+            )
+            horizontal_len_sum = norm(points[horizontal_edge_inds[0][0]] - points[horizontal_edge_inds[0][1]]) + norm(
+                points[horizontal_edge_inds[1][0]] - points[horizontal_edge_inds[1][1]]
+            )
 
             if vertical_len_sum > horizontal_len_sum * orientation_thr:
                 head_inds = horizontal_edge_inds[0]
@@ -181,18 +166,15 @@ class TextSnakeTargets(BaseTextDetTargets):
         assert points.shape[0] >= 4
         assert points.shape[1] == 2
 
-        head_inds, tail_inds = self.find_head_tail(points,
-                                                   self.orientation_thr)
+        head_inds, tail_inds = self.find_head_tail(points, self.orientation_thr)
         head_edge, tail_edge = points[head_inds], points[tail_inds]
 
         pad_points = np.vstack([points, points])
         if tail_inds[1] < 1:
             tail_inds[1] = len(points)
-        sideline1 = pad_points[head_inds[1]:tail_inds[1]]
-        sideline2 = pad_points[tail_inds[1]:(head_inds[1] + len(points))]
-        sideline_mean_shift = np.mean(
-            sideline1, axis=0) - np.mean(
-                sideline2, axis=0)
+        sideline1 = pad_points[head_inds[1] : tail_inds[1]]
+        sideline2 = pad_points[tail_inds[1] : (head_inds[1] + len(points))]
+        sideline_mean_shift = np.mean(sideline1, axis=0) - np.mean(sideline2, axis=0)
 
         if sideline_mean_shift[1] > 0:
             top_sideline, bot_sideline = sideline2, sideline1
@@ -219,8 +201,7 @@ class TextSnakeTargets(BaseTextDetTargets):
         assert line.ndim == 2
         assert len(line) >= 2
 
-        edges_length = np.sqrt((line[1:, 0] - line[:-1, 0])**2 +
-                               (line[1:, 1] - line[:-1, 1])**2)
+        edges_length = np.sqrt((line[1:, 0] - line[:-1, 0]) ** 2 + (line[1:, 1] - line[:-1, 1]) ** 2)
         total_length = np.sum(edges_length)
         return edges_length, total_length
 
@@ -251,8 +232,7 @@ class TextSnakeTargets(BaseTextDetTargets):
             while edge_ind < len(edges_length) - 1 and t > t_org[edge_ind + 1]:
                 edge_ind += 1
             t_l, t_r = t_org[edge_ind], t_org[edge_ind + 1]
-            weight = np.array([t_r - t, t - t_l], dtype=np.float32) / (
-                t_r - t_l + self.eps)
+            weight = np.array([t_r - t, t - t_l], dtype=np.float32) / (t_r - t_l + self.eps)
             p_coords = np.dot(weight, line[[edge_ind, edge_ind + 1]])
             points.append(p_coords)
         points.append(line[-1])
@@ -293,9 +273,9 @@ class TextSnakeTargets(BaseTextDetTargets):
 
         return resampled_line1, resampled_line2
 
-    def draw_center_region_maps(self, top_line, bot_line, center_line,
-                                center_region_mask, radius_map, sin_map,
-                                cos_map, region_shrink_ratio):
+    def draw_center_region_maps(
+        self, top_line, bot_line, center_line, center_region_mask, radius_map, sin_map, cos_map, region_shrink_ratio
+    ):
         """Draw attributes on text center region.
 
         Args:
@@ -319,8 +299,7 @@ class TextSnakeTargets(BaseTextDetTargets):
         """
 
         assert top_line.shape == bot_line.shape == center_line.shape
-        assert (center_region_mask.shape == radius_map.shape == sin_map.shape
-                == cos_map.shape)
+        assert center_region_mask.shape == radius_map.shape == sin_map.shape == cos_map.shape
         assert isinstance(region_shrink_ratio, float)
         for i in range(0, len(center_line) - 1):
 
@@ -332,14 +311,10 @@ class TextSnakeTargets(BaseTextDetTargets):
             sin_theta = self.vector_sin(text_direction)
             cos_theta = self.vector_cos(text_direction)
 
-            tl = center_line[i] + (top_line[i] -
-                                   center_line[i]) * region_shrink_ratio
-            tr = center_line[i + 1] + (
-                top_line[i + 1] - center_line[i + 1]) * region_shrink_ratio
-            br = center_line[i + 1] + (
-                bot_line[i + 1] - center_line[i + 1]) * region_shrink_ratio
-            bl = center_line[i] + (bot_line[i] -
-                                   center_line[i]) * region_shrink_ratio
+            tl = center_line[i] + (top_line[i] - center_line[i]) * region_shrink_ratio
+            tr = center_line[i + 1] + (top_line[i + 1] - center_line[i + 1]) * region_shrink_ratio
+            br = center_line[i + 1] + (bot_line[i + 1] - center_line[i + 1]) * region_shrink_ratio
+            bl = center_line[i] + (bot_line[i] - center_line[i]) * region_shrink_ratio
             current_center_box = np.vstack([tl, tr, br, bl]).astype(np.int32)
 
             cv2.fillPoly(center_region_mask, [current_center_box], color=1)
@@ -376,21 +351,18 @@ class TextSnakeTargets(BaseTextDetTargets):
 
         for poly in text_polys:
             assert len(poly) == 1
-            text_instance = [[poly[0][i], poly[0][i + 1]]
-                             for i in range(0, len(poly[0]), 2)]
+            text_instance = [[poly[0][i], poly[0][i + 1]] for i in range(0, len(poly[0]), 2)]
             polygon_points = np.array(text_instance).reshape(-1, 2)
 
             n = len(polygon_points)
             keep_inds = []
             for i in range(n):
-                if norm(polygon_points[i] -
-                        polygon_points[(i + 1) % n]) > 1e-5:
+                if norm(polygon_points[i] - polygon_points[(i + 1) % n]) > 1e-5:
                     keep_inds.append(i)
             polygon_points = polygon_points[keep_inds]
 
             _, _, top_line, bot_line = self.reorder_poly_edge(polygon_points)
-            resampled_top_line, resampled_bot_line = self.resample_sidelines(
-                top_line, bot_line, self.resample_step)
+            resampled_top_line, resampled_bot_line = self.resample_sidelines(top_line, bot_line, self.resample_step)
             resampled_bot_line = resampled_bot_line[::-1]
             center_line = (resampled_top_line + resampled_bot_line) / 2
 
@@ -405,26 +377,26 @@ class TextSnakeTargets(BaseTextDetTargets):
                     resampled_top_line = resampled_top_line[::-1]
                     resampled_bot_line = resampled_bot_line[::-1]
 
-            line_head_shrink_len = norm(resampled_top_line[0] -
-                                        resampled_bot_line[0]) / 4.0
-            line_tail_shrink_len = norm(resampled_top_line[-1] -
-                                        resampled_bot_line[-1]) / 4.0
+            line_head_shrink_len = norm(resampled_top_line[0] - resampled_bot_line[0]) / 4.0
+            line_tail_shrink_len = norm(resampled_top_line[-1] - resampled_bot_line[-1]) / 4.0
             head_shrink_num = int(line_head_shrink_len // self.resample_step)
             tail_shrink_num = int(line_tail_shrink_len // self.resample_step)
 
             if len(center_line) > head_shrink_num + tail_shrink_num + 2:
-                center_line = center_line[head_shrink_num:len(center_line) -
-                                          tail_shrink_num]
-                resampled_top_line = resampled_top_line[
-                    head_shrink_num:len(resampled_top_line) - tail_shrink_num]
-                resampled_bot_line = resampled_bot_line[
-                    head_shrink_num:len(resampled_bot_line) - tail_shrink_num]
+                center_line = center_line[head_shrink_num : len(center_line) - tail_shrink_num]
+                resampled_top_line = resampled_top_line[head_shrink_num : len(resampled_top_line) - tail_shrink_num]
+                resampled_bot_line = resampled_bot_line[head_shrink_num : len(resampled_bot_line) - tail_shrink_num]
 
-            self.draw_center_region_maps(resampled_top_line,
-                                         resampled_bot_line, center_line,
-                                         center_region_mask, radius_map,
-                                         sin_map, cos_map,
-                                         self.center_region_shrink_ratio)
+            self.draw_center_region_maps(
+                resampled_top_line,
+                resampled_bot_line,
+                center_line,
+                center_region_mask,
+                radius_map,
+                sin_map,
+                cos_map,
+                self.center_region_shrink_ratio,
+            )
 
         return center_region_mask, radius_map, sin_map, cos_map
 
@@ -447,10 +419,8 @@ class TextSnakeTargets(BaseTextDetTargets):
 
         for poly in text_polys:
             assert len(poly) == 1
-            text_instance = [[poly[0][i], poly[0][i + 1]]
-                             for i in range(0, len(poly[0]), 2)]
-            polygon = np.array(
-                text_instance, dtype=np.int32).reshape((1, -1, 2))
+            text_instance = [[poly[0][i], poly[0][i + 1]] for i in range(0, len(poly[0]), 2)]
+            polygon = np.array(text_instance, dtype=np.int32).reshape((1, -1, 2))
             cv2.fillPoly(text_region_mask, polygon, 1)
 
         return text_region_mask
@@ -467,30 +437,30 @@ class TextSnakeTargets(BaseTextDetTargets):
 
         assert isinstance(results, dict)
 
-        polygon_masks = results['gt_masks'].masks
-        polygon_masks_ignore = results['gt_masks_ignore'].masks
+        polygon_masks = results["gt_masks"].masks
+        polygon_masks_ignore = results["gt_masks_ignore"].masks
 
-        h, w, _ = results['img_shape']
+        h, w, _ = results["img_shape"]
 
         gt_text_mask = self.generate_text_region_mask((h, w), polygon_masks)
         gt_mask = self.generate_effective_mask((h, w), polygon_masks_ignore)
 
-        (gt_center_region_mask, gt_radius_map, gt_sin_map,
-         gt_cos_map) = self.generate_center_mask_attrib_maps((h, w),
-                                                             polygon_masks)
+        (gt_center_region_mask, gt_radius_map, gt_sin_map, gt_cos_map) = self.generate_center_mask_attrib_maps(
+            (h, w), polygon_masks
+        )
 
-        results['mask_fields'].clear()  # rm gt_masks encoded by polygons
+        results["mask_fields"].clear()  # rm gt_masks encoded by polygons
         mapping = {
-            'gt_text_mask': gt_text_mask,
-            'gt_center_region_mask': gt_center_region_mask,
-            'gt_mask': gt_mask,
-            'gt_radius_map': gt_radius_map,
-            'gt_sin_map': gt_sin_map,
-            'gt_cos_map': gt_cos_map
+            "gt_text_mask": gt_text_mask,
+            "gt_center_region_mask": gt_center_region_mask,
+            "gt_mask": gt_mask,
+            "gt_radius_map": gt_radius_map,
+            "gt_sin_map": gt_sin_map,
+            "gt_cos_map": gt_cos_map,
         }
         for key, value in mapping.items():
             value = value if isinstance(value, list) else [value]
             results[key] = BitmapMasks(value, h, w)
-            results['mask_fields'].append(key)
+            results["mask_fields"].append(key)
 
         return results

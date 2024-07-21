@@ -6,7 +6,6 @@ import os.path as osp
 import xml.etree.ElementTree as ET
 
 import mmcv
-
 from mmocr.utils import convert_annotations
 
 
@@ -26,16 +25,16 @@ def collect_files(img_dir, gt_dir, ratio):
     assert isinstance(gt_dir, str)
     assert gt_dir
     assert isinstance(ratio, float)
-    assert ratio < 1.0, 'val_ratio should be a float between 0.0 to 1.0'
+    assert ratio < 1.0, "val_ratio should be a float between 0.0 to 1.0"
 
     ann_list, imgs_list = [], []
     for img_file in os.listdir(img_dir):
-        ann_list.append(osp.join(gt_dir, img_file.split('.')[0] + '.xml'))
+        ann_list.append(osp.join(gt_dir, img_file.split(".")[0] + ".xml"))
         imgs_list.append(osp.join(img_dir, img_file))
 
     all_files = list(zip(sorted(imgs_list), sorted(ann_list)))
-    assert len(all_files), f'No images found in {img_dir}'
-    print(f'Loaded {len(all_files)} images from {img_dir}')
+    assert len(all_files), f"No images found in {img_dir}"
+    print(f"Loaded {len(all_files)} images from {img_dir}")
 
     trn_files, val_files = [], []
     if ratio > 0:
@@ -47,7 +46,7 @@ def collect_files(img_dir, gt_dir, ratio):
     else:
         trn_files, val_files = all_files, []
 
-    print(f'training #{len(trn_files)}, val #{len(val_files)}')
+    print(f"training #{len(trn_files)}, val #{len(val_files)}")
 
     return trn_files, val_files
 
@@ -66,8 +65,7 @@ def collect_annotations(files, nproc=1):
     assert isinstance(nproc, int)
 
     if nproc > 1:
-        images = mmcv.track_parallel_progress(
-            load_img_info, files, nproc=nproc)
+        images = mmcv.track_parallel_progress(load_img_info, files, nproc=nproc)
     else:
         images = mmcv.track_progress(load_img_info, files)
 
@@ -86,18 +84,18 @@ def load_img_info(files):
     assert isinstance(files, tuple)
 
     img_file, gt_file = files
-    assert osp.basename(gt_file).split('.')[0] == osp.basename(img_file).split(
-        '.')[0]
+    assert osp.basename(gt_file).split(".")[0] == osp.basename(img_file).split(".")[0]
     # read imgs while ignoring orientations
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
 
     img_info = dict(
         file_name=osp.join(osp.basename(img_file)),
         height=img.shape[0],
         width=img.shape[1],
-        segm_file=osp.join(osp.basename(gt_file)))
+        segm_file=osp.join(osp.basename(gt_file)),
+    )
 
-    if osp.splitext(gt_file)[1] == '.xml':
+    if osp.splitext(gt_file)[1] == ".xml":
         img_info = load_xml_info(gt_file, img_info)
     else:
         raise NotImplementedError
@@ -140,18 +138,13 @@ def load_xml_info(gt_file, img_info):
     obj = ET.parse(gt_file)
     root = obj.getroot()
     anno_info = []
-    for word in root.iter('word'):
-        x, y = max(0, int(word.attrib['x'])), max(0, int(word.attrib['y']))
-        w, h = int(word.attrib['width']), int(word.attrib['height'])
+    for word in root.iter("word"):
+        x, y = max(0, int(word.attrib["x"])), max(0, int(word.attrib["y"]))
+        w, h = int(word.attrib["width"]), int(word.attrib["height"])
         bbox = [x, y, w, h]
         segmentation = [x, y, x + w, y, x + w, y + h, x, y + h]
 
-        anno = dict(
-            iscrowd=0,
-            category_id=1,
-            bbox=bbox,
-            area=w * h,
-            segmentation=[segmentation])
+        anno = dict(iscrowd=0, category_id=1, bbox=bbox, area=w * h, segmentation=[segmentation])
         anno_info.append(anno)
 
     img_info.update(anno_info=anno_info)
@@ -160,13 +153,10 @@ def load_xml_info(gt_file, img_info):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training and val set of KAIST ')
-    parser.add_argument('root_path', help='Root dir path of KAIST')
-    parser.add_argument(
-        '--val-ratio', help='Split ratio for val set', default=0.0, type=float)
-    parser.add_argument(
-        '--nproc', default=1, type=int, help='Number of process')
+    parser = argparse.ArgumentParser(description="Generate training and val set of KAIST ")
+    parser.add_argument("root_path", help="Root dir path of KAIST")
+    parser.add_argument("--val-ratio", help="Split ratio for val set", default=0.0, type=float)
+    parser.add_argument("--nproc", default=1, type=int, help="Number of process")
     args = parser.parse_args()
     return args
 
@@ -176,24 +166,19 @@ def main():
     root_path = args.root_path
     ratio = args.val_ratio
 
-    trn_files, val_files = collect_files(
-        osp.join(root_path, 'imgs'), osp.join(root_path, 'annotations'), ratio)
+    trn_files, val_files = collect_files(osp.join(root_path, "imgs"), osp.join(root_path, "annotations"), ratio)
 
     # Train set
     trn_infos = collect_annotations(trn_files, nproc=args.nproc)
-    with mmcv.Timer(
-            print_tmpl='It takes {}s to convert KAIST Training annotation'):
-        convert_annotations(trn_infos,
-                            osp.join(root_path, 'instances_training.json'))
+    with mmcv.Timer(print_tmpl="It takes {}s to convert KAIST Training annotation"):
+        convert_annotations(trn_infos, osp.join(root_path, "instances_training.json"))
 
     # Val set
     if len(val_files) > 0:
         val_infos = collect_annotations(val_files, nproc=args.nproc)
-        with mmcv.Timer(
-                print_tmpl='It takes {}s to convert KAIST Val annotation'):
-            convert_annotations(val_infos,
-                                osp.join(root_path, 'instances_val.json'))
+        with mmcv.Timer(print_tmpl="It takes {}s to convert KAIST Val annotation"):
+            convert_annotations(val_infos, osp.join(root_path, "instances_val.json"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

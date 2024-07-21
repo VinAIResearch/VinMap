@@ -1,9 +1,10 @@
-import numpy as np
-import os
-import subprocess
-import json
 import argparse
 import glob
+import json
+import os
+import subprocess
+
+import numpy as np
 
 
 def init_args():
@@ -23,12 +24,11 @@ def parse_args():
 
 
 def run_shell_command(cmd):
-    p = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     out, err = p.communicate()
 
     if p.returncode == 0:
-        return out.decode('utf-8')
+        return out.decode("utf-8")
     else:
         return None
 
@@ -57,13 +57,13 @@ def parser_results_from_log_by_name(log_path, names_list):
 def load_gt_from_file(gt_file):
     if not os.path.exists(gt_file):
         raise ValueError("The log file {} does not exists!".format(gt_file))
-    with open(gt_file, 'r') as f:
+    with open(gt_file, "r") as f:
         data = f.readlines()
         f.close()
     parser_gt = {}
     for line in data:
         image_name, result = line.strip("\n").split("\t")
-        image_name = image_name.split('/')[-1]
+        image_name = image_name.split("/")[-1]
         try:
             result = json.loads(result)
         except:
@@ -102,8 +102,7 @@ def collect_predict_from_logs(log_path, key_list):
 
 def testing_assert_allclose(dict_x, dict_y, atol=1e-7, rtol=1e-7):
     for k in dict_x:
-        np.testing.assert_allclose(
-            np.array(dict_x[k]), np.array(dict_y[k]), atol=atol, rtol=rtol)
+        np.testing.assert_allclose(np.array(dict_x[k]), np.array(dict_y[k]), atol=atol, rtol=rtol)
 
 
 if __name__ == "__main__":
@@ -128,13 +127,8 @@ if __name__ == "__main__":
         pred_dict = pred_collection[filename]
 
         try:
-            testing_assert_allclose(
-                gt_dict, pred_dict, atol=args.atol, rtol=args.rtol)
-            print(
-                "Assert allclose passed! The results of {} and {} are consistent!".
-                format(filename, gt_filename))
+            testing_assert_allclose(gt_dict, pred_dict, atol=args.atol, rtol=args.rtol)
+            print("Assert allclose passed! The results of {} and {} are consistent!".format(filename, gt_filename))
         except Exception as E:
             print(E)
-            raise ValueError(
-                "The results of {} and the results of {} are inconsistent!".
-                format(filename, gt_filename))
+            raise ValueError("The results of {} and the results of {} are inconsistent!".format(filename, gt_filename))

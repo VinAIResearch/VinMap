@@ -4,17 +4,15 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.cnn import Conv2d, build_norm_layer
-from mmcv.cnn.bricks.drop import build_dropout
-from mmcv.cnn.bricks.transformer import FFN, PatchEmbed
-from mmcv.cnn.utils.weight_init import (constant_init, normal_init,
-                                        trunc_normal_init)
-from mmcv.runner import BaseModule, ModuleList
-from torch.nn.modules.batchnorm import _BatchNorm
-
 from mmcls.models.builder import BACKBONES
 from mmcls.models.utils.attention import MultiheadAttention
 from mmcls.models.utils.position_encoding import ConditionalPositionEncoding
+from mmcv.cnn import Conv2d, build_norm_layer
+from mmcv.cnn.bricks.drop import build_dropout
+from mmcv.cnn.bricks.transformer import FFN, PatchEmbed
+from mmcv.cnn.utils.weight_init import constant_init, normal_init, trunc_normal_init
+from mmcv.runner import BaseModule, ModuleList
+from torch.nn.modules.batchnorm import _BatchNorm
 
 
 class GlobalSubsampledAttention(MultiheadAttention):
@@ -48,43 +46,32 @@ class GlobalSubsampledAttention(MultiheadAttention):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads,
-                 norm_cfg=dict(type='LN'),
-                 qkv_bias=True,
-                 sr_ratio=1,
-                 **kwargs):
-        super(GlobalSubsampledAttention,
-              self).__init__(embed_dims, num_heads, **kwargs)
+    def __init__(self, embed_dims, num_heads, norm_cfg=dict(type="LN"), qkv_bias=True, sr_ratio=1, **kwargs):
+        super(GlobalSubsampledAttention, self).__init__(embed_dims, num_heads, **kwargs)
 
         self.qkv_bias = qkv_bias
         self.q = nn.Linear(self.input_dims, embed_dims, bias=qkv_bias)
         self.kv = nn.Linear(self.input_dims, embed_dims * 2, bias=qkv_bias)
 
         # remove self.qkv, here split into self.q, self.kv
-        delattr(self, 'qkv')
+        delattr(self, "qkv")
 
         self.sr_ratio = sr_ratio
         if sr_ratio > 1:
             # use a conv as the spatial-reduction operation, the kernel_size
             # and stride in conv are equal to the sr_ratio.
-            self.sr = Conv2d(
-                in_channels=embed_dims,
-                out_channels=embed_dims,
-                kernel_size=sr_ratio,
-                stride=sr_ratio)
+            self.sr = Conv2d(in_channels=embed_dims, out_channels=embed_dims, kernel_size=sr_ratio, stride=sr_ratio)
             # The ret[0] of build_norm_layer is norm name.
             self.norm = build_norm_layer(norm_cfg, embed_dims)[1]
 
     def forward(self, x, hw_shape):
         B, N, C = x.shape
         H, W = hw_shape
-        assert H * W == N, 'The product of h and w of hw_shape must be N, ' \
-                           'which is the 2nd dim number of the input Tensor x.'
+        assert H * W == N, (
+            "The product of h and w of hw_shape must be N, " "which is the 2nd dim number of the input Tensor x."
+        )
 
-        q = self.q(x).reshape(B, N, self.num_heads,
-                              C // self.num_heads).permute(0, 2, 1, 3)
+        q = self.q(x).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
 
         if self.sr_ratio > 1:
             x = x.permute(0, 2, 1).reshape(B, C, *hw_shape)  # BNC_2_BCHW
@@ -92,8 +79,7 @@ class GlobalSubsampledAttention(MultiheadAttention):
             x = x.reshape(B, C, -1).permute(0, 2, 1)  # BCHW_2_BNC
             x = self.norm(x)
 
-        kv = self.kv(x).reshape(B, -1, 2, self.num_heads,
-                                self.head_dims).permute(2, 0, 3, 1, 4)
+        kv = self.kv(x).reshape(B, -1, 2, self.num_heads, self.head_dims).permute(2, 0, 3, 1, 4)
         k, v = kv[0], kv[1]
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
@@ -134,19 +120,21 @@ class GSAEncoderLayer(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads,
-                 feedforward_channels,
-                 drop_rate=0.,
-                 attn_drop_rate=0.,
-                 drop_path_rate=0.,
-                 num_fcs=2,
-                 qkv_bias=True,
-                 act_cfg=dict(type='GELU'),
-                 norm_cfg=dict(type='LN'),
-                 sr_ratio=1.,
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        num_heads,
+        feedforward_channels,
+        drop_rate=0.0,
+        attn_drop_rate=0.0,
+        drop_path_rate=0.0,
+        num_fcs=2,
+        qkv_bias=True,
+        act_cfg=dict(type="GELU"),
+        norm_cfg=dict(type="LN"),
+        sr_ratio=1.0,
+        init_cfg=None,
+    ):
         super(GSAEncoderLayer, self).__init__(init_cfg=init_cfg)
 
         self.norm1 = build_norm_layer(norm_cfg, embed_dims, postfix=1)[1]
@@ -155,10 +143,11 @@ class GSAEncoderLayer(BaseModule):
             num_heads=num_heads,
             attn_drop=attn_drop_rate,
             proj_drop=drop_rate,
-            dropout_layer=dict(type='DropPath', drop_prob=drop_path_rate),
+            dropout_layer=dict(type="DropPath", drop_prob=drop_path_rate),
             qkv_bias=qkv_bias,
             norm_cfg=norm_cfg,
-            sr_ratio=sr_ratio)
+            sr_ratio=sr_ratio,
+        )
 
         self.norm2 = build_norm_layer(norm_cfg, embed_dims, postfix=2)[1]
         self.ffn = FFN(
@@ -166,13 +155,14 @@ class GSAEncoderLayer(BaseModule):
             feedforward_channels=feedforward_channels,
             num_fcs=num_fcs,
             ffn_drop=drop_rate,
-            dropout_layer=dict(type='DropPath', drop_prob=drop_path_rate),
+            dropout_layer=dict(type="DropPath", drop_prob=drop_path_rate),
             act_cfg=act_cfg,
-            add_identity=False)
+            add_identity=False,
+        )
 
-        self.drop_path = build_dropout(
-            dict(type='DropPath', drop_prob=drop_path_rate)
-        ) if drop_path_rate > 0. else nn.Identity()
+        self.drop_path = (
+            build_dropout(dict(type="DropPath", drop_prob=drop_path_rate)) if drop_path_rate > 0.0 else nn.Identity()
+        )
 
     def forward(self, x, hw_shape):
         x = x + self.drop_path(self.attn(self.norm1(x), hw_shape))
@@ -198,19 +188,20 @@ class LocallyGroupedSelfAttention(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads=8,
-                 qkv_bias=False,
-                 qk_scale=None,
-                 attn_drop_rate=0.,
-                 proj_drop_rate=0.,
-                 window_size=1,
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        num_heads=8,
+        qkv_bias=False,
+        qk_scale=None,
+        attn_drop_rate=0.0,
+        proj_drop_rate=0.0,
+        window_size=1,
+        init_cfg=None,
+    ):
         super(LocallyGroupedSelfAttention, self).__init__(init_cfg=init_cfg)
 
-        assert embed_dims % num_heads == 0, \
-            f'dim {embed_dims} should be divided by num_heads {num_heads}'
+        assert embed_dims % num_heads == 0, f"dim {embed_dims} should be divided by num_heads {num_heads}"
 
         self.embed_dims = embed_dims
         self.num_heads = num_heads
@@ -242,33 +233,30 @@ class LocallyGroupedSelfAttention(BaseModule):
         mask[:, :, -pad_r:].fill_(1)
 
         # [B, _h, _w, window_size, window_size, C]
-        x = x.reshape(B, _h, self.window_size, _w, self.window_size,
-                      C).transpose(2, 3)
-        mask = mask.reshape(1, _h, self.window_size, _w,
-                            self.window_size).transpose(2, 3).reshape(
-                                1, _h * _w,
-                                self.window_size * self.window_size)
+        x = x.reshape(B, _h, self.window_size, _w, self.window_size, C).transpose(2, 3)
+        mask = (
+            mask.reshape(1, _h, self.window_size, _w, self.window_size)
+            .transpose(2, 3)
+            .reshape(1, _h * _w, self.window_size * self.window_size)
+        )
         # [1, _h*_w, window_size*window_size, window_size*window_size]
         attn_mask = mask.unsqueeze(2) - mask.unsqueeze(3)
-        attn_mask = attn_mask.masked_fill(attn_mask != 0,
-                                          float(-1000.0)).masked_fill(
-                                              attn_mask == 0, float(0.0))
+        attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-1000.0)).masked_fill(attn_mask == 0, float(0.0))
 
         # [3, B, _w*_h, nhead, window_size*window_size, dim]
-        qkv = self.qkv(x).reshape(B, _h * _w,
-                                  self.window_size * self.window_size, 3,
-                                  self.num_heads, C // self.num_heads).permute(
-                                      3, 0, 1, 4, 2, 5)
+        qkv = (
+            self.qkv(x)
+            .reshape(B, _h * _w, self.window_size * self.window_size, 3, self.num_heads, C // self.num_heads)
+            .permute(3, 0, 1, 4, 2, 5)
+        )
         q, k, v = qkv[0], qkv[1], qkv[2]
         # [B, _h*_w, n_head, window_size*window_size, window_size*window_size]
         attn = (q @ k.transpose(-2, -1)) * self.scale
         attn = attn + attn_mask.unsqueeze(2)
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
-        attn = (attn @ v).transpose(2, 3).reshape(B, _h, _w, self.window_size,
-                                                  self.window_size, C)
-        x = attn.transpose(2, 3).reshape(B, _h * self.window_size,
-                                         _w * self.window_size, C)
+        attn = (attn @ v).transpose(2, 3).reshape(B, _h, _w, self.window_size, self.window_size, C)
+        x = attn.transpose(2, 3).reshape(B, _h * self.window_size, _w * self.window_size, C)
         if pad_r > 0 or pad_b > 0:
             x = x[:, :H, :W, :].contiguous()
 
@@ -304,28 +292,29 @@ class LSAEncoderLayer(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads,
-                 feedforward_channels,
-                 drop_rate=0.,
-                 attn_drop_rate=0.,
-                 drop_path_rate=0.,
-                 num_fcs=2,
-                 qkv_bias=True,
-                 qk_scale=None,
-                 act_cfg=dict(type='GELU'),
-                 norm_cfg=dict(type='LN'),
-                 window_size=1,
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        num_heads,
+        feedforward_channels,
+        drop_rate=0.0,
+        attn_drop_rate=0.0,
+        drop_path_rate=0.0,
+        num_fcs=2,
+        qkv_bias=True,
+        qk_scale=None,
+        act_cfg=dict(type="GELU"),
+        norm_cfg=dict(type="LN"),
+        window_size=1,
+        init_cfg=None,
+    ):
 
         super(LSAEncoderLayer, self).__init__(init_cfg=init_cfg)
 
         self.norm1 = build_norm_layer(norm_cfg, embed_dims, postfix=1)[1]
-        self.attn = LocallyGroupedSelfAttention(embed_dims, num_heads,
-                                                qkv_bias, qk_scale,
-                                                attn_drop_rate, drop_rate,
-                                                window_size)
+        self.attn = LocallyGroupedSelfAttention(
+            embed_dims, num_heads, qkv_bias, qk_scale, attn_drop_rate, drop_rate, window_size
+        )
 
         self.norm2 = build_norm_layer(norm_cfg, embed_dims, postfix=2)[1]
         self.ffn = FFN(
@@ -333,13 +322,14 @@ class LSAEncoderLayer(BaseModule):
             feedforward_channels=feedforward_channels,
             num_fcs=num_fcs,
             ffn_drop=drop_rate,
-            dropout_layer=dict(type='DropPath', drop_prob=drop_path_rate),
+            dropout_layer=dict(type="DropPath", drop_prob=drop_path_rate),
             act_cfg=act_cfg,
-            add_identity=False)
+            add_identity=False,
+        )
 
-        self.drop_path = build_dropout(
-            dict(type='DropPath', drop_prob=drop_path_rate)
-        ) if drop_path_rate > 0. else nn.Identity()
+        self.drop_path = (
+            build_dropout(dict(type="DropPath", drop_prob=drop_path_rate)) if drop_path_rate > 0.0 else nn.Identity()
+        )
 
     def forward(self, x, hw_shape):
         x = x + self.drop_path(self.attn(self.norm1(x), hw_shape))
@@ -406,75 +396,86 @@ class PCPVT(BaseModule):
         torch.Size([1, 320, 14, 14])
         torch.Size([1, 512, 7, 7])
     """
+
     arch_zoo = {
-        **dict.fromkeys(['s', 'small'],
-                        {'embed_dims':    [64, 128, 320, 512],
-                         'depths':        [3, 4, 6, 3],
-                         'num_heads':     [1, 2, 5, 8],
-                         'patch_sizes':   [4, 2, 2, 2],
-                         'strides':       [4, 2, 2, 2],
-                         'mlp_ratios':    [8, 8, 4, 4],
-                         'sr_ratios':     [8, 4, 2, 1]}),
-        **dict.fromkeys(['b', 'base'],
-                        {'embed_dims':    [64, 128, 320, 512],
-                         'depths':        [3, 4, 18, 3],
-                         'num_heads':     [1, 2, 5, 8],
-                         'patch_sizes':   [4, 2, 2, 2],
-                         'strides':       [4, 2, 2, 2],
-                         'mlp_ratios':    [8, 8, 4, 4],
-                         'sr_ratios':     [8, 4, 2, 1]}),
-        **dict.fromkeys(['l', 'large'],
-                        {'embed_dims':    [64, 128, 320, 512],
-                         'depths':        [3, 8, 27, 3],
-                         'num_heads':     [1, 2, 5, 8],
-                         'patch_sizes':   [4, 2, 2, 2],
-                         'strides':       [4, 2, 2, 2],
-                         'mlp_ratios':    [8, 8, 4, 4],
-                         'sr_ratios':     [8, 4, 2, 1]}),
-    }   # yapf: disable
+        **dict.fromkeys(
+            ["s", "small"],
+            {
+                "embed_dims": [64, 128, 320, 512],
+                "depths": [3, 4, 6, 3],
+                "num_heads": [1, 2, 5, 8],
+                "patch_sizes": [4, 2, 2, 2],
+                "strides": [4, 2, 2, 2],
+                "mlp_ratios": [8, 8, 4, 4],
+                "sr_ratios": [8, 4, 2, 1],
+            },
+        ),
+        **dict.fromkeys(
+            ["b", "base"],
+            {
+                "embed_dims": [64, 128, 320, 512],
+                "depths": [3, 4, 18, 3],
+                "num_heads": [1, 2, 5, 8],
+                "patch_sizes": [4, 2, 2, 2],
+                "strides": [4, 2, 2, 2],
+                "mlp_ratios": [8, 8, 4, 4],
+                "sr_ratios": [8, 4, 2, 1],
+            },
+        ),
+        **dict.fromkeys(
+            ["l", "large"],
+            {
+                "embed_dims": [64, 128, 320, 512],
+                "depths": [3, 8, 27, 3],
+                "num_heads": [1, 2, 5, 8],
+                "patch_sizes": [4, 2, 2, 2],
+                "strides": [4, 2, 2, 2],
+                "mlp_ratios": [8, 8, 4, 4],
+                "sr_ratios": [8, 4, 2, 1],
+            },
+        ),
+    }  # yapf: disable
 
-    essential_keys = {
-        'embed_dims', 'depths', 'num_heads', 'patch_sizes', 'strides',
-        'mlp_ratios', 'sr_ratios'
-    }
+    essential_keys = {"embed_dims", "depths", "num_heads", "patch_sizes", "strides", "mlp_ratios", "sr_ratios"}
 
-    def __init__(self,
-                 arch,
-                 in_channels=3,
-                 out_indices=(3, ),
-                 qkv_bias=False,
-                 drop_rate=0.,
-                 attn_drop_rate=0.,
-                 drop_path_rate=0.,
-                 norm_cfg=dict(type='LN'),
-                 norm_after_stage=False,
-                 init_cfg=None):
+    def __init__(
+        self,
+        arch,
+        in_channels=3,
+        out_indices=(3,),
+        qkv_bias=False,
+        drop_rate=0.0,
+        attn_drop_rate=0.0,
+        drop_path_rate=0.0,
+        norm_cfg=dict(type="LN"),
+        norm_after_stage=False,
+        init_cfg=None,
+    ):
         super(PCPVT, self).__init__(init_cfg=init_cfg)
         if isinstance(arch, str):
             arch = arch.lower()
-            assert arch in set(self.arch_zoo), \
-                f'Arch {arch} is not in default archs {set(self.arch_zoo)}'
+            assert arch in set(self.arch_zoo), f"Arch {arch} is not in default archs {set(self.arch_zoo)}"
             self.arch_settings = self.arch_zoo[arch]
         else:
             assert isinstance(arch, dict) and (
                 set(arch) == self.essential_keys
-            ), f'Custom arch needs a dict with keys {self.essential_keys}.'
+            ), f"Custom arch needs a dict with keys {self.essential_keys}."
             self.arch_settings = arch
 
-        self.depths = self.arch_settings['depths']
-        self.embed_dims = self.arch_settings['embed_dims']
-        self.patch_sizes = self.arch_settings['patch_sizes']
-        self.strides = self.arch_settings['strides']
-        self.mlp_ratios = self.arch_settings['mlp_ratios']
-        self.num_heads = self.arch_settings['num_heads']
-        self.sr_ratios = self.arch_settings['sr_ratios']
+        self.depths = self.arch_settings["depths"]
+        self.embed_dims = self.arch_settings["embed_dims"]
+        self.patch_sizes = self.arch_settings["patch_sizes"]
+        self.strides = self.arch_settings["strides"]
+        self.mlp_ratios = self.arch_settings["mlp_ratios"]
+        self.num_heads = self.arch_settings["num_heads"]
+        self.sr_ratios = self.arch_settings["sr_ratios"]
 
         self.num_extra_tokens = 0  # there is no cls-token in Twins
         self.num_stage = len(self.depths)
         for key, value in self.arch_settings.items():
             assert isinstance(value, list) and len(value) == self.num_stage, (
-                'Length of setting item in arch dict must be type of list and'
-                ' have the same length.')
+                "Length of setting item in arch dict must be type of list and" " have the same length."
+            )
 
         # patch_embeds
         self.patch_embeds = ModuleList()
@@ -492,43 +493,45 @@ class PCPVT(BaseModule):
                 PatchEmbed(
                     in_channels=stage_in_channels,
                     embed_dims=self.embed_dims[i],
-                    conv_type='Conv2d',
+                    conv_type="Conv2d",
                     kernel_size=self.patch_sizes[i],
                     stride=self.strides[i],
-                    padding='corner',
-                    norm_cfg=dict(type='LN')))
+                    padding="corner",
+                    norm_cfg=dict(type="LN"),
+                )
+            )
 
             self.position_encoding_drops.append(nn.Dropout(p=drop_rate))
 
         # PEGs
-        self.position_encodings = ModuleList([
-            ConditionalPositionEncoding(embed_dim, embed_dim)
-            for embed_dim in self.embed_dims
-        ])
+        self.position_encodings = ModuleList(
+            [ConditionalPositionEncoding(embed_dim, embed_dim) for embed_dim in self.embed_dims]
+        )
 
         # stochastic depth
         total_depth = sum(self.depths)
-        self.dpr = [
-            x.item() for x in torch.linspace(0, drop_path_rate, total_depth)
-        ]  # stochastic depth decay rule
+        self.dpr = [x.item() for x in torch.linspace(0, drop_path_rate, total_depth)]  # stochastic depth decay rule
         cur = 0
 
         for k in range(len(self.depths)):
-            _block = ModuleList([
-                GSAEncoderLayer(
-                    embed_dims=self.embed_dims[k],
-                    num_heads=self.num_heads[k],
-                    feedforward_channels=self.mlp_ratios[k] *
-                    self.embed_dims[k],
-                    attn_drop_rate=attn_drop_rate,
-                    drop_rate=drop_rate,
-                    drop_path_rate=self.dpr[cur + i],
-                    num_fcs=2,
-                    qkv_bias=qkv_bias,
-                    act_cfg=dict(type='GELU'),
-                    norm_cfg=norm_cfg,
-                    sr_ratio=self.sr_ratios[k]) for i in range(self.depths[k])
-            ])
+            _block = ModuleList(
+                [
+                    GSAEncoderLayer(
+                        embed_dims=self.embed_dims[k],
+                        num_heads=self.num_heads[k],
+                        feedforward_channels=self.mlp_ratios[k] * self.embed_dims[k],
+                        attn_drop_rate=attn_drop_rate,
+                        drop_rate=drop_rate,
+                        drop_path_rate=self.dpr[cur + i],
+                        num_fcs=2,
+                        qkv_bias=qkv_bias,
+                        act_cfg=dict(type="GELU"),
+                        norm_cfg=norm_cfg,
+                        sr_ratio=self.sr_ratios[k],
+                    )
+                    for i in range(self.depths[k])
+                ]
+            )
             self.stages.append(_block)
             cur += self.depths[k]
 
@@ -539,19 +542,19 @@ class PCPVT(BaseModule):
             self.norm_after_stage = [norm_after_stage] * self.num_stage
         else:
             self.norm_after_stage = norm_after_stage
-        assert len(self.norm_after_stage) == self.num_stage, \
-            (f'Number of norm_after_stage({len(self.norm_after_stage)}) should'
-             f' be equal to the number of stages({self.num_stage}).')
+        assert len(self.norm_after_stage) == self.num_stage, (
+            f"Number of norm_after_stage({len(self.norm_after_stage)}) should"
+            f" be equal to the number of stages({self.num_stage})."
+        )
 
         for i, has_norm in enumerate(self.norm_after_stage):
-            assert isinstance(has_norm, bool), 'norm_after_stage should be ' \
-                                               'bool or List[bool].'
+            assert isinstance(has_norm, bool), "norm_after_stage should be " "bool or List[bool]."
             if has_norm and norm_cfg is not None:
                 norm_layer = build_norm_layer(norm_cfg, self.embed_dims[i])[1]
             else:
                 norm_layer = nn.Identity()
 
-            self.add_module(f'norm_after_stage{i}', norm_layer)
+            self.add_module(f"norm_after_stage{i}", norm_layer)
 
     def init_weights(self):
         if self.init_cfg is not None:
@@ -559,15 +562,13 @@ class PCPVT(BaseModule):
         else:
             for m in self.modules():
                 if isinstance(m, nn.Linear):
-                    trunc_normal_init(m, std=.02, bias=0.)
+                    trunc_normal_init(m, std=0.02, bias=0.0)
                 elif isinstance(m, (_BatchNorm, nn.GroupNorm, nn.LayerNorm)):
-                    constant_init(m, val=1.0, bias=0.)
+                    constant_init(m, val=1.0, bias=0.0)
                 elif isinstance(m, nn.Conv2d):
-                    fan_out = m.kernel_size[0] * m.kernel_size[
-                        1] * m.out_channels
+                    fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                     fan_out //= m.groups
-                    normal_init(
-                        m, mean=0, std=math.sqrt(2.0 / fan_out), bias=0)
+                    normal_init(m, mean=0, std=math.sqrt(2.0 / fan_out), bias=0)
 
     def forward(self, x):
         outputs = list()
@@ -583,7 +584,7 @@ class PCPVT(BaseModule):
                 if j == 0:
                     x = self.position_encodings[i](x, hw_shape)
 
-            norm_layer = getattr(self, f'norm_after_stage{i}')
+            norm_layer = getattr(self, f"norm_after_stage{i}")
             x = norm_layer(x)
             x = x.reshape(b, h, w, -1).permute(0, 3, 1, 2).contiguous()
 
@@ -653,71 +654,101 @@ class SVT(PCPVT):
         torch.Size([1, 320, 14, 14])
         torch.Size([1, 512, 7, 7])
     """
+
     arch_zoo = {
-        **dict.fromkeys(['s', 'small'],
-                        {'embed_dims':    [64, 128, 256, 512],
-                         'depths':        [2, 2, 10, 4],
-                         'num_heads':     [2, 4, 8, 16],
-                         'patch_sizes':   [4, 2, 2, 2],
-                         'strides':       [4, 2, 2, 2],
-                         'mlp_ratios':    [4, 4, 4, 4],
-                         'sr_ratios':     [8, 4, 2, 1],
-                         'window_sizes':  [7, 7, 7, 7]}),
-        **dict.fromkeys(['b', 'base'],
-                        {'embed_dims':    [96, 192, 384, 768],
-                         'depths':        [2, 2, 18, 2],
-                         'num_heads':     [3, 6, 12, 24],
-                         'patch_sizes':   [4, 2, 2, 2],
-                         'strides':       [4, 2, 2, 2],
-                         'mlp_ratios':    [4, 4, 4, 4],
-                         'sr_ratios':     [8, 4, 2, 1],
-                         'window_sizes':  [7, 7, 7, 7]}),
-        **dict.fromkeys(['l', 'large'],
-                        {'embed_dims':    [128, 256, 512, 1024],
-                         'depths':        [2, 2, 18, 2],
-                         'num_heads':     [4, 8, 16, 32],
-                         'patch_sizes':   [4, 2, 2, 2],
-                         'strides':       [4, 2, 2, 2],
-                         'mlp_ratios':    [4, 4, 4, 4],
-                         'sr_ratios':     [8, 4, 2, 1],
-                         'window_sizes':  [7, 7, 7, 7]}),
+        **dict.fromkeys(
+            ["s", "small"],
+            {
+                "embed_dims": [64, 128, 256, 512],
+                "depths": [2, 2, 10, 4],
+                "num_heads": [2, 4, 8, 16],
+                "patch_sizes": [4, 2, 2, 2],
+                "strides": [4, 2, 2, 2],
+                "mlp_ratios": [4, 4, 4, 4],
+                "sr_ratios": [8, 4, 2, 1],
+                "window_sizes": [7, 7, 7, 7],
+            },
+        ),
+        **dict.fromkeys(
+            ["b", "base"],
+            {
+                "embed_dims": [96, 192, 384, 768],
+                "depths": [2, 2, 18, 2],
+                "num_heads": [3, 6, 12, 24],
+                "patch_sizes": [4, 2, 2, 2],
+                "strides": [4, 2, 2, 2],
+                "mlp_ratios": [4, 4, 4, 4],
+                "sr_ratios": [8, 4, 2, 1],
+                "window_sizes": [7, 7, 7, 7],
+            },
+        ),
+        **dict.fromkeys(
+            ["l", "large"],
+            {
+                "embed_dims": [128, 256, 512, 1024],
+                "depths": [2, 2, 18, 2],
+                "num_heads": [4, 8, 16, 32],
+                "patch_sizes": [4, 2, 2, 2],
+                "strides": [4, 2, 2, 2],
+                "mlp_ratios": [4, 4, 4, 4],
+                "sr_ratios": [8, 4, 2, 1],
+                "window_sizes": [7, 7, 7, 7],
+            },
+        ),
     }  # yapf: disable
 
     essential_keys = {
-        'embed_dims', 'depths', 'num_heads', 'patch_sizes', 'strides',
-        'mlp_ratios', 'sr_ratios', 'window_sizes'
+        "embed_dims",
+        "depths",
+        "num_heads",
+        "patch_sizes",
+        "strides",
+        "mlp_ratios",
+        "sr_ratios",
+        "window_sizes",
     }
 
-    def __init__(self,
-                 arch,
-                 in_channels=3,
-                 out_indices=(3, ),
-                 qkv_bias=False,
-                 drop_rate=0.,
-                 attn_drop_rate=0.,
-                 drop_path_rate=0.0,
-                 norm_cfg=dict(type='LN'),
-                 norm_after_stage=False,
-                 init_cfg=None):
-        super(SVT, self).__init__(arch, in_channels, out_indices, qkv_bias,
-                                  drop_rate, attn_drop_rate, drop_path_rate,
-                                  norm_cfg, norm_after_stage, init_cfg)
+    def __init__(
+        self,
+        arch,
+        in_channels=3,
+        out_indices=(3,),
+        qkv_bias=False,
+        drop_rate=0.0,
+        attn_drop_rate=0.0,
+        drop_path_rate=0.0,
+        norm_cfg=dict(type="LN"),
+        norm_after_stage=False,
+        init_cfg=None,
+    ):
+        super(SVT, self).__init__(
+            arch,
+            in_channels,
+            out_indices,
+            qkv_bias,
+            drop_rate,
+            attn_drop_rate,
+            drop_path_rate,
+            norm_cfg,
+            norm_after_stage,
+            init_cfg,
+        )
 
-        self.window_sizes = self.arch_settings['window_sizes']
+        self.window_sizes = self.arch_settings["window_sizes"]
 
         for k in range(self.num_stage):
             for i in range(self.depths[k]):
                 # in even-numbered layers of each stage, replace GSA with LSA
                 if i % 2 == 0:
                     ffn_channels = self.mlp_ratios[k] * self.embed_dims[k]
-                    self.stages[k][i] = \
-                        LSAEncoderLayer(
-                            embed_dims=self.embed_dims[k],
-                            num_heads=self.num_heads[k],
-                            feedforward_channels=ffn_channels,
-                            drop_rate=drop_rate,
-                            norm_cfg=norm_cfg,
-                            attn_drop_rate=attn_drop_rate,
-                            drop_path_rate=self.dpr[sum(self.depths[:k])+i],
-                            qkv_bias=qkv_bias,
-                            window_size=self.window_sizes[k])
+                    self.stages[k][i] = LSAEncoderLayer(
+                        embed_dims=self.embed_dims[k],
+                        num_heads=self.num_heads[k],
+                        feedforward_channels=ffn_channels,
+                        drop_rate=drop_rate,
+                        norm_cfg=norm_cfg,
+                        attn_drop_rate=attn_drop_rate,
+                        drop_path_rate=self.dpr[sum(self.depths[:k]) + i],
+                        qkv_bias=qkv_bias,
+                        window_size=self.window_sizes[k],
+                    )

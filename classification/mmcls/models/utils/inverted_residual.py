@@ -32,27 +32,28 @@ class InvertedResidual(BaseModule):
         init_cfg (dict | list[dict], optional): Initialization config dict.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 mid_channels,
-                 kernel_size=3,
-                 stride=1,
-                 se_cfg=None,
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 drop_path_rate=0.,
-                 with_cp=False,
-                 init_cfg=None):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        mid_channels,
+        kernel_size=3,
+        stride=1,
+        se_cfg=None,
+        conv_cfg=None,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        drop_path_rate=0.0,
+        with_cp=False,
+        init_cfg=None,
+    ):
         super(InvertedResidual, self).__init__(init_cfg)
-        self.with_res_shortcut = (stride == 1 and in_channels == out_channels)
+        self.with_res_shortcut = stride == 1 and in_channels == out_channels
         assert stride in [1, 2]
         self.with_cp = with_cp
-        self.drop_path = DropPath(
-            drop_path_rate) if drop_path_rate > 0 else nn.Identity()
+        self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0 else nn.Identity()
         self.with_se = se_cfg is not None
-        self.with_expand_conv = (mid_channels != in_channels)
+        self.with_expand_conv = mid_channels != in_channels
 
         if self.with_se:
             assert isinstance(se_cfg, dict)
@@ -66,7 +67,8 @@ class InvertedResidual(BaseModule):
                 padding=0,
                 conv_cfg=conv_cfg,
                 norm_cfg=norm_cfg,
-                act_cfg=act_cfg)
+                act_cfg=act_cfg,
+            )
         self.depthwise_conv = ConvModule(
             in_channels=mid_channels,
             out_channels=mid_channels,
@@ -76,7 +78,8 @@ class InvertedResidual(BaseModule):
             groups=mid_channels,
             conv_cfg=conv_cfg,
             norm_cfg=norm_cfg,
-            act_cfg=act_cfg)
+            act_cfg=act_cfg,
+        )
         if self.with_se:
             self.se = SELayer(**se_cfg)
         self.linear_conv = ConvModule(
@@ -87,7 +90,8 @@ class InvertedResidual(BaseModule):
             padding=0,
             conv_cfg=conv_cfg,
             norm_cfg=norm_cfg,
-            act_cfg=None)
+            act_cfg=None,
+        )
 
     def forward(self, x):
         """Forward function.

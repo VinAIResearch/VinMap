@@ -7,12 +7,11 @@ import warnings
 
 import cv2
 import mmcv
+import mmocr.utils as utils
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from PIL import Image, ImageDraw, ImageFont
-
-import mmocr.utils as utils
 
 
 def overlay_mask_img(img, mask):
@@ -28,8 +27,7 @@ def overlay_mask_img(img, mask):
     assert isinstance(img, np.ndarray)
     assert isinstance(mask, np.ndarray)
 
-    contours, _ = cv2.findContours(
-        mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     cv2.drawContours(img, contours, -1, (0, 255, 0), 1)
 
@@ -78,21 +76,12 @@ def show_img_boundary(img, boundary):
     assert isinstance(img, np.ndarray)
     assert utils.is_type_list(boundary, (int, float))
 
-    cv2.polylines(
-        img, [np.array(boundary).astype(np.int32).reshape(-1, 1, 2)],
-        True,
-        color=(0, 255, 0),
-        thickness=1)
+    cv2.polylines(img, [np.array(boundary).astype(np.int32).reshape(-1, 1, 2)], True, color=(0, 255, 0), thickness=1)
     plt.imshow(img)
     plt.show()
 
 
-def show_pred_gt(preds,
-                 gts,
-                 show=False,
-                 win_name='',
-                 wait_time=0,
-                 out_file=None):
+def show_pred_gt(preds, gts, show=False, win_name="", wait_time=0, out_file=None):
     """Show detection and ground truth for one image.
 
     Args:
@@ -119,22 +108,18 @@ def show_pred_gt(preds,
     height = int(max_xy[1]) + 100
 
     img = np.ones((height, width, 3), np.int8) * 255
-    pred_color = mmcv.color_val('red')
-    gt_color = mmcv.color_val('blue')
+    pred_color = mmcv.color_val("red")
+    gt_color = mmcv.color_val("blue")
     thickness = 1
 
     for boundary in preds:
         cv2.polylines(
-            img, [np.array(boundary).astype(np.int32).reshape(-1, 1, 2)],
-            True,
-            color=pred_color,
-            thickness=thickness)
+            img, [np.array(boundary).astype(np.int32).reshape(-1, 1, 2)], True, color=pred_color, thickness=thickness
+        )
     for gt in gts:
         cv2.polylines(
-            img, [np.array(gt).astype(np.int32).reshape(-1, 1, 2)],
-            True,
-            color=gt_color,
-            thickness=thickness)
+            img, [np.array(gt).astype(np.int32).reshape(-1, 1, 2)], True, color=gt_color, thickness=thickness
+        )
     if show:
         mmcv.imshow(img, win_name, wait_time)
     if out_file is not None:
@@ -143,19 +128,21 @@ def show_pred_gt(preds,
     return img
 
 
-def imshow_pred_boundary(img,
-                         boundaries_with_scores,
-                         labels,
-                         score_thr=0,
-                         boundary_color='blue',
-                         text_color='blue',
-                         thickness=1,
-                         font_scale=0.5,
-                         show=True,
-                         win_name='',
-                         wait_time=0,
-                         out_file=None,
-                         show_score=False):
+def imshow_pred_boundary(
+    img,
+    boundaries_with_scores,
+    labels,
+    score_thr=0,
+    boundary_color="blue",
+    text_color="blue",
+    thickness=1,
+    font_scale=0.5,
+    show=True,
+    win_name="",
+    wait_time=0,
+    out_file=None,
+    show_score=False,
+):
     """Draw boundaries and class labels (with scores) on an image.
 
     Args:
@@ -178,7 +165,7 @@ def imshow_pred_boundary(img,
     assert utils.is_type_list(labels, int)
     assert utils.equal_len(boundaries_with_scores, labels)
     if len(boundaries_with_scores) == 0:
-        warnings.warn('0 text found in ' + out_file)
+        warnings.warn("0 text found in " + out_file)
         return None
 
     utils.valid_boundary(boundaries_with_scores[0])
@@ -197,17 +184,18 @@ def imshow_pred_boundary(img,
     for boundary, score in zip(boundaries, scores):
         boundary_int = np.array(boundary).astype(np.int32)
 
-        cv2.polylines(
-            img, [boundary_int.reshape(-1, 1, 2)],
-            True,
-            color=boundary_color,
-            thickness=thickness)
+        cv2.polylines(img, [boundary_int.reshape(-1, 1, 2)], True, color=boundary_color, thickness=thickness)
 
         if show_score:
-            label_text = f'{score:.02f}'
-            cv2.putText(img, label_text,
-                        (boundary_int[0], boundary_int[1] - 2),
-                        cv2.FONT_HERSHEY_COMPLEX, font_scale, text_color)
+            label_text = f"{score:.02f}"
+            cv2.putText(
+                img,
+                label_text,
+                (boundary_int[0], boundary_int[1] - 2),
+                cv2.FONT_HERSHEY_COMPLEX,
+                font_scale,
+                text_color,
+            )
     if show:
         mmcv.imshow(img, win_name, wait_time)
     if out_file is not None:
@@ -216,17 +204,19 @@ def imshow_pred_boundary(img,
     return img
 
 
-def imshow_text_char_boundary(img,
-                              text_quads,
-                              boundaries,
-                              char_quads,
-                              chars,
-                              show=False,
-                              thickness=1,
-                              font_scale=0.5,
-                              win_name='',
-                              wait_time=-1,
-                              out_file=None):
+def imshow_text_char_boundary(
+    img,
+    text_quads,
+    boundaries,
+    char_quads,
+    chars,
+    show=False,
+    thickness=1,
+    font_scale=0.5,
+    win_name="",
+    wait_time=-1,
+    out_file=None,
+):
     """Draw text boxes and char boxes on img.
 
     Args:
@@ -252,37 +242,28 @@ def imshow_text_char_boundary(img,
     assert utils.equal_len(text_quads, char_quads, boundaries)
 
     img = mmcv.imread(img)
-    char_color = [mmcv.color_val('blue'), mmcv.color_val('green')]
-    text_color = mmcv.color_val('red')
+    char_color = [mmcv.color_val("blue"), mmcv.color_val("green")]
+    text_color = mmcv.color_val("red")
     text_inx = 0
-    for text_box, boundary, char_box, txt in zip(text_quads, boundaries,
-                                                 char_quads, chars):
+    for text_box, boundary, char_box, txt in zip(text_quads, boundaries, char_quads, chars):
         text_box = np.array(text_box)
         boundary = np.array(boundary)
 
         text_box = text_box.reshape(-1, 2).astype(np.int32)
-        cv2.polylines(
-            img, [text_box.reshape(-1, 1, 2)],
-            True,
-            color=text_color,
-            thickness=thickness)
+        cv2.polylines(img, [text_box.reshape(-1, 1, 2)], True, color=text_color, thickness=thickness)
         if boundary.shape[0] > 0:
-            cv2.polylines(
-                img, [boundary.reshape(-1, 1, 2)],
-                True,
-                color=text_color,
-                thickness=thickness)
+            cv2.polylines(img, [boundary.reshape(-1, 1, 2)], True, color=text_color, thickness=thickness)
 
         for b in char_box:
             b = np.array(b)
             c = char_color[text_inx % 2]
             b = b.astype(np.int32)
-            cv2.polylines(
-                img, [b.reshape(-1, 1, 2)], True, color=c, thickness=thickness)
+            cv2.polylines(img, [b.reshape(-1, 1, 2)], True, color=c, thickness=thickness)
 
-        label_text = ''.join(txt)
-        cv2.putText(img, label_text, (text_box[0, 0], text_box[0, 1] - 2),
-                    cv2.FONT_HERSHEY_COMPLEX, font_scale, text_color)
+        label_text = "".join(txt)
+        cv2.putText(
+            img, label_text, (text_box[0, 0], text_box[0, 1] - 2), cv2.FONT_HERSHEY_COMPLEX, font_scale, text_color
+        )
         text_inx = text_inx + 1
 
     if show:
@@ -314,19 +295,13 @@ def tile_image(images):
     offset_y = 0
     for image in images:
         img_h, img_w = image.shape[:2]
-        vis_img[offset_y:(offset_y + img_h), 0:img_w, :] = image
+        vis_img[offset_y : (offset_y + img_h), 0:img_w, :] = image
         offset_y += img_h
 
     return vis_img
 
 
-def imshow_text_label(img,
-                      pred_label,
-                      gt_label,
-                      show=False,
-                      win_name='',
-                      wait_time=-1,
-                      out_file=None):
+def imshow_text_label(img, pred_label, gt_label, show=False, win_name="", wait_time=-1, out_file=None):
     """Draw predicted texts and ground truth texts on images.
 
     Args:
@@ -357,17 +332,15 @@ def imshow_text_label(img,
         pred_img = draw_texts_by_pil(img, [pred_label], None)
     else:
         pred_img = np.ones((h, w, 3), dtype=np.uint8) * 255
-        cv2.putText(pred_img, pred_label, (5, 40), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.9, (0, 0, 255), 2)
+        cv2.putText(pred_img, pred_label, (5, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
     images = [pred_img, img]
 
-    if gt_label != '':
+    if gt_label != "":
         if is_contain_chinese(gt_label):
             gt_img = draw_texts_by_pil(img, [gt_label], None)
         else:
             gt_img = np.ones((h, w, 3), dtype=np.uint8) * 255
-            cv2.putText(gt_img, gt_label, (5, 40), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.9, (255, 0, 0), 2)
+            cv2.putText(gt_img, gt_label, (5, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
         images.append(gt_img)
 
     img = tile_image(images)
@@ -380,32 +353,20 @@ def imshow_text_label(img,
     return img
 
 
-def imshow_node(img,
-                result,
-                boxes,
-                idx_to_cls={},
-                show=False,
-                win_name='',
-                wait_time=-1,
-                out_file=None):
+def imshow_node(img, result, boxes, idx_to_cls={}, show=False, win_name="", wait_time=-1, out_file=None):
 
     img = mmcv.imread(img)
     h, w = img.shape[:2]
 
-    max_value, max_idx = torch.max(result['nodes'].detach().cpu(), -1)
+    max_value, max_idx = torch.max(result["nodes"].detach().cpu(), -1)
     node_pred_label = max_idx.numpy().tolist()
     node_pred_score = max_value.numpy().tolist()
 
     texts, text_boxes = [], []
     for i, box in enumerate(boxes):
-        new_box = [[box[0], box[1]], [box[2], box[1]], [box[2], box[3]],
-                   [box[0], box[3]]]
+        new_box = [[box[0], box[1]], [box[2], box[1]], [box[2], box[3]], [box[0], box[3]]]
         Pts = np.array([new_box], np.int32)
-        cv2.polylines(
-            img, [Pts.reshape((-1, 1, 2))],
-            True,
-            color=(255, 255, 0),
-            thickness=1)
+        cv2.polylines(img, [Pts.reshape((-1, 1, 2))], True, color=(255, 255, 0), thickness=1)
         x_min = int(min([point[0] for point in new_box]))
         y_min = int(min([point[1] for point in new_box]))
 
@@ -413,26 +374,27 @@ def imshow_node(img,
         pred_label = str(node_pred_label[i])
         if pred_label in idx_to_cls:
             pred_label = idx_to_cls[pred_label]
-        pred_score = '{:.2f}'.format(node_pred_score[i])
-        text = pred_label + '(' + pred_score + ')'
+        pred_score = "{:.2f}".format(node_pred_score[i])
+        text = pred_label + "(" + pred_score + ")"
         texts.append(text)
 
         # text box
-        font_size = int(
-            min(
-                abs(new_box[3][1] - new_box[0][1]),
-                abs(new_box[1][0] - new_box[0][0])))
+        font_size = int(min(abs(new_box[3][1] - new_box[0][1]), abs(new_box[1][0] - new_box[0][0])))
         char_num = len(text)
         text_box = [
-            x_min * 2, y_min, x_min * 2 + font_size * char_num, y_min,
-            x_min * 2 + font_size * char_num, y_min + font_size, x_min * 2,
-            y_min + font_size
+            x_min * 2,
+            y_min,
+            x_min * 2 + font_size * char_num,
+            y_min,
+            x_min * 2 + font_size * char_num,
+            y_min + font_size,
+            x_min * 2,
+            y_min + font_size,
         ]
         text_boxes.append(text_box)
 
     pred_img = np.ones((h, w * 2, 3), dtype=np.uint8) * 255
-    pred_img = draw_texts_by_pil(
-        pred_img, texts, text_boxes, draw_box=False, on_ori_img=True)
+    pred_img = draw_texts_by_pil(pred_img, texts, text_boxes, draw_box=False, on_ori_img=True)
 
     vis_img = np.ones((h, w * 3, 3), dtype=np.uint8) * 255
     vis_img[:, :w] = img
@@ -448,10 +410,20 @@ def imshow_node(img,
 
 def gen_color():
     """Generate BGR color schemes."""
-    color_list = [(101, 67, 254), (154, 157, 252), (173, 205, 249),
-                  (123, 151, 138), (187, 200, 178), (148, 137, 69),
-                  (169, 200, 200), (155, 175, 131), (154, 194, 182),
-                  (178, 190, 137), (140, 211, 222), (83, 156, 222)]
+    color_list = [
+        (101, 67, 254),
+        (154, 157, 252),
+        (173, 205, 249),
+        (123, 151, 138),
+        (187, 200, 178),
+        (148, 137, 69),
+        (169, 200, 200),
+        (155, 175, 131),
+        (154, 194, 182),
+        (178, 190, 137),
+        (140, 211, 222),
+        (83, 156, 222),
+    ]
     return color_list
 
 
@@ -469,12 +441,7 @@ def draw_polygons(img, polys):
     out_img = dst_img
     for idx, poly in enumerate(polys):
         poly = np.array(poly).reshape((-1, 1, 2)).astype(np.int32)
-        cv2.drawContours(
-            img,
-            np.array([poly]),
-            -1,
-            color_list[idx % len(color_list)],
-            thickness=cv2.FILLED)
+        cv2.drawContours(img, np.array([poly]), -1, color_list[idx % len(color_list)], thickness=cv2.FILLED)
         out_img = cv2.addWeighted(dst_img, 0.5, img, 0.5, 0)
     return out_img
 
@@ -487,11 +454,7 @@ def get_optimal_font_scale(text, width):
         width (int): The box width.
     """
     for scale in reversed(range(0, 60, 1)):
-        textSize = cv2.getTextSize(
-            text,
-            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-            fontScale=scale / 10,
-            thickness=1)
+        textSize = cv2.getTextSize(text, fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=scale / 10, thickness=1)
         new_width = textSize[0][0]
         if new_width <= width:
             return scale / 10
@@ -526,31 +489,27 @@ def draw_texts(img, texts, boxes=None, draw_box=True, on_ori_img=False):
             new_box = [[x, y] for x, y in zip(box[0::2], box[1::2])]
             Pts = np.array([new_box], np.int32)
             cv2.polylines(
-                out_img, [Pts.reshape((-1, 1, 2))],
-                True,
-                color=color_list[idx % len(color_list)],
-                thickness=1)
+                out_img, [Pts.reshape((-1, 1, 2))], True, color=color_list[idx % len(color_list)], thickness=1
+            )
         min_x = int(min(box[0::2]))
-        max_y = int(
-            np.mean(np.array(box[1::2])) + 0.2 *
-            (max(box[1::2]) - min(box[1::2])))
-        font_scale = get_optimal_font_scale(
-            text, int(max(box[0::2]) - min(box[0::2])))
-        cv2.putText(out_img, text, (min_x, max_y), cv2.FONT_HERSHEY_SIMPLEX,
-                    font_scale, (0, 0, 0), 1)
+        max_y = int(np.mean(np.array(box[1::2])) + 0.2 * (max(box[1::2]) - min(box[1::2])))
+        font_scale = get_optimal_font_scale(text, int(max(box[0::2]) - min(box[0::2])))
+        cv2.putText(out_img, text, (min_x, max_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), 1)
 
     return out_img
 
 
-def draw_texts_by_pil(img,
-                      texts,
-                      boxes=None,
-                      draw_box=True,
-                      on_ori_img=False,
-                      font_size=None,
-                      fill_color=None,
-                      draw_pos=None,
-                      return_text_size=False):
+def draw_texts_by_pil(
+    img,
+    texts,
+    boxes=None,
+    draw_box=True,
+    on_ori_img=False,
+    font_size=None,
+    fill_color=None,
+    draw_pos=None,
+    return_text_size=False,
+):
     """Draw boxes and texts on empty image, especially for Chinese.
 
     Args:
@@ -587,7 +546,7 @@ def draw_texts_by_pil(img,
     if on_ori_img:
         out_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     else:
-        out_img = Image.new('RGB', (w, h), color=(255, 255, 255))
+        out_img = Image.new("RGB", (w, h), color=(255, 255, 255))
     out_draw = ImageDraw.Draw(out_img)
 
     text_sizes = []
@@ -600,10 +559,10 @@ def draw_texts_by_pil(img,
         if draw_box:
             out_draw.line(box, fill=color, width=1)
         dirname, _ = os.path.split(os.path.abspath(__file__))
-        font_path = os.path.join(dirname, 'font.TTF')
+        font_path = os.path.join(dirname, "font.TTF")
         if not os.path.exists(font_path):
-            url = ('https://download.openmmlab.com/mmocr/data/font.TTF')
-            print(f'Downloading {url} ...')
+            url = "https://download.openmmlab.com/mmocr/data/font.TTF"
+            print(f"Downloading {url} ...")
             local_filename, _ = urllib.request.urlretrieve(url)
             shutil.move(local_filename, font_path)
         tmp_font_size = font_size
@@ -635,7 +594,7 @@ def is_contain_chinese(check_str):
     Return True if contains Chinese, else False.
     """
     for ch in check_str:
-        if u'\u4e00' <= ch <= u'\u9fff':
+        if "\u4e00" <= ch <= "\u9fff":
             return True
     return False
 
@@ -652,12 +611,12 @@ def det_recog_show_result(img, end2end_res, out_file=None):
     """
     img = mmcv.imread(img)
     boxes, texts = [], []
-    for res in end2end_res['result']:
-        boxes.append(res['box'])
-        texts.append(res['text'])
+    for res in end2end_res["result"]:
+        boxes.append(res["box"])
+        texts.append(res["text"])
     box_vis_img = draw_polygons(img, boxes)
 
-    if is_contain_chinese(''.join(texts)):
+    if is_contain_chinese("".join(texts)):
         text_vis_img = draw_texts_by_pil(img, texts, boxes)
     else:
         text_vis_img = draw_texts(img, texts, boxes)
@@ -705,10 +664,10 @@ def draw_edge_result(img, result, edge_thresh=0.5, keynode_thresh=0.5):
     new_h = vis_area_height
     pred_edge_img = np.ones((new_h, new_w, 3), dtype=np.uint8) * 255
 
-    nodes = result['nodes'].detach().cpu()
-    texts = result['img_metas'][0]['ori_texts']
-    num_nodes = result['nodes'].size(0)
-    edges = result['edges'].detach().cpu()[:, -1].view(num_nodes, num_nodes)
+    nodes = result["nodes"].detach().cpu()
+    texts = result["img_metas"][0]["ori_texts"]
+    num_nodes = result["nodes"].size(0)
+    edges = result["edges"].detach().cpu()[:, -1].view(num_nodes, num_nodes)
 
     # (i, j) will be a valid pair
     # either edge_score(node_i->node_j) > edge_thresh
@@ -724,13 +683,10 @@ def draw_edge_result(img, result, edge_thresh=0.5, keynode_thresh=0.5):
     #     nodes[n1, 2] is the score that this node is predicted as value.
     #     If nodes[n1, 1] > nodes[n1, 2], n1 will be the index of key,
     #     so that n2 will be the index of value.
-    result_pairs = [(n1, n2) if nodes[n1, 1] > nodes[n1, 2] else (n2, n1)
-                    for n1, n2 in zip(*pairs) if n1 < n2]
+    result_pairs = [(n1, n2) if nodes[n1, 1] > nodes[n1, 2] else (n2, n1) for n1, n2 in zip(*pairs) if n1 < n2]
 
     result_pairs.sort()
-    result_pairs_score = [
-        torch.max(edges[n1, n2], edges[n2, n1]) for n1, n2 in result_pairs
-    ]
+    result_pairs_score = [torch.max(edges[n1, n2], edges[n2, n1]) for n1, n2 in result_pairs]
 
     key_current_idx = -1
     pos_current = (-1, -1)
@@ -752,8 +708,7 @@ def draw_edge_result(img, result, edge_thresh=0.5, keynode_thresh=0.5):
             # enlarge blank area to show key-value info
             if newline_flag:
                 bbox_x1 += vis_area_width
-                tmp_img = np.ones(
-                    (new_h, new_w + vis_area_width, 3), dtype=np.uint8) * 255
+                tmp_img = np.ones((new_h, new_w + vis_area_width, 3), dtype=np.uint8) * 255
                 tmp_img[:new_h, :new_w] = pred_edge_img
                 pred_edge_img = tmp_img
                 new_w += vis_area_width
@@ -768,50 +723,58 @@ def draw_edge_result(img, result, edge_thresh=0.5, keynode_thresh=0.5):
             # draw text for a new key
             key_current_idx = key_idx
             pred_edge_img, text_sizes = draw_texts_by_pil(
-                pred_edge_img, [key_text],
+                pred_edge_img,
+                [key_text],
                 draw_box=False,
                 on_ori_img=True,
                 font_size=key_font_size,
                 fill_color=key_font_color,
                 draw_pos=[key_pos],
-                return_text_size=True)
-            pos_right_bottom = (key_pos[0] + text_sizes[0][0],
-                                key_pos[1] + text_sizes[0][1])
+                return_text_size=True,
+            )
+            pos_right_bottom = (key_pos[0] + text_sizes[0][0], key_pos[1] + text_sizes[0][1])
             pos_current = (pos_right_bottom[0] + 5, bbox_y1 + 10)
             pred_edge_img = cv2.arrowedLine(
-                pred_edge_img, (pos_right_bottom[0] + 5, bbox_y1 + 10),
-                (bbox_x1 + dist_key_to_value - 5, bbox_y1 + 10), arrow_color,
-                1)
-            score_pos_x = int(
-                (pos_right_bottom[0] + bbox_x1 + dist_key_to_value) / 2.)
+                pred_edge_img,
+                (pos_right_bottom[0] + 5, bbox_y1 + 10),
+                (bbox_x1 + dist_key_to_value - 5, bbox_y1 + 10),
+                arrow_color,
+                1,
+            )
+            score_pos_x = int((pos_right_bottom[0] + bbox_x1 + dist_key_to_value) / 2.0)
             score_pos_y = bbox_y1 + 10 - int(key_font_size * 0.3)
         else:
             # draw arrow from key to value
             if newline_flag:
-                tmp_img = np.ones((new_h + dist_pair_to_pair, new_w, 3),
-                                  dtype=np.uint8) * 255
+                tmp_img = np.ones((new_h + dist_pair_to_pair, new_w, 3), dtype=np.uint8) * 255
                 tmp_img[:new_h, :new_w] = pred_edge_img
                 pred_edge_img = tmp_img
                 new_h += dist_pair_to_pair
-            pred_edge_img = cv2.arrowedLine(pred_edge_img, pos_current,
-                                            (bbox_x1 + dist_key_to_value - 5,
-                                             bbox_y1 + 10), arrow_color, 1)
-            score_pos_x = int(
-                (pos_current[0] + bbox_x1 + dist_key_to_value - 5) / 2.)
-            score_pos_y = int((pos_current[1] + bbox_y1 + 10) / 2.)
+            pred_edge_img = cv2.arrowedLine(
+                pred_edge_img, pos_current, (bbox_x1 + dist_key_to_value - 5, bbox_y1 + 10), arrow_color, 1
+            )
+            score_pos_x = int((pos_current[0] + bbox_x1 + dist_key_to_value - 5) / 2.0)
+            score_pos_y = int((pos_current[1] + bbox_y1 + 10) / 2.0)
         # draw edge score
-        cv2.putText(pred_edge_img, '{:.2f}'.format(pair_score),
-                    (score_pos_x, score_pos_y), cv2.FONT_HERSHEY_COMPLEX, 0.4,
-                    score_color)
+        cv2.putText(
+            pred_edge_img,
+            "{:.2f}".format(pair_score),
+            (score_pos_x, score_pos_y),
+            cv2.FONT_HERSHEY_COMPLEX,
+            0.4,
+            score_color,
+        )
         # draw text for value
         pred_edge_img = draw_texts_by_pil(
-            pred_edge_img, [value_text],
+            pred_edge_img,
+            [value_text],
             draw_box=False,
             on_ori_img=True,
             font_size=value_font_size,
             fill_color=value_font_color,
             draw_pos=[value_pos],
-            return_text_size=False)
+            return_text_size=False,
+        )
         bbox_y1 += dist_pair_to_pair
         if bbox_y1 + dist_pair_to_pair >= new_h:
             newline_flag = True
@@ -819,13 +782,7 @@ def draw_edge_result(img, result, edge_thresh=0.5, keynode_thresh=0.5):
     return pred_edge_img
 
 
-def imshow_edge(img,
-                result,
-                boxes,
-                show=False,
-                win_name='',
-                wait_time=-1,
-                out_file=None):
+def imshow_edge(img, result, boxes, show=False, win_name="", wait_time=-1, out_file=None):
     """Display the prediction results of the nodes and edges of the KIE model.
 
     Args:
@@ -850,14 +807,9 @@ def imshow_edge(img,
     color_list = gen_color()
 
     for i, box in enumerate(boxes):
-        new_box = [[box[0], box[1]], [box[2], box[1]], [box[2], box[3]],
-                   [box[0], box[3]]]
+        new_box = [[box[0], box[1]], [box[2], box[1]], [box[2], box[3]], [box[0], box[3]]]
         Pts = np.array([new_box], np.int32)
-        cv2.polylines(
-            img, [Pts.reshape((-1, 1, 2))],
-            True,
-            color=color_list[i % len(color_list)],
-            thickness=1)
+        cv2.polylines(img, [Pts.reshape((-1, 1, 2))], True, color=color_list[i % len(color_list)], thickness=1)
 
     pred_img_h = h
     pred_img_w = w
@@ -871,18 +823,18 @@ def imshow_edge(img,
     vis_img[:, w:] = 255
 
     height_t, width_t = pred_edge_img.shape[:2]
-    vis_img[:height_t, w:(w + width_t)] = pred_edge_img
+    vis_img[:height_t, w : (w + width_t)] = pred_edge_img
 
     if show:
         mmcv.imshow(vis_img, win_name, wait_time)
     if out_file is not None:
         mmcv.imwrite(vis_img, out_file)
         res_dic = {
-            'boxes': boxes,
-            'nodes': result['nodes'].detach().cpu(),
-            'edges': result['edges'].detach().cpu(),
-            'metas': result['img_metas'][0]
+            "boxes": boxes,
+            "nodes": result["nodes"].detach().cpu(),
+            "edges": result["edges"].detach().cpu(),
+            "metas": result["img_metas"][0],
         }
-        mmcv.dump(res_dic, f'{out_file}_res.pkl')
+        mmcv.dump(res_dic, f"{out_file}_res.pkl")
 
     return vis_img

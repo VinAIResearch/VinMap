@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmocr.models.builder import DETECTORS
+
 from .single_stage_text_detector import SingleStageTextDetector
 from .text_detector_mixin import TextDetectorMixin
 
@@ -12,18 +13,18 @@ class DRRG(TextDetectorMixin, SingleStageTextDetector):
     [https://arxiv.org/abs/2003.07493]
     """
 
-    def __init__(self,
-                 backbone,
-                 neck,
-                 bbox_head,
-                 train_cfg=None,
-                 test_cfg=None,
-                 pretrained=None,
-                 show_score=False,
-                 init_cfg=None):
-        SingleStageTextDetector.__init__(self, backbone, neck, bbox_head,
-                                         train_cfg, test_cfg, pretrained,
-                                         init_cfg)
+    def __init__(
+        self,
+        backbone,
+        neck,
+        bbox_head,
+        train_cfg=None,
+        test_cfg=None,
+        pretrained=None,
+        show_score=False,
+        init_cfg=None,
+    ):
+        SingleStageTextDetector.__init__(self, backbone, neck, bbox_head, train_cfg, test_cfg, pretrained, init_cfg)
         TextDetectorMixin.__init__(self, show_score)
 
     def forward_train(self, img, img_metas, **kwargs):
@@ -40,7 +41,7 @@ class DRRG(TextDetectorMixin, SingleStageTextDetector):
             dict[str, Tensor]: A dictionary of loss components.
         """
         x = self.extract_feat(img)
-        gt_comp_attribs = kwargs.pop('gt_comp_attribs')
+        gt_comp_attribs = kwargs.pop("gt_comp_attribs")
         preds = self.bbox_head(x, gt_comp_attribs)
         losses = self.bbox_head.loss(preds, **kwargs)
         return losses

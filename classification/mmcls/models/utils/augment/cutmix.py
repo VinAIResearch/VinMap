@@ -23,12 +23,7 @@ class BaseCutMixLayer(object, metaclass=ABCMeta):
             clipped by image borders. Default to True
     """
 
-    def __init__(self,
-                 alpha,
-                 num_classes,
-                 prob=1.0,
-                 cutmix_minmax=None,
-                 correct_lam=True):
+    def __init__(self, alpha, num_classes, prob=1.0, cutmix_minmax=None, correct_lam=True):
         super(BaseCutMixLayer, self).__init__()
 
         assert isinstance(alpha, float) and alpha > 0
@@ -55,21 +50,15 @@ class BaseCutMixLayer(object, metaclass=ABCMeta):
         """
         assert len(self.cutmix_minmax) == 2
         img_h, img_w = img_shape[-2:]
-        cut_h = np.random.randint(
-            int(img_h * self.cutmix_minmax[0]),
-            int(img_h * self.cutmix_minmax[1]),
-            size=count)
-        cut_w = np.random.randint(
-            int(img_w * self.cutmix_minmax[0]),
-            int(img_w * self.cutmix_minmax[1]),
-            size=count)
+        cut_h = np.random.randint(int(img_h * self.cutmix_minmax[0]), int(img_h * self.cutmix_minmax[1]), size=count)
+        cut_w = np.random.randint(int(img_w * self.cutmix_minmax[0]), int(img_w * self.cutmix_minmax[1]), size=count)
         yl = np.random.randint(0, img_h - cut_h, size=count)
         xl = np.random.randint(0, img_w - cut_w, size=count)
         yu = yl + cut_h
         xu = xl + cut_w
         return yl, yu, xl, xu
 
-    def rand_bbox(self, img_shape, lam, margin=0., count=None):
+    def rand_bbox(self, img_shape, lam, margin=0.0, count=None):
         """Standard CutMix bounding-box that generates a random square bbox
         based on lambda value. This implementation includes support for
         enforcing a border margin as percent of bbox dimensions.
@@ -107,7 +96,7 @@ class BaseCutMixLayer(object, metaclass=ABCMeta):
             yl, yu, xl, xu = self.rand_bbox(img_shape, lam, count=count)
         if self.correct_lam or self.cutmix_minmax is not None:
             bbox_area = (yu - yl) * (xu - xl)
-            lam = 1. - bbox_area / float(img_shape[-2] * img_shape[-1])
+            lam = 1.0 - bbox_area / float(img_shape[-2] * img_shape[-1])
         return (yl, yu, xl, xu), lam
 
     @abstractmethod
@@ -115,7 +104,7 @@ class BaseCutMixLayer(object, metaclass=ABCMeta):
         pass
 
 
-@AUGMENT.register_module(name='BatchCutMix')
+@AUGMENT.register_module(name="BatchCutMix")
 class BatchCutMixLayer(BaseCutMixLayer):
     r"""CutMix layer for a batch of data.
 
@@ -163,12 +152,9 @@ class BatchCutMixLayer(BaseCutMixLayer):
         batch_size = img.size(0)
         index = torch.randperm(batch_size)
 
-        (bby1, bby2, bbx1,
-         bbx2), lam = self.cutmix_bbox_and_lam(img.shape, lam)
-        img[:, :, bby1:bby2, bbx1:bbx2] = \
-            img[index, :, bby1:bby2, bbx1:bbx2]
-        mixed_gt_label = lam * one_hot_gt_label + (
-            1 - lam) * one_hot_gt_label[index, :]
+        (bby1, bby2, bbx1, bbx2), lam = self.cutmix_bbox_and_lam(img.shape, lam)
+        img[:, :, bby1:bby2, bbx1:bbx2] = img[index, :, bby1:bby2, bbx1:bbx2]
+        mixed_gt_label = lam * one_hot_gt_label + (1 - lam) * one_hot_gt_label[index, :]
         return img, mixed_gt_label
 
     def __call__(self, img, gt_label):

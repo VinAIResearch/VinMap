@@ -14,9 +14,7 @@
 
 # This code is refer from: https://github.com/viig99/LS-ACELoss
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import paddle
 import paddle.nn as nn
@@ -25,19 +23,14 @@ import paddle.nn as nn
 class ACELoss(nn.Layer):
     def __init__(self, **kwargs):
         super().__init__()
-        self.loss_func = nn.CrossEntropyLoss(
-            weight=None,
-            ignore_index=0,
-            reduction='none',
-            soft_label=True,
-            axis=-1)
+        self.loss_func = nn.CrossEntropyLoss(weight=None, ignore_index=0, reduction="none", soft_label=True, axis=-1)
 
     def __call__(self, predicts, batch):
         if isinstance(predicts, (list, tuple)):
             predicts = predicts[-1]
 
         B, N = predicts.shape[:2]
-        div = paddle.to_tensor([N]).astype('float32')
+        div = paddle.to_tensor([N]).astype("float32")
 
         predicts = nn.functional.softmax(predicts, axis=-1)
         aggregation_preds = paddle.sum(predicts, axis=1)

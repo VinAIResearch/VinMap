@@ -2,10 +2,9 @@
 import torch
 import torch.nn.functional as F
 from mmdet.core import BitmapMasks
-from torch import nn
-
 from mmocr.models.builder import LOSSES
 from mmocr.utils import check_argument
+from torch import nn
 
 
 @LOSSES.register_module()
@@ -43,21 +42,18 @@ class DRRGLoss(nn.Module):
         positive_count = int(positive.float().sum())
         gt = gt.float()
         if positive_count > 0:
-            loss = F.binary_cross_entropy(pred, gt, reduction='none')
+            loss = F.binary_cross_entropy(pred, gt, reduction="none")
             positive_loss = torch.sum(loss * positive.float())
             negative_loss = loss * negative.float()
-            negative_count = min(
-                int(negative.float().sum()),
-                int(positive_count * self.ohem_ratio))
+            negative_count = min(int(negative.float().sum()), int(positive_count * self.ohem_ratio))
         else:
             positive_loss = torch.tensor(0.0, device=pred.device)
-            loss = F.binary_cross_entropy(pred, gt, reduction='none')
+            loss = F.binary_cross_entropy(pred, gt, reduction="none")
             negative_loss = loss * negative.float()
             negative_count = 100
         negative_loss, _ = torch.topk(negative_loss.view(-1), negative_count)
 
-        balance_loss = (positive_loss + torch.sum(negative_loss)) / (
-            float(positive_count + negative_count) + 1e-5)
+        balance_loss = (positive_loss + torch.sum(negative_loss)) / (float(positive_count + negative_count) + 1e-5)
 
         return balance_loss
 
@@ -107,19 +103,26 @@ class DRRGLoss(nn.Module):
                 # hxw
                 mask_sz = mask.shape
                 # left, right, top, bottom
-                pad = [
-                    0, target_sz[1] - mask_sz[1], 0, target_sz[0] - mask_sz[0]
-                ]
-                mask = F.pad(mask, pad, mode='constant', value=0)
+                pad = [0, target_sz[1] - mask_sz[1], 0, target_sz[0] - mask_sz[0]]
+                mask = F.pad(mask, pad, mode="constant", value=0)
                 kernel.append(mask)
             kernel = torch.stack(kernel)
             results.append(kernel)
 
         return results
 
-    def forward(self, preds, downsample_ratio, gt_text_mask,
-                gt_center_region_mask, gt_mask, gt_top_height_map,
-                gt_bot_height_map, gt_sin_map, gt_cos_map):
+    def forward(
+        self,
+        preds,
+        downsample_ratio,
+        gt_text_mask,
+        gt_center_region_mask,
+        gt_mask,
+        gt_top_height_map,
+        gt_bot_height_map,
+        gt_sin_map,
+        gt_cos_map,
+    ):
         """Compute Drrg loss.
 
         Args:
@@ -163,13 +166,13 @@ class DRRGLoss(nn.Module):
 
         # bitmask 2 tensor
         mapping = {
-            'gt_text_mask': gt_text_mask,
-            'gt_center_region_mask': gt_center_region_mask,
-            'gt_mask': gt_mask,
-            'gt_top_height_map': gt_top_height_map,
-            'gt_bot_height_map': gt_bot_height_map,
-            'gt_sin_map': gt_sin_map,
-            'gt_cos_map': gt_cos_map
+            "gt_text_mask": gt_text_mask,
+            "gt_center_region_mask": gt_center_region_mask,
+            "gt_mask": gt_mask,
+            "gt_top_height_map": gt_top_height_map,
+            "gt_bot_height_map": gt_bot_height_map,
+            "gt_sin_map": gt_sin_map,
+            "gt_cos_map": gt_cos_map,
         }
         gt = {}
         for key, value in mapping.items():
@@ -179,7 +182,7 @@ class DRRGLoss(nn.Module):
             else:
                 gt[key] = [item.rescale(downsample_ratio) for item in gt[key]]
                 gt[key] = self.bitmasks2tensor(gt[key], feature_sz[2:])
-                if key in ['gt_top_height_map', 'gt_bot_height_map']:
+                if key in ["gt_top_height_map", "gt_bot_height_map"]:
                     gt[key] = [item * downsample_ratio for item in gt[key]]
             gt[key] = [item.to(device) for item in gt[key]]
 
@@ -187,54 +190,41 @@ class DRRGLoss(nn.Module):
         pred_sin_map = pred_sin_map * scale
         pred_cos_map = pred_cos_map * scale
 
-        loss_text = self.balance_bce_loss(
-            torch.sigmoid(pred_text_region), gt['gt_text_mask'][0],
-            gt['gt_mask'][0])
+        loss_text = self.balance_bce_loss(torch.sigmoid(pred_text_region), gt["gt_text_mask"][0], gt["gt_mask"][0])
 
-        text_mask = (gt['gt_text_mask'][0] * gt['gt_mask'][0]).float()
-        negative_text_mask = ((1 - gt['gt_text_mask'][0]) *
-                              gt['gt_mask'][0]).float()
+        text_mask = (gt["gt_text_mask"][0] * gt["gt_mask"][0]).float()
+        negative_text_mask = ((1 - gt["gt_text_mask"][0]) * gt["gt_mask"][0]).float()
         loss_center_map = F.binary_cross_entropy(
-            torch.sigmoid(pred_center_region),
-            gt['gt_center_region_mask'][0].float(),
-            reduction='none')
+            torch.sigmoid(pred_center_region), gt["gt_center_region_mask"][0].float(), reduction="none"
+        )
         if int(text_mask.sum()) > 0:
-            loss_center_positive = torch.sum(
-                loss_center_map * text_mask) / torch.sum(text_mask)
+            loss_center_positive = torch.sum(loss_center_map * text_mask) / torch.sum(text_mask)
         else:
             loss_center_positive = torch.tensor(0.0, device=device)
-        loss_center_negative = torch.sum(
-            loss_center_map *
-            negative_text_mask) / torch.sum(negative_text_mask)
+        loss_center_negative = torch.sum(loss_center_map * negative_text_mask) / torch.sum(negative_text_mask)
         loss_center = loss_center_positive + 0.5 * loss_center_negative
 
-        center_mask = (gt['gt_center_region_mask'][0] *
-                       gt['gt_mask'][0]).float()
+        center_mask = (gt["gt_center_region_mask"][0] * gt["gt_mask"][0]).float()
         if int(center_mask.sum()) > 0:
             map_sz = pred_top_height_map.size()
             ones = torch.ones(map_sz, dtype=torch.float, device=device)
             loss_top = F.smooth_l1_loss(
-                pred_top_height_map / (gt['gt_top_height_map'][0] + 1e-2),
-                ones,
-                reduction='none')
+                pred_top_height_map / (gt["gt_top_height_map"][0] + 1e-2), ones, reduction="none"
+            )
             loss_bot = F.smooth_l1_loss(
-                pred_bot_height_map / (gt['gt_bot_height_map'][0] + 1e-2),
-                ones,
-                reduction='none')
-            gt_height = (
-                gt['gt_top_height_map'][0] + gt['gt_bot_height_map'][0])
-            loss_height = torch.sum(
-                (torch.log(gt_height + 1) *
-                 (loss_top + loss_bot)) * center_mask) / torch.sum(center_mask)
+                pred_bot_height_map / (gt["gt_bot_height_map"][0] + 1e-2), ones, reduction="none"
+            )
+            gt_height = gt["gt_top_height_map"][0] + gt["gt_bot_height_map"][0]
+            loss_height = torch.sum((torch.log(gt_height + 1) * (loss_top + loss_bot)) * center_mask) / torch.sum(
+                center_mask
+            )
 
             loss_sin = torch.sum(
-                F.smooth_l1_loss(
-                    pred_sin_map, gt['gt_sin_map'][0], reduction='none') *
-                center_mask) / torch.sum(center_mask)
+                F.smooth_l1_loss(pred_sin_map, gt["gt_sin_map"][0], reduction="none") * center_mask
+            ) / torch.sum(center_mask)
             loss_cos = torch.sum(
-                F.smooth_l1_loss(
-                    pred_cos_map, gt['gt_cos_map'][0], reduction='none') *
-                center_mask) / torch.sum(center_mask)
+                F.smooth_l1_loss(pred_cos_map, gt["gt_cos_map"][0], reduction="none") * center_mask
+            ) / torch.sum(center_mask)
         else:
             loss_height = torch.tensor(0.0, device=device)
             loss_sin = torch.tensor(0.0, device=device)
@@ -248,6 +238,7 @@ class DRRGLoss(nn.Module):
             loss_height=loss_height,
             loss_sin=loss_sin,
             loss_cos=loss_cos,
-            loss_gcn=loss_gcn)
+            loss_gcn=loss_gcn,
+        )
 
         return results

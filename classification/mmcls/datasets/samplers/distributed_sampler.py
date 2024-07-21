@@ -1,21 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
-from torch.utils.data import DistributedSampler as _DistributedSampler
-
 from mmcls.core.utils import sync_random_seed
 from mmcls.datasets import SAMPLERS
+from torch.utils.data import DistributedSampler as _DistributedSampler
 
 
 @SAMPLERS.register_module()
 class DistributedSampler(_DistributedSampler):
 
-    def __init__(self,
-                 dataset,
-                 num_replicas=None,
-                 rank=None,
-                 shuffle=True,
-                 round_up=True,
-                 seed=0):
+    def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True, round_up=True, seed=0):
         super().__init__(dataset, num_replicas=num_replicas, rank=rank)
         self.shuffle = shuffle
         self.round_up = round_up
@@ -47,13 +40,11 @@ class DistributedSampler(_DistributedSampler):
 
         # add extra samples to make it evenly divisible
         if self.round_up:
-            indices = (
-                indices *
-                int(self.total_size / len(indices) + 1))[:self.total_size]
+            indices = (indices * int(self.total_size / len(indices) + 1))[: self.total_size]
         assert len(indices) == self.total_size
 
         # subsample
-        indices = indices[self.rank:self.total_size:self.num_replicas]
+        indices = indices[self.rank : self.total_size : self.num_replicas]
         if self.round_up:
             assert len(indices) == self.num_samples
 

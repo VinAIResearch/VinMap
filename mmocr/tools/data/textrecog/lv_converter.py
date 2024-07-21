@@ -29,41 +29,31 @@ def convert_annotations(root_path, split, format):
     assert isinstance(root_path, str)
     assert isinstance(split, str)
 
-    if format == 'txt':  # LV has already provided txt format annos
+    if format == "txt":  # LV has already provided txt format annos
         return
 
-    if format == 'jsonl':
+    if format == "jsonl":
         lines = []
-        with open(
-                osp.join(root_path, f'{split}_label.txt'),
-                'r',
-                encoding='"utf-8-sig') as f:
+        with open(osp.join(root_path, f"{split}_label.txt"), "r", encoding='"utf-8-sig') as f:
             annos = f.readlines()
         for anno in annos:
             if anno:
                 # Text may contain spaces
-                dst_img_name, word = anno.split('png ')
-                word = word.strip('\n')
-                lines.append(
-                    json.dumps({
-                        'filename': dst_img_name + 'png',
-                        'text': word
-                    }))
+                dst_img_name, word = anno.split("png ")
+                word = word.strip("\n")
+                lines.append(json.dumps({"filename": dst_img_name + "png", "text": word}))
     else:
         raise NotImplementedError
 
-    list_to_file(osp.join(root_path, f'{split}_label.{format}'), lines)
+    list_to_file(osp.join(root_path, f"{split}_label.{format}"), lines)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training and test set of Lecture Video DB')
-    parser.add_argument('root_path', help='Root dir path of Lecture Video DB')
+    parser = argparse.ArgumentParser(description="Generate training and test set of Lecture Video DB")
+    parser.add_argument("root_path", help="Root dir path of Lecture Video DB")
     parser.add_argument(
-        '--format',
-        default='jsonl',
-        help='Use jsonl or string to format annotations',
-        choices=['jsonl', 'txt'])
+        "--format", default="jsonl", help="Use jsonl or string to format annotations", choices=["jsonl", "txt"]
+    )
     args = parser.parse_args()
     return args
 
@@ -72,10 +62,10 @@ def main():
     args = parse_args()
     root_path = args.root_path
 
-    for split in ['train', 'val', 'test']:
+    for split in ["train", "val", "test"]:
         convert_annotations(root_path, split, args.format)
-        print(f'{split} split converted.')
+        print(f"{split} split converted.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

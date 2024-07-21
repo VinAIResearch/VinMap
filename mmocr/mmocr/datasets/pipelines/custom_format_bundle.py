@@ -3,7 +3,6 @@ import numpy as np
 from mmcv.parallel import DataContainer as DC
 from mmdet.datasets.builder import PIPELINES
 from mmdet.datasets.pipelines.formatting import DefaultFormatBundle
-
 from mmocr.core.visualize import overlay_mask_img, show_feature
 
 
@@ -25,10 +24,7 @@ class CustomFormatBundle(DefaultFormatBundle):
         visualize (dict): If flag=True, visualize gt mask for debugging.
     """
 
-    def __init__(self,
-                 keys=[],
-                 call_super=True,
-                 visualize=dict(flag=False, boundary_key=None)):
+    def __init__(self, keys=[], call_super=True, visualize=dict(flag=False, boundary_key=None)):
 
         super().__init__()
         self.visualize = visualize
@@ -37,17 +33,17 @@ class CustomFormatBundle(DefaultFormatBundle):
 
     def __call__(self, results):
 
-        if self.visualize['flag']:
-            img = results['img'].astype(np.uint8)
-            boundary_key = self.visualize['boundary_key']
+        if self.visualize["flag"]:
+            img = results["img"].astype(np.uint8)
+            boundary_key = self.visualize["boundary_key"]
             if boundary_key is not None:
                 img = overlay_mask_img(img, results[boundary_key].masks[0])
 
             features = [img]
-            names = ['img']
+            names = ["img"]
             to_uint8 = [1]
 
-            for k in results['mask_fields']:
+            for k in results["mask_fields"]:
                 for iter in range(len(results[k].masks)):
                     features.append(results[k].masks[iter])
                     names.append(k + str(iter))

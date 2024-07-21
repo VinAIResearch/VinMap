@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch.nn as nn
 from mmcv.runner import BaseModule, Sequential
-
 from mmocr.models.builder import BACKBONES
 
 
@@ -15,13 +14,12 @@ class VeryDeepVgg(BaseModule):
         input_channels (int): Number of channels of input image tensor.
     """
 
-    def __init__(self,
-                 leaky_relu=True,
-                 input_channels=3,
-                 init_cfg=[
-                     dict(type='Xavier', layer='Conv2d'),
-                     dict(type='Uniform', layer='BatchNorm2d')
-                 ]):
+    def __init__(
+        self,
+        leaky_relu=True,
+        input_channels=3,
+        init_cfg=[dict(type="Xavier", layer="Conv2d"), dict(type="Uniform", layer="BatchNorm2d")],
+    ):
         super().__init__(init_cfg=init_cfg)
 
         ks = [3, 3, 3, 3, 3, 3, 2]
@@ -37,28 +35,24 @@ class VeryDeepVgg(BaseModule):
         def conv_relu(i, batch_normalization=False):
             n_in = input_channels if i == 0 else nm[i - 1]
             n_out = nm[i]
-            cnn.add_module('conv{0}'.format(i),
-                           nn.Conv2d(n_in, n_out, ks[i], ss[i], ps[i]))
+            cnn.add_module("conv{0}".format(i), nn.Conv2d(n_in, n_out, ks[i], ss[i], ps[i]))
             if batch_normalization:
-                cnn.add_module('batchnorm{0}'.format(i), nn.BatchNorm2d(n_out))
+                cnn.add_module("batchnorm{0}".format(i), nn.BatchNorm2d(n_out))
             if leaky_relu:
-                cnn.add_module('relu{0}'.format(i),
-                               nn.LeakyReLU(0.2, inplace=True))
+                cnn.add_module("relu{0}".format(i), nn.LeakyReLU(0.2, inplace=True))
             else:
-                cnn.add_module('relu{0}'.format(i), nn.ReLU(True))
+                cnn.add_module("relu{0}".format(i), nn.ReLU(True))
 
         conv_relu(0)
-        cnn.add_module('pooling{0}'.format(0), nn.MaxPool2d(2, 2))  # 64x16x64
+        cnn.add_module("pooling{0}".format(0), nn.MaxPool2d(2, 2))  # 64x16x64
         conv_relu(1)
-        cnn.add_module('pooling{0}'.format(1), nn.MaxPool2d(2, 2))  # 128x8x32
+        cnn.add_module("pooling{0}".format(1), nn.MaxPool2d(2, 2))  # 128x8x32
         conv_relu(2, True)
         conv_relu(3)
-        cnn.add_module('pooling{0}'.format(2),
-                       nn.MaxPool2d((2, 2), (2, 1), (0, 1)))  # 256x4x16
+        cnn.add_module("pooling{0}".format(2), nn.MaxPool2d((2, 2), (2, 1), (0, 1)))  # 256x4x16
         conv_relu(4, True)
         conv_relu(5)
-        cnn.add_module('pooling{0}'.format(3),
-                       nn.MaxPool2d((2, 2), (2, 1), (0, 1)))  # 512x2x16
+        cnn.add_module("pooling{0}".format(3), nn.MaxPool2d((2, 2), (2, 1), (0, 1)))  # 512x2x16
         conv_relu(6, True)  # 512x1x16
 
         self.cnn = cnn

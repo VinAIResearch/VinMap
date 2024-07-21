@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from mmocr.models.builder import HEADS
+
 from . import PANHead
 
 
@@ -18,17 +19,18 @@ class PSEHead(PANHead):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 downsample_ratio=0.25,
-                 loss=dict(type='PSELoss'),
-                 postprocessor=dict(
-                     type='PSEPostprocessor', text_repr_type='poly'),
-                 train_cfg=None,
-                 test_cfg=None,
-                 init_cfg=None,
-                 **kwargs):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        downsample_ratio=0.25,
+        loss=dict(type="PSELoss"),
+        postprocessor=dict(type="PSEPostprocessor", text_repr_type="poly"),
+        train_cfg=None,
+        test_cfg=None,
+        init_cfg=None,
+        **kwargs
+    ):
 
         super().__init__(
             in_channels=in_channels,
@@ -39,4 +41,5 @@ class PSEHead(PANHead):
             train_cfg=train_cfg,
             test_cfg=test_cfg,
             init_cfg=init_cfg,
-            **kwargs)
+            **kwargs
+        )

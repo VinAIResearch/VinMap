@@ -1,9 +1,11 @@
-import sys
 import os
-import lmdb # install lmdb by "pip install lmdb"
+import sys
+
 import cv2
+import lmdb  # install lmdb by "pip install lmdb"
 import numpy as np
 from tqdm import tqdm
+
 
 def checkImageIsValid(imageBin):
     isvalid = True
@@ -22,10 +24,12 @@ def checkImageIsValid(imageBin):
 
     return isvalid, imgH, imgW
 
+
 def writeCache(env, cache):
     with env.begin(write=True) as txn:
         for k, v in cache.items():
             txn.put(k.encode(), v)
+
 
 def createDataset(outputPath, root_dir, annotation_path):
     """
@@ -39,28 +43,28 @@ def createDataset(outputPath, root_dir, annotation_path):
     """
 
     annotation_path = os.path.join(root_dir, annotation_path)
-    with open(annotation_path, 'r') as ann_file:
+    with open(annotation_path, "r") as ann_file:
         lines = ann_file.readlines()
-        annotations = [l.strip().split(' ') for l in lines]
+        annotations = [l.strip().split(" ") for l in lines]
 
     nSamples = len(annotations)
     env = lmdb.open(outputPath, map_size=1099511627776)
     cache = {}
     cnt = 0
     error = 0
-    
-    pbar = tqdm(range(nSamples), ncols = 100, desc='Create {}'.format(outputPath)) 
+
+    pbar = tqdm(range(nSamples), ncols=100, desc="Create {}".format(outputPath))
     for i in pbar:
         print(annotations[i])
         imageFile, label = annotations[i]
-        #imagePath = os.path.join(root_dir, imageFile)
-        imagePath=imageFile
-        #print(imagePath)
+        # imagePath = os.path.join(root_dir, imageFile)
+        imagePath = imageFile
+        # print(imagePath)
         if not os.path.exists(imagePath):
             error += 1
             continue
-        
-        with open(imagePath, 'rb') as f:
+
+        with open(imagePath, "rb") as f:
             imageBin = f.read()
         isvalid, imgH, imgW = checkImageIsValid(imageBin)
 
@@ -68,10 +72,10 @@ def createDataset(outputPath, root_dir, annotation_path):
             error += 1
             continue
 
-        imageKey = 'image-%09d' % cnt
-        labelKey = 'label-%09d' % cnt
-        pathKey = 'path-%09d' % cnt
-        dimKey = 'dim-%09d' % cnt
+        imageKey = "image-%09d" % cnt
+        labelKey = "label-%09d" % cnt
+        pathKey = "path-%09d" % cnt
+        dimKey = "dim-%09d" % cnt
 
         cache[imageKey] = imageBin
         cache[labelKey] = label.encode()
@@ -84,12 +88,11 @@ def createDataset(outputPath, root_dir, annotation_path):
             writeCache(env, cache)
             cache = {}
 
-    nSamples = cnt-1
-    cache['num-samples'] = str(nSamples).encode()
+    nSamples = cnt - 1
+    cache["num-samples"] = str(nSamples).encode()
     writeCache(env, cache)
 
     if error > 0:
-        print('Remove {} invalid images'.format(error))
-    print('Created dataset with %d samples' % nSamples)
+        print("Remove {} invalid images".format(error))
+    print("Created dataset with %d samples" % nSamples)
     sys.stdout.flush()
-

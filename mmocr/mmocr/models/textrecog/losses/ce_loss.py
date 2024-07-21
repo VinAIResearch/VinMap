@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch.nn as nn
-
 from mmocr.models.builder import LOSSES
 
 
@@ -19,22 +18,18 @@ class CELoss(nn.Module):
             sequence will also be removed to be aligned with the target length.
     """
 
-    def __init__(self,
-                 ignore_index=-1,
-                 reduction='none',
-                 ignore_first_char=False):
+    def __init__(self, ignore_index=-1, reduction="none", ignore_first_char=False):
         super().__init__()
         assert isinstance(ignore_index, int)
         assert isinstance(reduction, str)
-        assert reduction in ['none', 'mean', 'sum']
+        assert reduction in ["none", "mean", "sum"]
         assert isinstance(ignore_first_char, bool)
 
-        self.loss_ce = nn.CrossEntropyLoss(
-            ignore_index=ignore_index, reduction=reduction)
+        self.loss_ce = nn.CrossEntropyLoss(ignore_index=ignore_index, reduction=reduction)
         self.ignore_first_char = ignore_first_char
 
     def format(self, outputs, targets_dict):
-        targets = targets_dict['padded_targets']
+        targets = targets_dict["padded_targets"]
         if self.ignore_first_char:
             targets = targets[:, 1:].contiguous()
             outputs = outputs[:, :-1, :]
@@ -79,11 +74,11 @@ class SARLoss(CELoss):
         SARLoss assumes that the first input token is always `<SOS>`.
     """
 
-    def __init__(self, ignore_index=-1, reduction='mean', **kwargs):
+    def __init__(self, ignore_index=-1, reduction="mean", **kwargs):
         super().__init__(ignore_index, reduction)
 
     def format(self, outputs, targets_dict):
-        targets = targets_dict['padded_targets']
+        targets = targets_dict["padded_targets"]
         # targets[0, :], [start_idx, idx1, idx2, ..., end_idx, pad_idx...]
         # outputs[0, :, 0], [idx1, idx2, ..., end_idx, ...]
 
@@ -110,11 +105,7 @@ class TFLoss(CELoss):
         TFLoss assumes that the first input token is always `<SOS>`.
     """
 
-    def __init__(self,
-                 ignore_index=-1,
-                 reduction='none',
-                 flatten=True,
-                 **kwargs):
+    def __init__(self, ignore_index=-1, reduction="none", flatten=True, **kwargs):
         super().__init__(ignore_index, reduction)
         assert isinstance(flatten, bool)
 
@@ -122,7 +113,7 @@ class TFLoss(CELoss):
 
     def format(self, outputs, targets_dict):
         outputs = outputs[:, :-1, :].contiguous()
-        targets = targets_dict['padded_targets']
+        targets = targets_dict["padded_targets"]
         targets = targets[:, 1:].contiguous()
         if self.flatten:
             outputs = outputs.view(-1, outputs.size(-1))

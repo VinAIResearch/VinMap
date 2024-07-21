@@ -5,7 +5,6 @@ import os.path as osp
 import xml.etree.ElementTree as ET
 
 import mmcv
-
 from mmocr.utils import convert_annotations
 
 
@@ -28,10 +27,9 @@ def collect_files(data_dir):
             if not osp.isdir(crt_dir):
                 continue
             for crt_file in os.listdir(crt_dir):
-                if crt_file.endswith('xml'):
+                if crt_file.endswith("xml"):
                     ann_path = osp.join(crt_dir, crt_file)
-                    img_path = osp.join(crt_dir,
-                                        crt_file.replace('xml', 'png'))
+                    img_path = osp.join(crt_dir, crt_file.replace("xml", "png"))
                     if os.path.exists(img_path):
                         ann_list.append(ann_path)
                         imgs_list.append(img_path)
@@ -39,8 +37,8 @@ def collect_files(data_dir):
                         continue
 
     files = list(zip(imgs_list, ann_list))
-    assert len(files), f'No images found in {data_dir}'
-    print(f'Loaded {len(files)} images from {data_dir}')
+    assert len(files), f"No images found in {data_dir}"
+    print(f"Loaded {len(files)} images from {data_dir}")
 
     return files
 
@@ -59,8 +57,7 @@ def collect_annotations(files, nproc=1):
     assert isinstance(nproc, int)
 
     if nproc > 1:
-        images = mmcv.track_parallel_progress(
-            load_img_info, files, nproc=nproc)
+        images = mmcv.track_parallel_progress(load_img_info, files, nproc=nproc)
     else:
         images = mmcv.track_progress(load_img_info, files)
 
@@ -79,19 +76,16 @@ def load_img_info(files):
     assert isinstance(files, tuple)
 
     img_file, gt_file = files
-    assert osp.basename(gt_file).split('.')[0] == osp.basename(img_file).split(
-        '.')[0]
+    assert osp.basename(gt_file).split(".")[0] == osp.basename(img_file).split(".")[0]
     # read imgs while ignoring orientations
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
     img_file = os.path.split(img_file)[-1]
 
     img_info = dict(
-        file_name=img_file,
-        height=img.shape[0],
-        width=img.shape[1],
-        segm_file=osp.join(osp.basename(gt_file)))
+        file_name=img_file, height=img.shape[0], width=img.shape[1], segm_file=osp.join(osp.basename(gt_file))
+    )
 
-    if osp.splitext(gt_file)[1] == '.xml':
+    if osp.splitext(gt_file)[1] == ".xml":
         img_info = load_xml_info(gt_file, img_info)
     else:
         raise NotImplementedError
@@ -129,22 +123,17 @@ def load_xml_info(gt_file, img_info):
     obj = ET.parse(gt_file)
     root = obj.getroot()
     anno_info = []
-    for obj in root.iter('object'):
-        x = max(0, int(obj.find('bndbox').find('xmin').text))
-        y = max(0, int(obj.find('bndbox').find('ymin').text))
-        xmax = int(obj.find('bndbox').find('xmax').text)
-        ymax = int(obj.find('bndbox').find('ymax').text)
+    for obj in root.iter("object"):
+        x = max(0, int(obj.find("bndbox").find("xmin").text))
+        y = max(0, int(obj.find("bndbox").find("ymin").text))
+        xmax = int(obj.find("bndbox").find("xmax").text)
+        ymax = int(obj.find("bndbox").find("ymax").text)
 
         w, h = abs(xmax - x), abs(ymax - y)
         bbox = [x, y, w, h]
         segmentation = [x, y, x + w, y, x + w, y + h, x, y + h]
 
-        anno = dict(
-            iscrowd=0,
-            category_id=1,
-            bbox=bbox,
-            area=w * h,
-            segmentation=[segmentation])
+        anno = dict(iscrowd=0, category_id=1, bbox=bbox, area=w * h, segmentation=[segmentation])
         anno_info.append(anno)
 
     img_info.update(anno_info=anno_info)
@@ -153,11 +142,9 @@ def load_xml_info(gt_file, img_info):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training, val and test set of Lecture Video DB ')
-    parser.add_argument('root_path', help='Root dir path of Lecture Video DB')
-    parser.add_argument(
-        '--nproc', default=1, type=int, help='number of process')
+    parser = argparse.ArgumentParser(description="Generate training, val and test set of Lecture Video DB ")
+    parser.add_argument("root_path", help="Root dir path of Lecture Video DB")
+    parser.add_argument("--nproc", default=1, type=int, help="number of process")
     args = parser.parse_args()
     return args
 
@@ -166,15 +153,13 @@ def main():
     args = parse_args()
     root_path = args.root_path
 
-    for split in ['train', 'val', 'test']:
-        print(f'Processing {split} set...')
-        with mmcv.Timer(print_tmpl='It takes {}s to convert LV annotation'):
-            files = collect_files(osp.join(root_path, 'imgs', split))
+    for split in ["train", "val", "test"]:
+        print(f"Processing {split} set...")
+        with mmcv.Timer(print_tmpl="It takes {}s to convert LV annotation"):
+            files = collect_files(osp.join(root_path, "imgs", split))
             image_infos = collect_annotations(files, nproc=args.nproc)
-            convert_annotations(
-                image_infos, osp.join(root_path,
-                                      'instances_' + split + '.json'))
+            convert_annotations(image_infos, osp.join(root_path, "instances_" + split + ".json"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

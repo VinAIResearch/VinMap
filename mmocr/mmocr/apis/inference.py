@@ -10,13 +10,13 @@ from mmcv.runner import load_checkpoint
 from mmdet.core import get_classes
 from mmdet.datasets import replace_ImageToTensor
 from mmdet.datasets.pipelines import Compose
-
 from mmocr.models import build_detector
 from mmocr.utils import is_2dlist
+
 from .utils import disable_text_recog_aug_test
 
 
-def init_detector(config, checkpoint=None, device='cuda:0', cfg_options=None):
+def init_detector(config, checkpoint=None, device="cuda:0", cfg_options=None):
     """Initialize a detector from config file.
 
     Args:
@@ -33,34 +33,28 @@ def init_detector(config, checkpoint=None, device='cuda:0', cfg_options=None):
     if isinstance(config, str):
         config = mmcv.Config.fromfile(config)
     elif not isinstance(config, mmcv.Config):
-        raise TypeError('config must be a filename or Config object, '
-                        f'but got {type(config)}')
+        raise TypeError("config must be a filename or Config object, " f"but got {type(config)}")
     if cfg_options is not None:
         config.merge_from_dict(cfg_options)
-    if config.model.get('pretrained'):
+    if config.model.get("pretrained"):
         config.model.pretrained = None
     config.model.train_cfg = None
-    model = build_detector(config.model, test_cfg=config.get('test_cfg'))
+    model = build_detector(config.model, test_cfg=config.get("test_cfg"))
     if checkpoint is not None:
-        checkpoint = load_checkpoint(model, checkpoint, map_location='cpu')
-        if 'CLASSES' in checkpoint.get('meta', {}):
-            model.CLASSES = checkpoint['meta']['CLASSES']
+        checkpoint = load_checkpoint(model, checkpoint, map_location="cpu")
+        if "CLASSES" in checkpoint.get("meta", {}):
+            model.CLASSES = checkpoint["meta"]["CLASSES"]
         else:
-            warnings.simplefilter('once')
-            warnings.warn('Class names are not saved in the checkpoint\'s '
-                          'meta data, use COCO classes by default.')
-            model.CLASSES = get_classes('coco')
+            warnings.simplefilter("once")
+            warnings.warn("Class names are not saved in the checkpoint's " "meta data, use COCO classes by default.")
+            model.CLASSES = get_classes("coco")
     model.cfg = config  # save the config in the model for convenience
     model.to(device)
     model.eval()
     return model
 
 
-def model_inference(cfg,
-                    imgs,
-                    ann=None,
-                    batch_mode=False,
-                    return_data=False, device = None):
+def model_inference(cfg, imgs, ann=None, batch_mode=False, return_data=False, device=None):
     """Inference image(s) with the detector.
 
     Args:
@@ -77,22 +71,22 @@ def model_inference(cfg,
     if isinstance(imgs, (list, tuple)):
         is_batch = True
         if len(imgs) == 0:
-            raise Exception('empty imgs provided, please check and try again')
+            raise Exception("empty imgs provided, please check and try again")
         if not isinstance(imgs[0], (np.ndarray, str)):
-            raise AssertionError('imgs must be strings or numpy arrays')
+            raise AssertionError("imgs must be strings or numpy arrays")
 
     elif isinstance(imgs, (np.ndarray, str)):
         imgs = [imgs]
         is_batch = False
     else:
-        raise AssertionError('imgs must be strings or numpy arrays')
+        raise AssertionError("imgs must be strings or numpy arrays")
 
     is_ndarray = isinstance(imgs[0], np.ndarray)
 
     if batch_mode:
-        cfg = disable_text_recog_aug_test(cfg, set_types=['test'])
+        cfg = disable_text_recog_aug_test(cfg, set_types=["test"])
 
-    if cfg.data.test.get('pipeline', None) is None:
+    if cfg.data.test.get("pipeline", None) is None:
         if is_2dlist(cfg.data.test.datasets):
             cfg.data.test.pipeline = cfg.data.test.datasets[0][0].pipeline
         else:
@@ -103,7 +97,7 @@ def model_inference(cfg,
     if is_ndarray:
         cfg = cfg.copy()
         # set loading pipeline type
-        cfg.data.test.pipeline[0].type = 'LoadImageFromNdarray'
+        cfg.data.test.pipeline[0].type = "LoadImageFromNdarray"
 
     cfg.data.test.pipeline = replace_ImageToTensor(cfg.data.test.pipeline)
     test_pipeline = Compose(cfg.data.test.pipeline)
@@ -113,18 +107,10 @@ def model_inference(cfg,
         # prepare data
         if is_ndarray:
             # directly add img
-            data = dict(
-                img=img,
-                ann_info=ann,
-                img_info=dict(width=img.shape[1], height=img.shape[0]),
-                bbox_fields=[])
+            data = dict(img=img, ann_info=ann, img_info=dict(width=img.shape[1], height=img.shape[0]), bbox_fields=[])
         else:
             # add information into dict
-            data = dict(
-                img_info=dict(filename=img),
-                img_prefix=None,
-                ann_info=ann,
-                bbox_fields=[])
+            data = dict(img_info=dict(filename=img), img_prefix=None, ann_info=ann, bbox_fields=[])
         if ann is not None:
             data.update(dict(**ann))
 
@@ -132,41 +118,37 @@ def model_inference(cfg,
         data = test_pipeline(data)
         # get tensor from list to stack for batch mode (text detection)
         if batch_mode:
-            if cfg.data.test.pipeline[1].type == 'MultiScaleFlipAug':
+            if cfg.data.test.pipeline[1].type == "MultiScaleFlipAug":
                 for key, value in data.items():
                     data[key] = value[0]
         datas.append(data)
 
-    if isinstance(datas[0]['img'], list) and len(datas) > 1:
-        raise Exception('aug test does not support '
-                        f'inference with batch size '
-                        f'{len(datas)}')
+    if isinstance(datas[0]["img"], list) and len(datas) > 1:
+        raise Exception("aug test does not support " f"inference with batch size " f"{len(datas)}")
 
     data = collate(datas, samples_per_gpu=len(imgs))
 
     # process img_metas
-    if isinstance(data['img_metas'], list):
-        data['img_metas'] = [
-            img_metas.data[0] for img_metas in data['img_metas']
-        ]
+    if isinstance(data["img_metas"], list):
+        data["img_metas"] = [img_metas.data[0] for img_metas in data["img_metas"]]
     else:
-        data['img_metas'] = data['img_metas'].data
+        data["img_metas"] = data["img_metas"].data
 
-    if isinstance(data['img'], list):
-        data['img'] = [img.data for img in data['img']]
-        if isinstance(data['img'][0], list):
-            data['img'] = [img[0] for img in data['img']]
+    if isinstance(data["img"], list):
+        data["img"] = [img.data for img in data["img"]]
+        if isinstance(data["img"][0], list):
+            data["img"] = [img[0] for img in data["img"]]
     else:
-        data['img'] = data['img'].data
+        data["img"] = data["img"].data
 
     # for KIE models
     if ann is not None:
-        data['relations'] = data['relations'].data[0]
-        data['gt_bboxes'] = data['gt_bboxes'].data[0]
-        data['texts'] = data['texts'].data[0]
-        data['img'] = data['img'][0]
-        data['img_metas'] = data['img_metas'][0]
-    if device != 'cpu':
+        data["relations"] = data["relations"].data[0]
+        data["gt_bboxes"] = data["gt_bboxes"].data[0]
+        data["texts"] = data["texts"].data[0]
+        data["img"] = data["img"][0]
+        data["img_metas"] = data["img_metas"][0]
+    if device != "cpu":
         data = scatter(data, [device])[0]
     return data
     # # forward the model
@@ -197,7 +179,7 @@ def text_model_inference(model, input_sentence):
     assert isinstance(input_sentence, str)
 
     cfg = model.cfg
-    if cfg.data.test.get('pipeline', None) is None:
+    if cfg.data.test.get("pipeline", None) is None:
         if is_2dlist(cfg.data.test.datasets):
             cfg.data.test.pipeline = cfg.data.test.datasets[0][0].pipeline
         else:
@@ -205,21 +187,21 @@ def text_model_inference(model, input_sentence):
     if is_2dlist(cfg.data.test.pipeline):
         cfg.data.test.pipeline = cfg.data.test.pipeline[0]
     test_pipeline = Compose(cfg.data.test.pipeline)
-    data = {'text': input_sentence, 'label': {}}
+    data = {"text": input_sentence, "label": {}}
 
     # build the data pipeline
     data = test_pipeline(data)
-    if isinstance(data['img_metas'], dict):
-        img_metas = data['img_metas']
+    if isinstance(data["img_metas"], dict):
+        img_metas = data["img_metas"]
     else:
-        img_metas = data['img_metas'].data
+        img_metas = data["img_metas"].data
 
     assert isinstance(img_metas, dict)
     img_metas = {
-        'input_ids': img_metas['input_ids'].unsqueeze(0),
-        'attention_masks': img_metas['attention_masks'].unsqueeze(0),
-        'token_type_ids': img_metas['token_type_ids'].unsqueeze(0),
-        'labels': img_metas['labels'].unsqueeze(0)
+        "input_ids": img_metas["input_ids"].unsqueeze(0),
+        "attention_masks": img_metas["attention_masks"].unsqueeze(0),
+        "token_type_ids": img_metas["token_type_ids"].unsqueeze(0),
+        "labels": img_metas["labels"].unsqueeze(0),
     }
     # forward the model
     with torch.no_grad():

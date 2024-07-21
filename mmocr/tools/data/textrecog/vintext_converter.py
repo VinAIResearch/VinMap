@@ -5,7 +5,6 @@ import os
 import os.path as osp
 
 import mmcv
-
 from mmocr.datasets.pipelines.crop import crop_img
 from mmocr.utils.fileio import list_to_file
 
@@ -27,13 +26,13 @@ def collect_files(img_dir, gt_dir):
 
     ann_list, imgs_list = [], []
     for img_file in os.listdir(img_dir):
-        ann_file = 'gt_' + str(int(img_file[2:6])) + '.txt'
+        ann_file = "gt_" + str(int(img_file[2:6])) + ".txt"
         ann_list.append(osp.join(gt_dir, ann_file))
         imgs_list.append(osp.join(img_dir, img_file))
 
     files = list(zip(imgs_list, ann_list))
-    assert len(files), f'No images found in {img_dir}'
-    print(f'Loaded {len(files)} images from {img_dir}')
+    assert len(files), f"No images found in {img_dir}"
+    print(f"Loaded {len(files)} images from {img_dir}")
 
     return files
 
@@ -52,8 +51,7 @@ def collect_annotations(files, nproc=1):
     assert isinstance(nproc, int)
 
     if nproc > 1:
-        images = mmcv.track_parallel_progress(
-            load_img_info, files, nproc=nproc)
+        images = mmcv.track_parallel_progress(load_img_info, files, nproc=nproc)
     else:
         images = mmcv.track_progress(load_img_info, files)
 
@@ -72,18 +70,18 @@ def load_img_info(files):
     assert isinstance(files, tuple)
 
     img_file, gt_file = files
-    assert int(osp.basename(gt_file)[3:-4]) == int(
-        osp.basename(img_file)[2:-4])
+    assert int(osp.basename(gt_file)[3:-4]) == int(osp.basename(img_file)[2:-4])
     # read imgs while ignoring orientations
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
 
     img_info = dict(
         file_name=osp.join(osp.basename(img_file)),
         height=img.shape[0],
         width=img.shape[1],
-        segm_file=osp.join(osp.basename(gt_file)))
+        segm_file=osp.join(osp.basename(gt_file)),
+    )
 
-    if osp.splitext(gt_file)[1] == '.txt':
+    if osp.splitext(gt_file)[1] == ".txt":
         img_info = load_txt_info(gt_file, img_info)
     else:
         raise NotImplementedError
@@ -111,16 +109,16 @@ def load_txt_info(gt_file, img_info):
         img_info (dict): The dict of the img and annotation information
     """
 
-    with open(gt_file, 'r', encoding='utf-8') as f:
+    with open(gt_file, "r", encoding="utf-8") as f:
         anno_info = []
         for line in f:
-            line = line.strip('\n')
-            ann = line.split(',')
+            line = line.strip("\n")
+            ann = line.split(",")
             bbox = ann[0:8]
-            word = line[len(','.join(bbox)) + 1:]
+            word = line[len(",".join(bbox)) + 1 :]
             bbox = [int(coord) for coord in bbox]
             # Ignore hard samples
-            if word == '###':
+            if word == "###":
                 continue
             assert len(bbox) == 8
             anno = dict(bbox=bbox, word=word)
@@ -142,72 +140,58 @@ def generate_ann(root_path, split, image_infos, preserve_vertical, format):
         preserve_vertical (bool): Whether to preserve vertical texts
         format (str): Using jsonl(dict) or str to format annotations
     """
-    dst_image_root = osp.join(root_path, 'crops', split)
-    ignore_image_root = osp.join(root_path, 'ignores', split)
-    if split == 'training':
-        dst_label_file = osp.join(root_path, f'train_label.{format}')
-    elif split == 'test':
-        dst_label_file = osp.join(root_path, f'test_label.{format}')
-    elif split == 'unseen_test':
-        dst_label_file = osp.join(root_path, f'unseen_test_label.{format}')
+    dst_image_root = osp.join(root_path, "crops", split)
+    ignore_image_root = osp.join(root_path, "ignores", split)
+    if split == "training":
+        dst_label_file = osp.join(root_path, f"train_label.{format}")
+    elif split == "test":
+        dst_label_file = osp.join(root_path, f"test_label.{format}")
+    elif split == "unseen_test":
+        dst_label_file = osp.join(root_path, f"unseen_test_label.{format}")
     os.makedirs(dst_image_root, exist_ok=True)
 
     lines = []
     for image_info in image_infos:
         index = 1
-        src_img_path = osp.join(root_path, 'imgs', split,
-                                image_info['file_name'])
+        src_img_path = osp.join(root_path, "imgs", split, image_info["file_name"])
         image = mmcv.imread(src_img_path)
-        src_img_root = image_info['file_name'].split('.')[0]
+        src_img_root = image_info["file_name"].split(".")[0]
 
-        for anno in image_info['anno_info']:
-            word = anno['word']
-            dst_img = crop_img(image, anno['bbox'], 0, 0)
+        for anno in image_info["anno_info"]:
+            word = anno["word"]
+            dst_img = crop_img(image, anno["bbox"], 0, 0)
             h, w, _ = dst_img.shape
 
-            dst_img_name = f'{src_img_root}_{index}.png'
+            dst_img_name = f"{src_img_root}_{index}.png"
             index += 1
             # Skip invalid annotations
             if min(dst_img.shape) == 0:
                 continue
             # Skip vertical texts
-            if not preserve_vertical and h / w > 2 and split == 'training':
+            if not preserve_vertical and h / w > 2 and split == "training":
                 dst_img_path = osp.join(ignore_image_root, dst_img_name)
             else:
                 dst_img_path = osp.join(dst_image_root, dst_img_name)
 
             mmcv.imwrite(dst_img, dst_img_path)
-            filename = f'{osp.basename(dst_image_root)}/{dst_img_name}'
-            if format == 'txt':
-                lines.append(f'{filename} '
-                             f'{word}')
-            elif format == 'jsonl':
-                lines.append(
-                    json.dumps({
-                        'filename': filename,
-                        'text': word
-                    },
-                               ensure_ascii=False))
+            filename = f"{osp.basename(dst_image_root)}/{dst_img_name}"
+            if format == "txt":
+                lines.append(f"{filename} " f"{word}")
+            elif format == "jsonl":
+                lines.append(json.dumps({"filename": filename, "text": word}, ensure_ascii=False))
             else:
                 raise NotImplementedError
     list_to_file(dst_label_file, lines)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training and test set of VinText ')
-    parser.add_argument('root_path', help='Root dir path of VinText')
+    parser = argparse.ArgumentParser(description="Generate training and test set of VinText ")
+    parser.add_argument("root_path", help="Root dir path of VinText")
+    parser.add_argument("--preserve-vertical", help="Preserve samples containing vertical texts", action="store_true")
+    parser.add_argument("--nproc", default=1, type=int, help="Number of processes")
     parser.add_argument(
-        '--preserve-vertical',
-        help='Preserve samples containing vertical texts',
-        action='store_true')
-    parser.add_argument(
-        '--nproc', default=1, type=int, help='Number of processes')
-    parser.add_argument(
-        '--format',
-        default='jsonl',
-        help='Use jsonl or string to format annotations',
-        choices=['jsonl', 'txt'])
+        "--format", default="jsonl", help="Use jsonl or string to format annotations", choices=["jsonl", "txt"]
+    )
     args = parser.parse_args()
     return args
 
@@ -215,17 +199,13 @@ def parse_args():
 def main():
     args = parse_args()
     root_path = args.root_path
-    for split in ['training', 'test', 'unseen_test']:
-        print(f'Processing {split} set...')
-        with mmcv.Timer(
-                print_tmpl='It takes {}s to convert VinText annotation'):
-            files = collect_files(
-                osp.join(root_path, 'imgs', split),
-                osp.join(root_path, 'annotations'))
+    for split in ["training", "test", "unseen_test"]:
+        print(f"Processing {split} set...")
+        with mmcv.Timer(print_tmpl="It takes {}s to convert VinText annotation"):
+            files = collect_files(osp.join(root_path, "imgs", split), osp.join(root_path, "annotations"))
             image_infos = collect_annotations(files, nproc=args.nproc)
-            generate_ann(root_path, split, image_infos, args.preserve_vertical,
-                         args.format)
+            generate_ann(root_path, split, image_infos, args.preserve_vertical, args.format)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -10,7 +10,7 @@ from ..builder import NECKS
 def gem(x: Tensor, p: Parameter, eps: float = 1e-6, clamp=True) -> Tensor:
     if clamp:
         x = x.clamp(min=eps)
-    return F.avg_pool2d(x.pow(p), (x.size(-2), x.size(-1))).pow(1. / p)
+    return F.avg_pool2d(x.pow(p), (x.size(-2), x.size(-1))).pow(1.0 / p)
 
 
 @NECKS.register_module()
@@ -30,7 +30,7 @@ class GeneralizedMeanPooling(nn.Module):
             Default: True
     """
 
-    def __init__(self, p=3., eps=1e-6, clamp=True):
+    def __init__(self, p=3.0, eps=1e-6, clamp=True):
         assert p >= 1, "'p' must be a value greater then 1"
         super(GeneralizedMeanPooling, self).__init__()
         self.p = Parameter(torch.ones(1) * p)
@@ -39,15 +39,11 @@ class GeneralizedMeanPooling(nn.Module):
 
     def forward(self, inputs):
         if isinstance(inputs, tuple):
-            outs = tuple([
-                gem(x, p=self.p, eps=self.eps, clamp=self.clamp)
-                for x in inputs
-            ])
-            outs = tuple(
-                [out.view(x.size(0), -1) for out, x in zip(outs, inputs)])
+            outs = tuple([gem(x, p=self.p, eps=self.eps, clamp=self.clamp) for x in inputs])
+            outs = tuple([out.view(x.size(0), -1) for out, x in zip(outs, inputs)])
         elif isinstance(inputs, torch.Tensor):
             outs = gem(inputs, p=self.p, eps=self.eps, clamp=self.clamp)
             outs = outs.view(inputs.size(0), -1)
         else:
-            raise TypeError('neck inputs should be tuple or torch.tensor')
+            raise TypeError("neck inputs should be tuple or torch.tensor")
         return outs

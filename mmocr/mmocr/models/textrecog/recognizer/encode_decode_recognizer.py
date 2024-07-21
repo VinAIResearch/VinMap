@@ -2,10 +2,16 @@
 import warnings
 
 import torch
+from mmocr.models.builder import (
+    RECOGNIZERS,
+    build_backbone,
+    build_convertor,
+    build_decoder,
+    build_encoder,
+    build_loss,
+    build_preprocessor,
+)
 
-from mmocr.models.builder import (RECOGNIZERS, build_backbone, build_convertor,
-                                  build_decoder, build_encoder, build_loss,
-                                  build_preprocessor)
 from .base import BaseRecognizer
 
 
@@ -13,18 +19,20 @@ from .base import BaseRecognizer
 class EncodeDecodeRecognizer(BaseRecognizer):
     """Base class for encode-decode recognizer."""
 
-    def __init__(self,
-                 preprocessor=None,
-                 backbone=None,
-                 encoder=None,
-                 decoder=None,
-                 loss=None,
-                 label_convertor=None,
-                 train_cfg=None,
-                 test_cfg=None,
-                 max_seq_len=40,
-                 pretrained=None,
-                 init_cfg=None):
+    def __init__(
+        self,
+        preprocessor=None,
+        backbone=None,
+        encoder=None,
+        decoder=None,
+        loss=None,
+        label_convertor=None,
+        train_cfg=None,
+        test_cfg=None,
+        max_seq_len=40,
+        pretrained=None,
+        init_cfg=None,
+    ):
 
         super().__init__(init_cfg=init_cfg)
 
@@ -65,9 +73,11 @@ class EncodeDecodeRecognizer(BaseRecognizer):
         self.max_seq_len = max_seq_len
 
         if pretrained is not None:
-            warnings.warn('DeprecationWarning: pretrained is a deprecated \
-                key, please consider using init_cfg')
-            self.init_cfg = dict(type='Pretrained', checkpoint=pretrained)
+            warnings.warn(
+                "DeprecationWarning: pretrained is a deprecated \
+                key, please consider using init_cfg"
+            )
+            self.init_cfg = dict(type="Pretrained", checkpoint=pretrained)
 
     def extract_feat(self, img):
         """Directly extract features from the backbone."""
@@ -93,12 +103,12 @@ class EncodeDecodeRecognizer(BaseRecognizer):
             dict[str, tensor]: A dictionary of loss components.
         """
         for img_meta in img_metas:
-            valid_ratio = 1.0 * img_meta['resize_shape'][1] / img.size(-1)
-            img_meta['valid_ratio'] = valid_ratio
+            valid_ratio = 1.0 * img_meta["resize_shape"][1] / img.size(-1)
+            img_meta["valid_ratio"] = valid_ratio
 
         feat = self.extract_feat(img)
 
-        gt_labels = [img_meta['text'] for img_meta in img_metas]
+        gt_labels = [img_meta["text"] for img_meta in img_metas]
 
         targets_dict = self.label_convertor.str2tensor(gt_labels)
 
@@ -106,8 +116,7 @@ class EncodeDecodeRecognizer(BaseRecognizer):
         if self.encoder is not None:
             out_enc = self.encoder(feat, img_metas)
 
-        out_dec = self.decoder(
-            feat, out_enc, targets_dict, img_metas, train_mode=True)
+        out_dec = self.decoder(feat, out_enc, targets_dict, img_metas, train_mode=True)
 
         loss_inputs = (
             out_dec,
@@ -129,8 +138,8 @@ class EncodeDecodeRecognizer(BaseRecognizer):
             list[str]: Text label result of each image.
         """
         for img_meta in img_metas:
-            valid_ratio = 1.0 * img_meta['resize_shape'][1] / img.size(-1)
-            img_meta['valid_ratio'] = valid_ratio
+            valid_ratio = 1.0 * img_meta["resize_shape"][1] / img.size(-1)
+            img_meta["valid_ratio"] = valid_ratio
 
         feat = self.extract_feat(img)
 
@@ -138,15 +147,13 @@ class EncodeDecodeRecognizer(BaseRecognizer):
         if self.encoder is not None:
             out_enc = self.encoder(feat, img_metas)
 
-        out_dec = self.decoder(
-            feat, out_enc, None, img_metas, train_mode=False)
+        out_dec = self.decoder(feat, out_enc, None, img_metas, train_mode=False)
 
         # early return to avoid post processing
         if torch.onnx.is_in_onnx_export():
             return out_dec
 
-        label_indexes, label_scores = self.label_convertor.tensor2idx(
-            out_dec, img_metas)
+        label_indexes, label_scores = self.label_convertor.tensor2idx(out_dec, img_metas)
         label_strings = self.label_convertor.idx2str(label_indexes)
 
         # flatten batch results
@@ -157,10 +164,10 @@ class EncodeDecodeRecognizer(BaseRecognizer):
         return results
 
     def merge_aug_results(self, aug_results):
-        out_text, out_score = '', -1
+        out_text, out_score = "", -1
         for result in aug_results:
-            text = result[0]['text']
-            score = sum(result[0]['score']) / max(1, len(text))
+            text = result[0]["text"]
+            score = sum(result[0]["score"]) / max(1, len(text))
             if score > out_score:
                 out_text = text
                 out_score = score

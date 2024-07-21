@@ -11,10 +11,18 @@ from .sar_decoder import ParallelSARDecoder, SequentialSARDecoder
 from .sar_decoder_with_bs import ParallelSARDecoderWithBS
 from .sequence_attention_decoder import SequenceAttentionDecoder
 
+
 __all__ = [
-    'CRNNDecoder', 'ParallelSARDecoder', 'SequentialSARDecoder',
-    'ParallelSARDecoderWithBS', 'NRTRDecoder', 'BaseDecoder',
-    'SequenceAttentionDecoder', 'PositionAttentionDecoder',
-    'RobustScannerDecoder', 'ABILanguageDecoder', 'ABIVisionDecoder',
-    'MasterDecoder'
+    "CRNNDecoder",
+    "ParallelSARDecoder",
+    "SequentialSARDecoder",
+    "ParallelSARDecoderWithBS",
+    "NRTRDecoder",
+    "BaseDecoder",
+    "SequenceAttentionDecoder",
+    "PositionAttentionDecoder",
+    "RobustScannerDecoder",
+    "ABILanguageDecoder",
+    "ABIVisionDecoder",
+    "MasterDecoder",
 ]

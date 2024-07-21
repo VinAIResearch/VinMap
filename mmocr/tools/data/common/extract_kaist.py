@@ -10,15 +10,15 @@ from xml.etree.ElementTree import ParseError
 
 def extract(root_path):
     idx = 0
-    for language in ['English', 'Korean', 'Mixed']:
-        for camera in ['Digital_Camera', 'Mobile_Phone']:
-            crt_path = osp.join(root_path, 'KAIST', language, camera)
+    for language in ["English", "Korean", "Mixed"]:
+        for camera in ["Digital_Camera", "Mobile_Phone"]:
+            crt_path = osp.join(root_path, "KAIST", language, camera)
             zips = os.listdir(crt_path)
             for zip in zips:
-                extracted_path = osp.join(root_path, 'tmp', zip)
+                extracted_path = osp.join(root_path, "tmp", zip)
                 extract_zipfile(osp.join(crt_path, zip), extracted_path)
                 for file in os.listdir(extracted_path):
-                    if file.endswith('xml'):
+                    if file.endswith("xml"):
                         src_ann = os.path.join(extracted_path, file)
                         # Filtering broken annotations
                         try:
@@ -26,23 +26,14 @@ def extract(root_path):
                         except ParseError:
                             continue
                         src_img = None
-                        img_names = [
-                            file.replace('xml', suffix)
-                            for suffix in ['jpg', 'JPG']
-                        ]
+                        img_names = [file.replace("xml", suffix) for suffix in ["jpg", "JPG"]]
                         for im in img_names:
                             img_path = osp.join(extracted_path, im)
                             if osp.exists(img_path):
                                 src_img = img_path
                         if src_img:
-                            shutil.move(
-                                src_ann,
-                                osp.join(root_path, 'annotations',
-                                         str(idx).zfill(5) + '.xml'))
-                            shutil.move(
-                                src_img,
-                                osp.join(root_path, 'imgs',
-                                         str(idx).zfill(5) + '.jpg'))
+                            shutil.move(src_ann, osp.join(root_path, "annotations", str(idx).zfill(5) + ".xml"))
+                            shutil.move(src_img, osp.join(root_path, "imgs", str(idx).zfill(5) + ".jpg"))
                             idx += 1
 
 
@@ -56,8 +47,8 @@ def extract_zipfile(zip_path, dst_dir, delete=True):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Extract KAIST zips')
-    parser.add_argument('root_path', help='Root path of KAIST')
+    parser = argparse.ArgumentParser(description="Extract KAIST zips")
+    parser.add_argument("root_path", help="Root path of KAIST")
     args = parser.parse_args()
     return args
 
@@ -67,9 +58,9 @@ def main():
     root_path = args.root_path
     assert osp.exists(root_path)
     extract(root_path)
-    shutil.rmtree(osp.join(args.root_path, 'tmp'))
-    shutil.rmtree(osp.join(args.root_path, 'KAIST'))
+    shutil.rmtree(osp.join(args.root_path, "tmp"))
+    shutil.rmtree(osp.join(args.root_path, "KAIST"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

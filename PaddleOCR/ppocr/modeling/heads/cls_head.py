@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import math
+
 import paddle
-from paddle import nn, ParamAttr
 import paddle.nn.functional as F
+from paddle import ParamAttr, nn
 
 
 class ClsHead(nn.Layer):
@@ -38,10 +37,9 @@ class ClsHead(nn.Layer):
         self.fc = nn.Linear(
             in_channels,
             class_dim,
-            weight_attr=ParamAttr(
-                name="fc_0.w_0",
-                initializer=nn.initializer.Uniform(-stdv, stdv)),
-            bias_attr=ParamAttr(name="fc_0.b_0"), )
+            weight_attr=ParamAttr(name="fc_0.w_0", initializer=nn.initializer.Uniform(-stdv, stdv)),
+            bias_attr=ParamAttr(name="fc_0.b_0"),
+        )
 
     def forward(self, x, targets=None):
         x = self.pool(x)

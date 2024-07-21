@@ -3,7 +3,6 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.runner import BaseModule
-
 from mmocr.models.builder import DECODERS
 
 
@@ -17,14 +16,13 @@ class FCDecoder(BaseModule):
         hidden_size (int): Hidden layer output layer channels.
     """
 
-    def __init__(self,
-                 num_labels=None,
-                 hidden_dropout_prob=0.1,
-                 hidden_size=768,
-                 init_cfg=[
-                     dict(type='Xavier', layer='Conv2d'),
-                     dict(type='Uniform', layer='BatchNorm2d')
-                 ]):
+    def __init__(
+        self,
+        num_labels=None,
+        hidden_dropout_prob=0.1,
+        hidden_size=768,
+        init_cfg=[dict(type="Xavier", layer="Conv2d"), dict(type="Uniform", layer="BatchNorm2d")],
+    ):
         super().__init__(init_cfg=init_cfg)
         self.num_labels = num_labels
 

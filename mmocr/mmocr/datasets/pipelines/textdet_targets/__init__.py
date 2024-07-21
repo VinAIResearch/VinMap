@@ -7,7 +7,13 @@ from .panet_targets import PANetTargets
 from .psenet_targets import PSENetTargets
 from .textsnake_targets import TextSnakeTargets
 
+
 __all__ = [
-    'BaseTextDetTargets', 'PANetTargets', 'PSENetTargets', 'DBNetTargets',
-    'FCENetTargets', 'TextSnakeTargets', 'DRRGTargets'
+    "BaseTextDetTargets",
+    "PANetTargets",
+    "PSENetTargets",
+    "DBNetTargets",
+    "FCENetTargets",
+    "TextSnakeTargets",
+    "DRRGTargets",
 ]

@@ -9,7 +9,7 @@ class DotProductAttentionLayer(nn.Module):
     def __init__(self, dim_model=None):
         super().__init__()
 
-        self.scale = dim_model**-0.5 if dim_model is not None else 1.
+        self.scale = dim_model**-0.5 if dim_model is not None else 1.0
 
     def forward(self, query, key, value, mask=None):
         n, seq_len = mask.size()
@@ -17,7 +17,7 @@ class DotProductAttentionLayer(nn.Module):
 
         if mask is not None:
             mask = mask.view(n, 1, seq_len)
-            logits = logits.masked_fill(mask, float('-inf'))
+            logits = logits.masked_fill(mask, float("-inf"))
 
         weights = F.softmax(logits, dim=2)
 

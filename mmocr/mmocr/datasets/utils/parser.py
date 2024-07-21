@@ -17,11 +17,7 @@ class LineStrParser:
         separator (str): Separator to separate string to list of sub-string.
     """
 
-    def __init__(self,
-                 keys=['filename', 'text'],
-                 keys_idx=[0, 1],
-                 separator=' ',
-                 **kwargs):
+    def __init__(self, keys=["filename", "text"], keys_idx=[0, 1], separator=" ", **kwargs):
         assert isinstance(keys, list)
         assert isinstance(keys_idx, list)
         assert isinstance(separator, str)
@@ -36,19 +32,18 @@ class LineStrParser:
         map_index = index % len(data_ret)
         line_str = data_ret[map_index]
         line_str = self.strip_cls(line_str)
-        if len(line_str.split(' ')) > 2:
-            msg = 'More than two blank spaces were detected. '
-            msg += 'Please use LineJsonParser to handle '
-            msg += 'annotations with blanks. '
-            msg += 'Check Doc '
-            msg += 'https://mmocr.readthedocs.io/en/latest/'
-            msg += 'tutorials/blank_recog.html '
-            msg += 'for details.'
+        if len(line_str.split(" ")) > 2:
+            msg = "More than two blank spaces were detected. "
+            msg += "Please use LineJsonParser to handle "
+            msg += "annotations with blanks. "
+            msg += "Check Doc "
+            msg += "https://mmocr.readthedocs.io/en/latest/"
+            msg += "tutorials/blank_recog.html "
+            msg += "for details."
             warnings.warn(msg)
         line_str = line_str.split(self.separator)
         if len(line_str) <= max(self.keys_idx):
-            raise Exception(
-                f'key index: {max(self.keys_idx)} out of range: {line_str}')
+            raise Exception(f"key index: {max(self.keys_idx)} out of range: {line_str}")
 
         line_info = {}
         for i, key in enumerate(self.keys):
@@ -76,7 +71,7 @@ class LineJsonParser:
         line_info = {}
         for key in self.keys:
             if key not in line_json_obj:
-                raise Exception(f'key {key} not in line json {line_json_obj}')
+                raise Exception(f"key {key} not in line json {line_json_obj}")
             line_info[key] = line_json_obj[key]
 
         return line_info

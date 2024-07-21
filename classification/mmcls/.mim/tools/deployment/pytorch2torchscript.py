@@ -7,10 +7,10 @@ from functools import partial
 import mmcv
 import numpy as np
 import torch
+from mmcls.models import build_classifier
 from mmcv.runner import load_checkpoint
 from torch import nn
 
-from mmcls.models import build_classifier
 
 torch.manual_seed(3)
 
@@ -27,17 +27,15 @@ def _demo_mm_inputs(input_shape: tuple, num_classes: int):
     (N, C, H, W) = input_shape
     rng = np.random.RandomState(0)
     imgs = rng.rand(*input_shape)
-    gt_labels = rng.randint(
-        low=0, high=num_classes, size=(N, 1)).astype(np.uint8)
+    gt_labels = rng.randint(low=0, high=num_classes, size=(N, 1)).astype(np.uint8)
     mm_inputs = {
-        'imgs': torch.FloatTensor(imgs).requires_grad_(False),
-        'gt_labels': torch.LongTensor(gt_labels),
+        "imgs": torch.FloatTensor(imgs).requires_grad_(False),
+        "gt_labels": torch.LongTensor(gt_labels),
     }
     return mm_inputs
 
 
-def pytorch2torchscript(model: nn.Module, input_shape: tuple, output_file: str,
-                        verify: bool):
+def pytorch2torchscript(model: nn.Module, input_shape: tuple, output_file: str, verify: bool):
     """Export Pytorch model to TorchScript model through torch.jit.trace and
     verify the outputs are same between Pytorch and TorchScript.
 
@@ -56,7 +54,7 @@ def pytorch2torchscript(model: nn.Module, input_shape: tuple, output_file: str,
     num_classes = model.head.num_classes
     mm_inputs = _demo_mm_inputs(input_shape, num_classes)
 
-    imgs = mm_inputs.pop('imgs')
+    imgs = mm_inputs.pop("imgs")
     img_list = [img[None, :] for img in imgs]
 
     # replace original forward function
@@ -69,7 +67,7 @@ def pytorch2torchscript(model: nn.Module, input_shape: tuple, output_file: str,
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
         trace_model.save(output_file)
-        print(f'Successfully exported TorchScript model: {output_file}')
+        print(f"Successfully exported TorchScript model: {output_file}")
     model.forward = origin_forward
 
     if verify:
@@ -83,33 +81,22 @@ def pytorch2torchscript(model: nn.Module, input_shape: tuple, output_file: str,
         # get jit output
         jit_result = jit_model(img_list[0])[0].detach().numpy()
         if not np.allclose(pytorch_result, jit_result):
-            raise ValueError(
-                'The outputs are different between Pytorch and TorchScript')
-        print('The outputs are same between Pytorch and TorchScript')
+            raise ValueError("The outputs are different between Pytorch and TorchScript")
+        print("The outputs are same between Pytorch and TorchScript")
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Convert MMCls to TorchScript')
-    parser.add_argument('config', help='test config file path')
-    parser.add_argument('--checkpoint', help='checkpoint file', type=str)
-    parser.add_argument(
-        '--verify',
-        action='store_true',
-        help='verify the TorchScript model',
-        default=False)
-    parser.add_argument('--output-file', type=str, default='tmp.pt')
-    parser.add_argument(
-        '--shape',
-        type=int,
-        nargs='+',
-        default=[224, 224],
-        help='input image size')
+    parser = argparse.ArgumentParser(description="Convert MMCls to TorchScript")
+    parser.add_argument("config", help="test config file path")
+    parser.add_argument("--checkpoint", help="checkpoint file", type=str)
+    parser.add_argument("--verify", action="store_true", help="verify the TorchScript model", default=False)
+    parser.add_argument("--output-file", type=str, default="tmp.pt")
+    parser.add_argument("--shape", type=int, nargs="+", default=[224, 224], help="input image size")
     args = parser.parse_args()
     return args
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_args()
 
     if len(args.shape) == 1:
@@ -120,7 +107,7 @@ if __name__ == '__main__':
             3,
         ) + tuple(args.shape)
     else:
-        raise ValueError('invalid input shape')
+        raise ValueError("invalid input shape")
 
     cfg = mmcv.Config.fromfile(args.config)
     cfg.model.pretrained = None
@@ -129,11 +116,7 @@ if __name__ == '__main__':
     classifier = build_classifier(cfg.model)
 
     if args.checkpoint:
-        load_checkpoint(classifier, args.checkpoint, map_location='cpu')
+        load_checkpoint(classifier, args.checkpoint, map_location="cpu")
 
     # convert model to TorchScript file
-    pytorch2torchscript(
-        classifier,
-        input_shape,
-        output_file=args.output_file,
-        verify=args.verify)
+    pytorch2torchscript(classifier, input_shape, output_file=args.output_file, verify=args.verify)

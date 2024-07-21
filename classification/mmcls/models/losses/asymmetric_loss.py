@@ -6,16 +6,18 @@ from ..builder import LOSSES
 from .utils import convert_to_one_hot, weight_reduce_loss
 
 
-def asymmetric_loss(pred,
-                    target,
-                    weight=None,
-                    gamma_pos=1.0,
-                    gamma_neg=4.0,
-                    clip=0.05,
-                    reduction='mean',
-                    avg_factor=None,
-                    use_sigmoid=True,
-                    eps=1e-8):
+def asymmetric_loss(
+    pred,
+    target,
+    weight=None,
+    gamma_pos=1.0,
+    gamma_neg=4.0,
+    clip=0.05,
+    reduction="mean",
+    avg_factor=None,
+    use_sigmoid=True,
+    eps=1e-8,
+):
     r"""asymmetric loss.
 
     Please refer to the `paper <https://arxiv.org/abs/2009.14119>`__ for
@@ -44,8 +46,7 @@ def asymmetric_loss(pred,
     Returns:
         torch.Tensor: Loss.
     """
-    assert pred.shape == \
-        target.shape, 'pred and target should be in the same shape.'
+    assert pred.shape == target.shape, "pred and target should be in the same shape."
 
     if use_sigmoid:
         pred_sigmoid = pred.sigmoid()
@@ -55,12 +56,10 @@ def asymmetric_loss(pred,
     target = target.type_as(pred)
 
     if clip and clip > 0:
-        pt = (1 - pred_sigmoid +
-              clip).clamp(max=1) * (1 - target) + pred_sigmoid * target
+        pt = (1 - pred_sigmoid + clip).clamp(max=1) * (1 - target) + pred_sigmoid * target
     else:
         pt = (1 - pred_sigmoid) * (1 - target) + pred_sigmoid * target
-    asymmetric_weight = (1 - pt).pow(gamma_pos * target + gamma_neg *
-                                     (1 - target))
+    asymmetric_weight = (1 - pt).pow(gamma_pos * target + gamma_neg * (1 - target))
     loss = -torch.log(pt.clamp(min=eps)) * asymmetric_weight
     if weight is not None:
         assert weight.dim() == 1
@@ -90,14 +89,9 @@ class AsymmetricLoss(nn.Module):
             to 1e-8.
     """
 
-    def __init__(self,
-                 gamma_pos=0.0,
-                 gamma_neg=4.0,
-                 clip=0.05,
-                 reduction='mean',
-                 loss_weight=1.0,
-                 use_sigmoid=True,
-                 eps=1e-8):
+    def __init__(
+        self, gamma_pos=0.0, gamma_neg=4.0, clip=0.05, reduction="mean", loss_weight=1.0, use_sigmoid=True, eps=1e-8
+    ):
         super(AsymmetricLoss, self).__init__()
         self.gamma_pos = gamma_pos
         self.gamma_neg = gamma_neg
@@ -107,12 +101,7 @@ class AsymmetricLoss(nn.Module):
         self.use_sigmoid = use_sigmoid
         self.eps = eps
 
-    def forward(self,
-                pred,
-                target,
-                weight=None,
-                avg_factor=None,
-                reduction_override=None):
+    def forward(self, pred, target, weight=None, avg_factor=None, reduction_override=None):
         r"""asymmetric loss.
 
         Args:
@@ -130,9 +119,8 @@ class AsymmetricLoss(nn.Module):
         Returns:
             torch.Tensor: Loss.
         """
-        assert reduction_override in (None, 'none', 'mean', 'sum')
-        reduction = (
-            reduction_override if reduction_override else self.reduction)
+        assert reduction_override in (None, "none", "mean", "sum")
+        reduction = reduction_override if reduction_override else self.reduction
         if target.dim() == 1 or (target.dim() == 2 and target.shape[1] == 1):
             target = convert_to_one_hot(target.view(-1, 1), pred.shape[-1])
         loss_cls = self.loss_weight * asymmetric_loss(
@@ -145,5 +133,6 @@ class AsymmetricLoss(nn.Module):
             reduction=reduction,
             avg_factor=avg_factor,
             use_sigmoid=self.use_sigmoid,
-            eps=self.eps)
+            eps=self.eps,
+        )
         return loss_cls

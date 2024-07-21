@@ -11,12 +11,12 @@
 # CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 try:
-    from PyQt5.QtGui import *
     from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
     from PyQt5.QtWidgets import QColorDialog, QDialogButtonBox
 except ImportError:
-    from PyQt4.QtGui import *
     from PyQt4.QtCore import *
+    from PyQt4.QtGui import *
 
 BB = QDialogButtonBox
 

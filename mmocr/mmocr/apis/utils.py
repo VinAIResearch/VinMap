@@ -6,7 +6,6 @@ import mmcv
 import numpy as np
 import torch
 from mmdet.datasets import replace_ImageToTensor
-
 from mmocr.utils import is_2dlist, is_type_list
 
 
@@ -22,19 +21,19 @@ def replace_image_to_tensor(cfg, set_types=None):
     """Replace 'ImageToTensor' to 'DefaultFormatBundle'."""
     assert set_types is None or isinstance(set_types, list)
     if set_types is None:
-        set_types = ['val', 'test']
+        set_types = ["val", "test"]
 
     cfg = copy.deepcopy(cfg)
     for set_type in set_types:
-        assert set_type in ['val', 'test']
-        uniform_pipeline = cfg.data[set_type].get('pipeline', None)
+        assert set_type in ["val", "test"]
+        uniform_pipeline = cfg.data[set_type].get("pipeline", None)
         if is_type_list(uniform_pipeline, dict):
             update_pipeline(cfg.data[set_type])
         elif is_2dlist(uniform_pipeline):
             for idx, _ in enumerate(uniform_pipeline):
                 update_pipeline(cfg.data[set_type], idx)
 
-        for dataset in cfg.data[set_type].get('datasets', []):
+        for dataset in cfg.data[set_type].get("datasets", []):
             if isinstance(dataset, list):
                 for each_dataset in dataset:
                     update_pipeline(each_dataset)
@@ -45,15 +44,13 @@ def replace_image_to_tensor(cfg, set_types=None):
 
 
 def update_pipeline_recog(cfg, idx=None):
-    warning_msg = 'Remove "MultiRotateAugOCR" to support batch ' + \
-        'inference since samples_per_gpu > 1.'
+    warning_msg = 'Remove "MultiRotateAugOCR" to support batch ' + "inference since samples_per_gpu > 1."
     if idx is None:
-        if cfg.get('pipeline',
-                   None) and cfg.pipeline[1].type == 'MultiRotateAugOCR':
+        if cfg.get("pipeline", None) and cfg.pipeline[1].type == "MultiRotateAugOCR":
             warnings.warn(warning_msg)
             cfg.pipeline = [cfg.pipeline[0], *cfg.pipeline[1].transforms]
     else:
-        if cfg[idx][1].type == 'MultiRotateAugOCR':
+        if cfg[idx][1].type == "MultiRotateAugOCR":
             warnings.warn(warning_msg)
             cfg[idx] = [cfg[idx][0], *cfg[idx][1].transforms]
 
@@ -68,27 +65,24 @@ def disable_text_recog_aug_test(cfg, set_types=None):
     """
     assert set_types is None or isinstance(set_types, list)
     if set_types is None:
-        set_types = ['val', 'test']
+        set_types = ["val", "test"]
 
     cfg = copy.deepcopy(cfg)
-    warnings.simplefilter('once')
+    warnings.simplefilter("once")
     for set_type in set_types:
-        assert set_type in ['val', 'test']
+        assert set_type in ["val", "test"]
         dataset_type = cfg.data[set_type].type
-        if dataset_type not in [
-                'ConcatDataset', 'UniformConcatDataset', 'OCRDataset',
-                'OCRSegDataset'
-        ]:
+        if dataset_type not in ["ConcatDataset", "UniformConcatDataset", "OCRDataset", "OCRSegDataset"]:
             continue
 
-        uniform_pipeline = cfg.data[set_type].get('pipeline', None)
+        uniform_pipeline = cfg.data[set_type].get("pipeline", None)
         if is_type_list(uniform_pipeline, dict):
             update_pipeline_recog(cfg.data[set_type])
         elif is_2dlist(uniform_pipeline):
             for idx, _ in enumerate(uniform_pipeline):
                 update_pipeline_recog(cfg.data[set_type].pipeline, idx)
 
-        for dataset in cfg.data[set_type].get('datasets', []):
+        for dataset in cfg.data[set_type].get("datasets", []):
             if isinstance(dataset, list):
                 for each_dataset in dataset:
                     update_pipeline_recog(each_dataset)
@@ -98,7 +92,7 @@ def disable_text_recog_aug_test(cfg, set_types=None):
     return cfg
 
 
-def tensor2grayimgs(tensor, mean=(127, ), std=(127, ), **kwargs):
+def tensor2grayimgs(tensor, mean=(127,), std=(127,), **kwargs):
     """Convert tensor to 1-channel gray images.
 
     Args:

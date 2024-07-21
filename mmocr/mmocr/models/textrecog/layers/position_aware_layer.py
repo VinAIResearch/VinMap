@@ -9,18 +9,13 @@ class PositionAwareLayer(nn.Module):
 
         self.dim_model = dim_model
 
-        self.rnn = nn.LSTM(
-            input_size=dim_model,
-            hidden_size=dim_model,
-            num_layers=rnn_layers,
-            batch_first=True)
+        self.rnn = nn.LSTM(input_size=dim_model, hidden_size=dim_model, num_layers=rnn_layers, batch_first=True)
 
         self.mixer = nn.Sequential(
-            nn.Conv2d(
-                dim_model, dim_model, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(dim_model, dim_model, kernel_size=3, stride=1, padding=1),
             nn.ReLU(True),
-            nn.Conv2d(
-                dim_model, dim_model, kernel_size=3, stride=1, padding=1))
+            nn.Conv2d(dim_model, dim_model, kernel_size=3, stride=1, padding=1),
+        )
 
     def forward(self, img_feature):
         n, c, h, w = img_feature.size()

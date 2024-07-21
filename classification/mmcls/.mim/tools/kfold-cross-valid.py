@@ -10,17 +10,16 @@ from pathlib import Path
 
 import mmcv
 import torch
-from mmcv import Config, DictAction
-from mmcv.runner import get_dist_info, init_dist
-
 from mmcls import __version__
 from mmcls.apis import init_random_seed, set_random_seed, train_model
 from mmcls.datasets import build_dataset
 from mmcls.models import build_classifier
 from mmcls.utils import collect_env, get_root_logger, load_json_log
+from mmcv import Config, DictAction
+from mmcv.runner import get_dist_info, init_dist
 
-TEST_METRICS = ('precision', 'recall', 'f1_score', 'support', 'mAP', 'CP',
-                'CR', 'CF1', 'OP', 'OR', 'OF1', 'accuracy')
+
+TEST_METRICS = ("precision", "recall", "f1_score", "support", "mAP", "CP", "CR", "CF1", "OP", "OR", "OF1", "accuracy")
 
 prog_description = """K-Fold cross-validation.
 
@@ -37,70 +36,58 @@ To summarize a 5-fold cross-validation:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=prog_description)
-    parser.add_argument('config', help='train config file path')
+        formatter_class=argparse.RawDescriptionHelpFormatter, description=prog_description
+    )
+    parser.add_argument("config", help="train config file path")
+    parser.add_argument("--num-splits", type=int, help="The number of all folds.")
     parser.add_argument(
-        '--num-splits', type=int, help='The number of all folds.')
-    parser.add_argument(
-        '--fold',
+        "--fold",
         type=int,
-        help='The fold used to do validation. '
-        'If specify, only do an experiment of the specified fold.')
+        help="The fold used to do validation. " "If specify, only do an experiment of the specified fold.",
+    )
+    parser.add_argument("--summary", action="store_true", help="Summarize the k-fold cross-validation results.")
+    parser.add_argument("--work-dir", help="the dir to save logs and models")
+    parser.add_argument("--resume-from", help="the checkpoint file to resume from")
     parser.add_argument(
-        '--summary',
-        action='store_true',
-        help='Summarize the k-fold cross-validation results.')
-    parser.add_argument('--work-dir', help='the dir to save logs and models')
-    parser.add_argument(
-        '--resume-from', help='the checkpoint file to resume from')
-    parser.add_argument(
-        '--no-validate',
-        action='store_true',
-        help='whether not to evaluate the checkpoint during training')
+        "--no-validate", action="store_true", help="whether not to evaluate the checkpoint during training"
+    )
     group_gpus = parser.add_mutually_exclusive_group()
-    group_gpus.add_argument('--device', help='device used for training')
+    group_gpus.add_argument("--device", help="device used for training")
     group_gpus.add_argument(
-        '--gpus',
+        "--gpus",
         type=int,
-        help='(Deprecated, please use --gpu-id) number of gpus to use '
-        '(only applicable to non-distributed training)')
+        help="(Deprecated, please use --gpu-id) number of gpus to use "
+        "(only applicable to non-distributed training)",
+    )
     group_gpus.add_argument(
-        '--gpu-ids',
+        "--gpu-ids",
         type=int,
-        nargs='+',
-        help='(Deprecated, please use --gpu-id) ids of gpus to use '
-        '(only applicable to non-distributed training)')
+        nargs="+",
+        help="(Deprecated, please use --gpu-id) ids of gpus to use " "(only applicable to non-distributed training)",
+    )
     group_gpus.add_argument(
-        '--gpu-id',
-        type=int,
-        default=0,
-        help='id of gpu to use '
-        '(only applicable to non-distributed training)')
-    parser.add_argument('--seed', type=int, default=None, help='random seed')
+        "--gpu-id", type=int, default=0, help="id of gpu to use " "(only applicable to non-distributed training)"
+    )
+    parser.add_argument("--seed", type=int, default=None, help="random seed")
     parser.add_argument(
-        '--deterministic',
-        action='store_true',
-        help='whether to set deterministic options for CUDNN backend.')
+        "--deterministic", action="store_true", help="whether to set deterministic options for CUDNN backend."
+    )
     parser.add_argument(
-        '--cfg-options',
-        nargs='+',
+        "--cfg-options",
+        nargs="+",
         action=DictAction,
-        help='override some settings in the used config, the key-value pair '
-        'in xxx=yyy format will be merged into config file. If the value to '
+        help="override some settings in the used config, the key-value pair "
+        "in xxx=yyy format will be merged into config file. If the value to "
         'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
         'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
-        'Note that the quotation marks are necessary and that no white space '
-        'is allowed.')
-    parser.add_argument(
-        '--launcher',
-        choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='none',
-        help='job launcher')
-    parser.add_argument('--local_rank', type=int, default=0)
+        "Note that the quotation marks are necessary and that no white space "
+        "is allowed.",
+    )
+    parser.add_argument("--launcher", choices=["none", "pytorch", "slurm", "mpi"], default="none", help="job launcher")
+    parser.add_argument("--local_rank", type=int, default=0)
     args = parser.parse_args()
-    if 'LOCAL_RANK' not in os.environ:
-        os.environ['LOCAL_RANK'] = str(args.local_rank)
+    if "LOCAL_RANK" not in os.environ:
+        os.environ["LOCAL_RANK"] = str(args.local_rank)
 
     return args
 
@@ -111,15 +98,15 @@ def copy_config(old_cfg):
     _cfg_dict = copy.deepcopy(old_cfg._cfg_dict)
     _filename = copy.deepcopy(old_cfg._filename)
     _text = copy.deepcopy(old_cfg._text)
-    super(Config, new_cfg).__setattr__('_cfg_dict', _cfg_dict)
-    super(Config, new_cfg).__setattr__('_filename', _filename)
-    super(Config, new_cfg).__setattr__('_text', _text)
+    super(Config, new_cfg).__setattr__("_cfg_dict", _cfg_dict)
+    super(Config, new_cfg).__setattr__("_filename", _filename)
+    super(Config, new_cfg).__setattr__("_text", _text)
     return new_cfg
 
 
 def train_single_fold(args, cfg, fold, distributed, seed):
     # create the work_dir for the fold
-    work_dir = osp.join(cfg.work_dir, f'fold{fold}')
+    work_dir = osp.join(cfg.work_dir, f"fold{fold}")
     cfg.work_dir = work_dir
 
     # create work_dir
@@ -127,14 +114,14 @@ def train_single_fold(args, cfg, fold, distributed, seed):
 
     # wrap the dataset cfg
     train_dataset = dict(
-        type='KFoldDataset',
+        type="KFoldDataset",
         fold=fold,
         dataset=cfg.data.train,
         num_splits=args.num_splits,
         seed=seed,
     )
     val_dataset = dict(
-        type='KFoldDataset',
+        type="KFoldDataset",
         fold=fold,
         # Use the same dataset with training.
         dataset=copy.deepcopy(cfg.data.train),
@@ -142,17 +129,17 @@ def train_single_fold(args, cfg, fold, distributed, seed):
         seed=seed,
         test_mode=True,
     )
-    val_dataset['dataset']['pipeline'] = cfg.data.val.pipeline
+    val_dataset["dataset"]["pipeline"] = cfg.data.val.pipeline
     cfg.data.train = train_dataset
     cfg.data.val = val_dataset
     cfg.data.test = val_dataset
 
     # dump config
-    stem, suffix = osp.basename(args.config).rsplit('.', 1)
-    cfg.dump(osp.join(cfg.work_dir, f'{stem}_fold{fold}.{suffix}'))
+    stem, suffix = osp.basename(args.config).rsplit(".", 1)
+    cfg.dump(osp.join(cfg.work_dir, f"{stem}_fold{fold}.{suffix}"))
     # init the logger before other steps
-    timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-    log_file = osp.join(cfg.work_dir, f'{timestamp}.log')
+    timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+    log_file = osp.join(cfg.work_dir, f"{timestamp}.log")
     logger = get_root_logger(log_file=log_file, log_level=cfg.log_level)
 
     # init the meta dict to record some important information such as
@@ -160,25 +147,22 @@ def train_single_fold(args, cfg, fold, distributed, seed):
     meta = dict()
     # log env info
     env_info_dict = collect_env()
-    env_info = '\n'.join([(f'{k}: {v}') for k, v in env_info_dict.items()])
-    dash_line = '-' * 60 + '\n'
-    logger.info('Environment info:\n' + dash_line + env_info + '\n' +
-                dash_line)
-    meta['env_info'] = env_info
+    env_info = "\n".join([(f"{k}: {v}") for k, v in env_info_dict.items()])
+    dash_line = "-" * 60 + "\n"
+    logger.info("Environment info:\n" + dash_line + env_info + "\n" + dash_line)
+    meta["env_info"] = env_info
 
     # log some basic info
-    logger.info(f'Distributed training: {distributed}')
-    logger.info(f'Config:\n{cfg.pretty_text}')
-    logger.info(
-        f'-------- Cross-validation: [{fold+1}/{args.num_splits}] -------- ')
+    logger.info(f"Distributed training: {distributed}")
+    logger.info(f"Config:\n{cfg.pretty_text}")
+    logger.info(f"-------- Cross-validation: [{fold+1}/{args.num_splits}] -------- ")
 
     # set random seeds
     # Use different seed in different folds
-    logger.info(f'Set random seed to {seed + fold}, '
-                f'deterministic: {args.deterministic}')
+    logger.info(f"Set random seed to {seed + fold}, " f"deterministic: {args.deterministic}")
     set_random_seed(seed + fold, deterministic=args.deterministic)
     cfg.seed = seed + fold
-    meta['seed'] = seed + fold
+    meta["seed"] = seed + fold
 
     model = build_classifier(cfg.model)
     model.init_weights()
@@ -193,7 +177,9 @@ def train_single_fold(args, cfg, fold, distributed, seed):
             mmcls_version=__version__,
             config=cfg.pretty_text,
             CLASSES=datasets[0].CLASSES,
-            kfold=dict(fold=fold, num_splits=args.num_splits)))
+            kfold=dict(fold=fold, num_splits=args.num_splits),
+        )
+    )
     # add an attribute for visualization convenience
     train_model(
         model,
@@ -202,23 +188,24 @@ def train_single_fold(args, cfg, fold, distributed, seed):
         distributed=distributed,
         validate=(not args.no_validate),
         timestamp=timestamp,
-        device='cpu' if args.device == 'cpu' else 'cuda',
-        meta=meta)
+        device="cpu" if args.device == "cpu" else "cuda",
+        meta=meta,
+    )
 
 
 def summary(args, cfg):
     summary = dict()
     for fold in range(args.num_splits):
-        work_dir = Path(cfg.work_dir) / f'fold{fold}'
+        work_dir = Path(cfg.work_dir) / f"fold{fold}"
 
         # Find the latest training log
-        log_files = list(work_dir.glob('*.log.json'))
+        log_files = list(work_dir.glob("*.log.json"))
         if len(log_files) == 0:
             continue
         log_file = sorted(log_files)[-1]
 
         date = datetime.fromtimestamp(log_file.lstat().st_mtime)
-        summary[fold] = {'date': date.strftime('%Y-%m-%d %H:%M:%S')}
+        summary[fold] = {"date": date.strftime("%Y-%m-%d %H:%M:%S")}
 
         # Find the latest eval log
         json_log = load_json_log(log_file)
@@ -236,10 +223,9 @@ def summary(args, cfg):
                 eval_log = json_log[epoch]
                 break
 
-        summary[fold]['epoch'] = epoch
-        summary[fold]['metric'] = {
-            k: v[0]  # the value is a list with only one item.
-            for k, v in eval_log.items() if is_metric_key(k)
+        summary[fold]["epoch"] = epoch
+        summary[fold]["metric"] = {
+            k: v[0] for k, v in eval_log.items() if is_metric_key(k)  # the value is a list with only one item.
         }
     show_summary(args, summary)
 
@@ -249,37 +235,36 @@ def show_summary(args, summary_data):
         from rich.console import Console
         from rich.table import Table
     except ImportError:
-        raise ImportError('Please run `pip install rich` to install '
-                          'package `rich` to draw the table.')
+        raise ImportError("Please run `pip install rich` to install " "package `rich` to draw the table.")
 
     console = Console()
-    table = Table(title=f'{args.num_splits}-fold Cross-validation Summary')
-    table.add_column('Fold')
-    metrics = summary_data[0]['metric'].keys()
+    table = Table(title=f"{args.num_splits}-fold Cross-validation Summary")
+    table.add_column("Fold")
+    metrics = summary_data[0]["metric"].keys()
     for metric in metrics:
         table.add_column(metric)
-    table.add_column('Epoch')
-    table.add_column('Date')
+    table.add_column("Epoch")
+    table.add_column("Date")
 
     for fold in range(args.num_splits):
-        row = [f'{fold+1}']
+        row = [f"{fold+1}"]
         if fold not in summary_data:
             table.add_row(*row)
             continue
         for metric in metrics:
-            metric_value = summary_data[fold]['metric'].get(metric, '')
+            metric_value = summary_data[fold]["metric"].get(metric, "")
 
             def format_value(value):
                 if isinstance(value, float):
-                    return f'{value:.2f}'
+                    return f"{value:.2f}"
                 if isinstance(value, (list, tuple)):
                     return str([format_value(i) for i in value])
                 else:
                     return str(value)
 
             row.append(format_value(metric_value))
-        row.append(str(summary_data[fold]['epoch']))
-        row.append(summary_data[fold]['date'])
+        row.append(str(summary_data[fold]["epoch"]))
+        row.append(summary_data[fold]["date"])
         table.add_row(*row)
 
     console.print(table)
@@ -292,17 +277,16 @@ def main():
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
     # set cudnn_benchmark
-    if cfg.get('cudnn_benchmark', False):
+    if cfg.get("cudnn_benchmark", False):
         torch.backends.cudnn.benchmark = True
 
     # work_dir is determined in this priority: CLI > segment in file > filename
     if args.work_dir is not None:
         # update configs according to CLI args if args.work_dir is not None
         cfg.work_dir = args.work_dir
-    elif cfg.get('work_dir', None) is None:
+    elif cfg.get("work_dir", None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
-        cfg.work_dir = osp.join('./work_dirs',
-                                osp.splitext(osp.basename(args.config))[0])
+        cfg.work_dir = osp.join("./work_dirs", osp.splitext(osp.basename(args.config))[0])
 
     if args.summary:
         summary(args, cfg)
@@ -311,34 +295,38 @@ def main():
     # resume from the previous experiment
     if args.resume_from is not None:
         cfg.resume_from = args.resume_from
-        resume_kfold = torch.load(cfg.resume_from).get('meta',
-                                                       {}).get('kfold', None)
+        resume_kfold = torch.load(cfg.resume_from).get("meta", {}).get("kfold", None)
         if resume_kfold is None:
             raise RuntimeError(
                 'No "meta" key in checkpoints or no "kfold" in the meta dict. '
-                'Please check if the resume checkpoint from a k-fold '
-                'cross-valid experiment.')
-        resume_fold = resume_kfold['fold']
-        assert args.num_splits == resume_kfold['num_splits']
+                "Please check if the resume checkpoint from a k-fold "
+                "cross-valid experiment."
+            )
+        resume_fold = resume_kfold["fold"]
+        assert args.num_splits == resume_kfold["num_splits"]
     else:
         resume_fold = 0
 
     if args.gpus is not None:
         cfg.gpu_ids = range(1)
-        warnings.warn('`--gpus` is deprecated because we only support '
-                      'single GPU mode in non-distributed training. '
-                      'Use `gpus=1` now.')
+        warnings.warn(
+            "`--gpus` is deprecated because we only support "
+            "single GPU mode in non-distributed training. "
+            "Use `gpus=1` now."
+        )
     if args.gpu_ids is not None:
         cfg.gpu_ids = args.gpu_ids[0:1]
-        warnings.warn('`--gpu-ids` is deprecated, please use `--gpu-id`. '
-                      'Because we only support single GPU mode in '
-                      'non-distributed training. Use the first GPU '
-                      'in `gpu_ids` now.')
+        warnings.warn(
+            "`--gpu-ids` is deprecated, please use `--gpu-id`. "
+            "Because we only support single GPU mode in "
+            "non-distributed training. Use the first GPU "
+            "in `gpu_ids` now."
+        )
     if args.gpus is None and args.gpu_ids is None:
         cfg.gpu_ids = [args.gpu_id]
 
     # init distributed env first, since logger depends on the dist info.
-    if args.launcher == 'none':
+    if args.launcher == "none":
         distributed = False
     else:
         distributed = True
@@ -367,5 +355,5 @@ def main():
         summary(args, cfg)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

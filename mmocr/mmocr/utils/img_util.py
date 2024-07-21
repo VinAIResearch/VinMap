@@ -19,19 +19,19 @@ def drop_orientation(img_file):
     assert img_file
 
     # read imgs with ignoring orientations
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
     # read imgs with orientations as dataloader does when training and testing
-    img_color = mmcv.imread(img_file, 'color')
+    img_color = mmcv.imread(img_file, "color")
     # make sure imgs have no orientation info, or annotation gt is wrong.
     if img.shape[:2] == img_color.shape[:2]:
         return img_file
 
-    target_file = os.path.splitext(img_file)[0] + '.png'
+    target_file = os.path.splitext(img_file)[0] + ".png"
     # read img with ignoring orientation information
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
     mmcv.imwrite(img, target_file)
     os.remove(img_file)
-    print(f'{img_file} has orientation info. Ignore it by converting to png')
+    print(f"{img_file} has orientation info. Ignore it by converting to png")
     return target_file
 
 
@@ -49,4 +49,4 @@ def is_not_png(img_file):
 
     suffix = os.path.splitext(img_file)[1]
 
-    return suffix not in ['.PNG', '.png']
+    return suffix not in [".PNG", ".png"]

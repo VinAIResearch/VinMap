@@ -18,21 +18,17 @@ class MultiLabelLinearClsHead(MultiLabelClsHead):
             Defaults to use dict(type='Normal', layer='Linear', std=0.01).
     """
 
-    def __init__(self,
-                 num_classes,
-                 in_channels,
-                 loss=dict(
-                     type='CrossEntropyLoss',
-                     use_sigmoid=True,
-                     reduction='mean',
-                     loss_weight=1.0),
-                 init_cfg=dict(type='Normal', layer='Linear', std=0.01)):
-        super(MultiLabelLinearClsHead, self).__init__(
-            loss=loss, init_cfg=init_cfg)
+    def __init__(
+        self,
+        num_classes,
+        in_channels,
+        loss=dict(type="CrossEntropyLoss", use_sigmoid=True, reduction="mean", loss_weight=1.0),
+        init_cfg=dict(type="Normal", layer="Linear", std=0.01),
+    ):
+        super(MultiLabelLinearClsHead, self).__init__(loss=loss, init_cfg=init_cfg)
 
         if num_classes <= 0:
-            raise ValueError(
-                f'num_classes={num_classes} must be a positive integer')
+            raise ValueError(f"num_classes={num_classes} must be a positive integer")
 
         self.in_channels = in_channels
         self.num_classes = num_classes

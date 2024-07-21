@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from mmocr.models.builder import build_activation_layer
 
 
@@ -26,7 +25,7 @@ class ScaledDotProductAttention(nn.Module):
         attn = torch.matmul(q / self.temperature, k.transpose(2, 3))
 
         if mask is not None:
-            attn = attn.masked_fill(mask == 0, float('-inf'))
+            attn = attn.masked_fill(mask == 0, float("-inf"))
 
         attn = self.dropout(F.softmax(attn, dim=-1))
         output = torch.matmul(attn, v)
@@ -48,13 +47,7 @@ class MultiHeadAttention(nn.Module):
         qkv_bias (bool): Add bias in projection layer. Default: False.
     """
 
-    def __init__(self,
-                 n_head=8,
-                 d_model=512,
-                 d_k=64,
-                 d_v=64,
-                 dropout=0.1,
-                 qkv_bias=False):
+    def __init__(self, n_head=8, d_model=512, d_k=64, d_v=64, dropout=0.1, qkv_bias=False):
         super().__init__()
         self.n_head = n_head
         self.d_k = d_k
@@ -90,8 +83,7 @@ class MultiHeadAttention(nn.Module):
 
         attn_out, _ = self.attention(q, k, v, mask=mask)
 
-        attn_out = attn_out.transpose(1, 2).contiguous().view(
-            batch_size, len_q, self.dim_v)
+        attn_out = attn_out.transpose(1, 2).contiguous().view(batch_size, len_q, self.dim_v)
 
         attn_out = self.fc(attn_out)
         attn_out = self.proj_drop(attn_out)
@@ -111,7 +103,7 @@ class PositionwiseFeedForward(nn.Module):
         act_cfg (dict): Activation cfg for feedforward module.
     """
 
-    def __init__(self, d_in, d_hid, dropout=0.1, act_cfg=dict(type='Relu')):
+    def __init__(self, d_in, d_hid, dropout=0.1, act_cfg=dict(type="Relu")):
         super().__init__()
         self.w_1 = nn.Linear(d_in, d_hid)
         self.w_2 = nn.Linear(d_hid, d_in)
@@ -136,16 +128,11 @@ class PositionalEncoding(nn.Module):
 
         # Not a parameter
         # Position table of shape (1, n_position, d_hid)
-        self.register_buffer(
-            'position_table',
-            self._get_sinusoid_encoding_table(n_position, d_hid))
+        self.register_buffer("position_table", self._get_sinusoid_encoding_table(n_position, d_hid))
 
     def _get_sinusoid_encoding_table(self, n_position, d_hid):
         """Sinusoid position encoding table."""
-        denominator = torch.Tensor([
-            1.0 / np.power(10000, 2 * (hid_j // 2) / d_hid)
-            for hid_j in range(d_hid)
-        ])
+        denominator = torch.Tensor([1.0 / np.power(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)])
         denominator = denominator.view(1, -1)
         pos_tensor = torch.arange(n_position).unsqueeze(-1).float()
         sinusoid_table = pos_tensor * denominator
@@ -160,5 +147,5 @@ class PositionalEncoding(nn.Module):
             x (Tensor): Tensor of shape (batch_size, pos_len, d_hid, ...)
         """
         self.device = x.device
-        x = x + self.position_table[:, :x.size(1)].clone().detach()
+        x = x + self.position_table[:, : x.size(1)].clone().detach()
         return self.dropout(x)

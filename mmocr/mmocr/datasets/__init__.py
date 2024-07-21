@@ -14,11 +14,23 @@ from .text_det_dataset import TextDetDataset
 from .uniform_concat_dataset import UniformConcatDataset
 from .utils import *  # NOQA
 
+
 __all__ = [
-    'DATASETS', 'IcdarDataset', 'build_dataloader', 'build_dataset',
-    'BaseDataset', 'OCRDataset', 'TextDetDataset', 'CustomFormatBundle',
-    'DBNetTargets', 'OCRSegDataset', 'KIEDataset', 'FCENetTargets',
-    'NerDataset', 'UniformConcatDataset', 'OpensetKIEDataset'
+    "DATASETS",
+    "IcdarDataset",
+    "build_dataloader",
+    "build_dataset",
+    "BaseDataset",
+    "OCRDataset",
+    "TextDetDataset",
+    "CustomFormatBundle",
+    "DBNetTargets",
+    "OCRSegDataset",
+    "KIEDataset",
+    "FCENetTargets",
+    "NerDataset",
+    "UniformConcatDataset",
+    "OpensetKIEDataset",
 ]
 
 __all__ += utils.__all__

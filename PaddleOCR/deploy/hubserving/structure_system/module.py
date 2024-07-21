@@ -12,28 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+
+
 sys.path.insert(0, ".")
 import copy
-
 import time
-import paddlehub
-from paddlehub.common.logger import logger
-from paddlehub.module.module import moduleinfo, runnable, serving
+
 import cv2
 import numpy as np
+import paddlehub
 import paddlehub as hub
-
-from tools.infer.utility import base64_to_cv2
+from deploy.hubserving.structure_system.params import read_params
+from paddlehub.common.logger import logger
+from paddlehub.module.module import moduleinfo, runnable, serving
 from ppstructure.predict_system import StructureSystem as PPStructureSystem
 from ppstructure.predict_system import save_structure_res
 from ppstructure.utility import parse_args
-from deploy.hubserving.structure_system.params import read_params
+from tools.infer.utility import base64_to_cv2
 
 
 @moduleinfo(
@@ -42,7 +41,8 @@ from deploy.hubserving.structure_system.params import read_params
     summary="PP-Structure system service",
     author="paddle-dev",
     author_email="paddle-dev@baidu.com",
-    type="cv/structure_system")
+    type="cv/structure_system",
+)
 class StructureSystem(hub.Module):
     def _initialize(self, use_gpu=False, enable_mkldnn=False):
         """
@@ -84,8 +84,7 @@ class StructureSystem(hub.Module):
     def read_images(self, paths=[]):
         images = []
         for img_path in paths:
-            assert os.path.isfile(
-                img_path), "The {} isn't a valid file.".format(img_path)
+            assert os.path.isfile(img_path), "The {} isn't a valid file.".format(img_path)
             img = cv2.imread(img_path)
             if img is None:
                 logger.info("error in loading image:{}".format(img_path))
@@ -126,9 +125,9 @@ class StructureSystem(hub.Module):
             # parse result
             res_final = []
             for region in res:
-                region.pop('img')
+                region.pop("img")
                 res_final.append(region)
-            all_results.append({'regions': res_final})
+            all_results.append({"regions": res_final})
         return all_results
 
     @serving
@@ -141,9 +140,9 @@ class StructureSystem(hub.Module):
         return results
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     structure_system = StructureSystem()
     structure_system._initialize()
-    image_path = ['./ppstructure/docs/table/1.png']
+    image_path = ["./ppstructure/docs/table/1.png"]
     res = structure_system.predict(paths=image_path)
     print(res)

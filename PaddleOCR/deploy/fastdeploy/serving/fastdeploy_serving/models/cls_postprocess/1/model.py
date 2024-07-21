@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import json
-import numpy as np
 import time
 
 import fastdeploy as fd
+import numpy as np
 
 # triton_python_backend_utils is available in every Triton Python model. You
 # need to use this module to create inference requests and responses. It also
@@ -46,7 +46,7 @@ class TritonPythonModel:
           * model_name: Model name
         """
         # You must parse model_config. JSON string is not parsed here
-        self.model_config = json.loads(args['model_config'])
+        self.model_config = json.loads(args["model_config"])
         print("model_config:", self.model_config)
 
         self.input_names = []
@@ -84,16 +84,12 @@ class TritonPythonModel:
         """
         responses = []
         for request in requests:
-            infer_outputs = pb_utils.get_input_tensor_by_name(
-                request, self.input_names[0])
+            infer_outputs = pb_utils.get_input_tensor_by_name(request, self.input_names[0])
             infer_outputs = infer_outputs.as_numpy()
             results = self.postprocessor.run([infer_outputs])
-            out_tensor_0 = pb_utils.Tensor(self.output_names[0],
-                                           np.array(results[0]))
-            out_tensor_1 = pb_utils.Tensor(self.output_names[1],
-                                           np.array(results[1]))
-            inference_response = pb_utils.InferenceResponse(
-                output_tensors=[out_tensor_0, out_tensor_1])
+            out_tensor_0 = pb_utils.Tensor(self.output_names[0], np.array(results[0]))
+            out_tensor_1 = pb_utils.Tensor(self.output_names[1], np.array(results[1]))
+            inference_response = pb_utils.InferenceResponse(output_tensors=[out_tensor_0, out_tensor_1])
             responses.append(inference_response)
         return responses
 
@@ -102,4 +98,4 @@ class TritonPythonModel:
         Implementing `finalize` function is optional. This function allows
         the model to perform any necessary clean ups before exit.
         """
-        print('Cleaning up...')
+        print("Cleaning up...")

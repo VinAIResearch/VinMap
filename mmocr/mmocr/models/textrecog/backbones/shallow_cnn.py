@@ -2,7 +2,6 @@
 import torch.nn as nn
 from mmcv.cnn import ConvModule
 from mmcv.runner import BaseModule
-
 from mmocr.models.builder import BACKBONES
 
 
@@ -20,13 +19,12 @@ class ShallowCNN(BaseModule):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 input_channels=1,
-                 hidden_dim=512,
-                 init_cfg=[
-                     dict(type='Kaiming', layer='Conv2d'),
-                     dict(type='Uniform', layer='BatchNorm2d')
-                 ]):
+    def __init__(
+        self,
+        input_channels=1,
+        hidden_dim=512,
+        init_cfg=[dict(type="Kaiming", layer="Conv2d"), dict(type="Uniform", layer="BatchNorm2d")],
+    ):
         super().__init__(init_cfg=init_cfg)
         assert isinstance(input_channels, int)
         assert isinstance(hidden_dim, int)
@@ -38,8 +36,9 @@ class ShallowCNN(BaseModule):
             stride=1,
             padding=1,
             bias=False,
-            norm_cfg=dict(type='BN'),
-            act_cfg=dict(type='ReLU'))
+            norm_cfg=dict(type="BN"),
+            act_cfg=dict(type="ReLU"),
+        )
         self.conv2 = ConvModule(
             hidden_dim // 2,
             hidden_dim,
@@ -47,8 +46,9 @@ class ShallowCNN(BaseModule):
             stride=1,
             padding=1,
             bias=False,
-            norm_cfg=dict(type='BN'),
-            act_cfg=dict(type='ReLU'))
+            norm_cfg=dict(type="BN"),
+            act_cfg=dict(type="ReLU"),
+        )
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
 
     def forward(self, x):

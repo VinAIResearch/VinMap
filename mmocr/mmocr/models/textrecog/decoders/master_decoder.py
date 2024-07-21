@@ -7,9 +7,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn.bricks.transformer import BaseTransformerLayer
 from mmcv.runner import ModuleList
-
 from mmocr.models.builder import DECODERS
 from mmocr.models.common.modules import PositionalEncoding
+
 from .base_decoder import BaseDecoder
 
 
@@ -64,37 +64,35 @@ class MasterDecoder(BaseDecoder):
         d_model=512,
         feat_size=6 * 40,
         d_inner=2048,
-        attn_drop=0.,
-        ffn_drop=0.,
+        attn_drop=0.0,
+        ffn_drop=0.0,
         feat_pe_drop=0.2,
         max_seq_len=30,
         init_cfg=None,
     ):
         super(MasterDecoder, self).__init__(init_cfg=init_cfg)
 
-        operation_order = ('norm', 'self_attn', 'norm', 'cross_attn', 'norm',
-                           'ffn')
+        operation_order = ("norm", "self_attn", "norm", "cross_attn", "norm", "ffn")
         decoder_layer = BaseTransformerLayer(
             operation_order=operation_order,
             attn_cfgs=dict(
-                type='MultiheadAttention',
+                type="MultiheadAttention",
                 embed_dims=d_model,
                 num_heads=n_head,
                 attn_drop=attn_drop,
-                dropout_layer=dict(type='Dropout', drop_prob=attn_drop),
+                dropout_layer=dict(type="Dropout", drop_prob=attn_drop),
             ),
             ffn_cfgs=dict(
-                type='FFN',
+                type="FFN",
                 embed_dims=d_model,
                 feedforward_channels=d_inner,
                 ffn_drop=ffn_drop,
-                dropout_layer=dict(type='Dropout', drop_prob=ffn_drop),
+                dropout_layer=dict(type="Dropout", drop_prob=ffn_drop),
             ),
-            norm_cfg=dict(type='LN'),
+            norm_cfg=dict(type="LN"),
             batch_first=True,
         )
-        self.decoder_layers = ModuleList(
-            [copy.deepcopy(decoder_layer) for _ in range(n_layers)])
+        self.decoder_layers = ModuleList([copy.deepcopy(decoder_layer) for _ in range(n_layers)])
 
         self.cls = nn.Linear(d_model, num_classes)
 
@@ -105,10 +103,10 @@ class MasterDecoder(BaseDecoder):
         self.n_head = n_head
 
         self.embedding = Embeddings(d_model=d_model, vocab=num_classes)
-        self.positional_encoding = PositionalEncoding(
-            d_hid=d_model, n_position=self.max_seq_len + 1)
+        self.positional_encoding = PositionalEncoding(d_hid=d_model, n_position=self.max_seq_len + 1)
         self.feat_positional_encoding = PositionalEncoding(
-            d_hid=d_model, n_position=self.feat_size, dropout=feat_pe_drop)
+            d_hid=d_model, n_position=self.feat_size, dropout=feat_pe_drop
+        )
         self.norm = nn.LayerNorm(d_model)
 
     def make_mask(self, tgt, device):
@@ -124,8 +122,7 @@ class MasterDecoder(BaseDecoder):
 
         trg_pad_mask = (tgt != self.PAD).unsqueeze(1).unsqueeze(3).bool()
         tgt_len = tgt.size(1)
-        trg_sub_mask = torch.tril(
-            torch.ones((tgt_len, tgt_len), dtype=torch.bool, device=device))
+        trg_sub_mask = torch.tril(torch.ones((tgt_len, tgt_len), dtype=torch.bool, device=device))
         tgt_mask = trg_pad_mask & trg_sub_mask
 
         # inverse for mmcv's BaseTransformerLayer
@@ -141,8 +138,7 @@ class MasterDecoder(BaseDecoder):
         x = self.positional_encoding(x)
         attn_masks = [tgt_mask, src_mask]
         for layer in self.decoder_layers:
-            x = layer(
-                query=x, key=feature, value=feature, attn_masks=attn_masks)
+            x = layer(query=x, key=feature, value=feature, attn_masks=attn_masks)
         x = self.norm(x)
         return self.cls(x)
 
@@ -178,12 +174,11 @@ class MasterDecoder(BaseDecoder):
             b, c, h, w = feat.shape
             feat = feat.view(b, c, h * w)
             feat = feat.permute((0, 2, 1))
-        out_enc = self.feat_positional_encoding(feat) \
-            if out_enc is None else out_enc
+        out_enc = self.feat_positional_encoding(feat) if out_enc is None else out_enc
 
         device = feat.device
         if isinstance(targets_dict, dict):
-            padded_targets = targets_dict['padded_targets'].to(device)
+            padded_targets = targets_dict["padded_targets"].to(device)
         else:
             padded_targets = targets_dict.to(device)
         src_mask = None
@@ -207,8 +202,7 @@ class MasterDecoder(BaseDecoder):
             b, c, h, w = feat.shape
             feat = feat.view(b, c, h * w)
             feat = feat.permute((0, 2, 1))
-        out_enc = self.feat_positional_encoding(feat) \
-            if out_enc is None else out_enc
+        out_enc = self.feat_positional_encoding(feat) if out_enc is None else out_enc
 
         batch_size = out_enc.shape[0]
         SOS = torch.zeros(batch_size).long().to(out_enc.device)

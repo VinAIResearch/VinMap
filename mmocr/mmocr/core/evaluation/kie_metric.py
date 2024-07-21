@@ -19,8 +19,7 @@ def compute_f1_score(preds, gts, ignores=[]):
     """
     C = preds.size(1)
     classes = torch.LongTensor(sorted(set(range(C)) - set(ignores)))
-    hist = torch.bincount(
-        gts * C + preds.argmax(1), minlength=C**2).view(C, C).float()
+    hist = torch.bincount(gts * C + preds.argmax(1), minlength=C**2).view(C, C).float()
     diag = torch.diag(hist)
     recalls = diag / hist.sum(1).clamp(min=1)
     precisions = diag / hist.sum(0).clamp(min=1)

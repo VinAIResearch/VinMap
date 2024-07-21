@@ -31,12 +31,7 @@ class CosineAnnealingCooldownLrUpdaterHook(LrUpdaterHook):
         You need to set one and only one of ``min_lr`` and ``min_lr_ratio``.
     """
 
-    def __init__(self,
-                 min_lr=None,
-                 min_lr_ratio=None,
-                 cool_down_ratio=0.1,
-                 cool_down_time=10,
-                 **kwargs):
+    def __init__(self, min_lr=None, min_lr_ratio=None, cool_down_ratio=0.1, cool_down_time=10, **kwargs):
         assert (min_lr is None) ^ (min_lr_ratio is None)
         self.min_lr = min_lr
         self.min_lr_ratio = min_lr_ratio

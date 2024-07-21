@@ -1,11 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import cv2
+import mmocr.utils.check_argument as check_argument
 import numpy as np
 from mmdet.datasets.builder import PIPELINES
 from numpy.fft import fft
 from numpy.linalg import norm
 
-import mmocr.utils.check_argument as check_argument
 from .textsnake_targets import TextSnakeTargets
 
 
@@ -27,12 +27,14 @@ class FCENetTargets(TextSnakeTargets):
             assigned to each level.
     """
 
-    def __init__(self,
-                 fourier_degree=5,
-                 resample_step=4.0,
-                 center_region_shrink_ratio=0.3,
-                 level_size_divisors=(8, 16, 32),
-                 level_proportion_range=((0, 0.4), (0.3, 0.7), (0.6, 1.0))):
+    def __init__(
+        self,
+        fourier_degree=5,
+        resample_step=4.0,
+        center_region_shrink_ratio=0.3,
+        level_size_divisors=(8, 16, 32),
+        level_proportion_range=((0, 0.4), (0.3, 0.7), (0.6, 1.0)),
+    ):
 
         super().__init__()
         assert isinstance(level_size_divisors, tuple)
@@ -67,38 +69,31 @@ class FCENetTargets(TextSnakeTargets):
             assert len(poly) == 1
             polygon_points = poly[0].reshape(-1, 2)
             _, _, top_line, bot_line = self.reorder_poly_edge(polygon_points)
-            resampled_top_line, resampled_bot_line = self.resample_sidelines(
-                top_line, bot_line, self.resample_step)
+            resampled_top_line, resampled_bot_line = self.resample_sidelines(top_line, bot_line, self.resample_step)
             resampled_bot_line = resampled_bot_line[::-1]
             center_line = (resampled_top_line + resampled_bot_line) / 2
 
-            line_head_shrink_len = norm(resampled_top_line[0] -
-                                        resampled_bot_line[0]) / 4.0
-            line_tail_shrink_len = norm(resampled_top_line[-1] -
-                                        resampled_bot_line[-1]) / 4.0
+            line_head_shrink_len = norm(resampled_top_line[0] - resampled_bot_line[0]) / 4.0
+            line_tail_shrink_len = norm(resampled_top_line[-1] - resampled_bot_line[-1]) / 4.0
             head_shrink_num = int(line_head_shrink_len // self.resample_step)
             tail_shrink_num = int(line_tail_shrink_len // self.resample_step)
             if len(center_line) > head_shrink_num + tail_shrink_num + 2:
-                center_line = center_line[head_shrink_num:len(center_line) -
-                                          tail_shrink_num]
-                resampled_top_line = resampled_top_line[
-                    head_shrink_num:len(resampled_top_line) - tail_shrink_num]
-                resampled_bot_line = resampled_bot_line[
-                    head_shrink_num:len(resampled_bot_line) - tail_shrink_num]
+                center_line = center_line[head_shrink_num : len(center_line) - tail_shrink_num]
+                resampled_top_line = resampled_top_line[head_shrink_num : len(resampled_top_line) - tail_shrink_num]
+                resampled_bot_line = resampled_bot_line[head_shrink_num : len(resampled_bot_line) - tail_shrink_num]
 
             for i in range(0, len(center_line) - 1):
-                tl = center_line[i] + (resampled_top_line[i] - center_line[i]
-                                       ) * self.center_region_shrink_ratio
-                tr = center_line[i + 1] + (
-                    resampled_top_line[i + 1] -
-                    center_line[i + 1]) * self.center_region_shrink_ratio
-                br = center_line[i + 1] + (
-                    resampled_bot_line[i + 1] -
-                    center_line[i + 1]) * self.center_region_shrink_ratio
-                bl = center_line[i] + (resampled_bot_line[i] - center_line[i]
-                                       ) * self.center_region_shrink_ratio
-                current_center_box = np.vstack([tl, tr, br,
-                                                bl]).astype(np.int32)
+                tl = center_line[i] + (resampled_top_line[i] - center_line[i]) * self.center_region_shrink_ratio
+                tr = (
+                    center_line[i + 1]
+                    + (resampled_top_line[i + 1] - center_line[i + 1]) * self.center_region_shrink_ratio
+                )
+                br = (
+                    center_line[i + 1]
+                    + (resampled_bot_line[i + 1] - center_line[i + 1]) * self.center_region_shrink_ratio
+                )
+                bl = center_line[i] + (resampled_bot_line[i] - center_line[i]) * self.center_region_shrink_ratio
+                current_center_box = np.vstack([tl, tr, br, bl]).astype(np.int32)
                 center_region_boxes.append(current_center_box)
 
         cv2.fillPoly(center_region_mask, center_region_boxes, 1)
@@ -121,7 +116,7 @@ class FCENetTargets(TextSnakeTargets):
                 p2 = polygon[0]
             else:
                 p2 = polygon[i + 1]
-            length.append(((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)**0.5)
+            length.append(((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5)
 
         total_length = sum(length)
         n_on_each_line = (np.array(length) / (total_length + 1e-8)) * n
@@ -175,7 +170,7 @@ class FCENetTargets(TextSnakeTargets):
         """
         points = polygon[:, 0] + polygon[:, 1] * 1j
         c_fft = fft(points) / len(points)
-        c = np.hstack((c_fft[-fourier_degree:], c_fft[:fourier_degree + 1]))
+        c = np.hstack((c_fft[-fourier_degree:], c_fft[: fourier_degree + 1]))
         return c
 
     def clockwise(self, c, fourier_degree):
@@ -242,18 +237,15 @@ class FCENetTargets(TextSnakeTargets):
 
         for poly in text_polys:
             assert len(poly) == 1
-            text_instance = [[poly[0][i], poly[0][i + 1]]
-                             for i in range(0, len(poly[0]), 2)]
+            text_instance = [[poly[0][i], poly[0][i + 1]] for i in range(0, len(poly[0]), 2)]
             mask = np.zeros((h, w), dtype=np.uint8)
             polygon = np.array(text_instance).reshape((1, -1, 2))
             cv2.fillPoly(mask, polygon.astype(np.int32), 1)
             fourier_coeff = self.cal_fourier_signature(polygon[0], k)
             for i in range(-k, k + 1):
                 if i != 0:
-                    real_map[i + k, :, :] = mask * fourier_coeff[i + k, 0] + (
-                        1 - mask) * real_map[i + k, :, :]
-                    imag_map[i + k, :, :] = mask * fourier_coeff[i + k, 1] + (
-                        1 - mask) * imag_map[i + k, :, :]
+                    real_map[i + k, :, :] = mask * fourier_coeff[i + k, 0] + (1 - mask) * real_map[i + k, :, :]
+                    imag_map[i + k, :, :] = mask * fourier_coeff[i + k, 1] + (1 - mask) * imag_map[i + k, :, :]
                 else:
                     yx = np.argwhere(mask > 0.5)
                     k_ind = np.ones((len(yx)), dtype=np.int64) * k
@@ -281,8 +273,7 @@ class FCENetTargets(TextSnakeTargets):
         level_maps = []
         for poly in text_polys:
             assert len(poly) == 1
-            text_instance = [[poly[0][i], poly[0][i + 1]]
-                             for i in range(0, len(poly[0]), 2)]
+            text_instance = [[poly[0][i], poly[0][i + 1]] for i in range(0, len(poly[0]), 2)]
             polygon = np.array(text_instance, dtype=np.int).reshape((1, -1, 2))
             _, _, box_w, box_h = cv2.boundingRect(polygon)
             proportion = max(box_h, box_w) / (h + 1e-8)
@@ -293,35 +284,29 @@ class FCENetTargets(TextSnakeTargets):
 
         for ignore_poly in ignore_polys:
             assert len(ignore_poly) == 1
-            text_instance = [[ignore_poly[0][i], ignore_poly[0][i + 1]]
-                             for i in range(0, len(ignore_poly[0]), 2)]
+            text_instance = [[ignore_poly[0][i], ignore_poly[0][i + 1]] for i in range(0, len(ignore_poly[0]), 2)]
             polygon = np.array(text_instance, dtype=np.int).reshape((1, -1, 2))
             _, _, box_w, box_h = cv2.boundingRect(polygon)
             proportion = max(box_h, box_w) / (h + 1e-8)
 
             for ind, proportion_range in enumerate(lv_proportion_range):
                 if proportion_range[0] < proportion < proportion_range[1]:
-                    lv_ignore_polys[ind].append(
-                        [ignore_poly[0] / lv_size_divs[ind]])
+                    lv_ignore_polys[ind].append([ignore_poly[0] / lv_size_divs[ind]])
 
         for ind, size_divisor in enumerate(lv_size_divs):
             current_level_maps = []
             level_img_size = (h // size_divisor, w // size_divisor)
 
-            text_region = self.generate_text_region_mask(
-                level_img_size, lv_text_polys[ind])[None]
+            text_region = self.generate_text_region_mask(level_img_size, lv_text_polys[ind])[None]
             current_level_maps.append(text_region)
 
-            center_region = self.generate_center_region_mask(
-                level_img_size, lv_text_polys[ind])[None]
+            center_region = self.generate_center_region_mask(level_img_size, lv_text_polys[ind])[None]
             current_level_maps.append(center_region)
 
-            effective_mask = self.generate_effective_mask(
-                level_img_size, lv_ignore_polys[ind])[None]
+            effective_mask = self.generate_effective_mask(level_img_size, lv_ignore_polys[ind])[None]
             current_level_maps.append(effective_mask)
 
-            fourier_real_map, fourier_image_maps = self.generate_fourier_maps(
-                level_img_size, lv_text_polys[ind])
+            fourier_real_map, fourier_image_maps = self.generate_fourier_maps(level_img_size, lv_text_polys[ind])
             current_level_maps.append(fourier_real_map)
             current_level_maps.append(fourier_image_maps)
 
@@ -341,20 +326,15 @@ class FCENetTargets(TextSnakeTargets):
 
         assert isinstance(results, dict)
 
-        polygon_masks = results['gt_masks'].masks
-        polygon_masks_ignore = results['gt_masks_ignore'].masks
+        polygon_masks = results["gt_masks"].masks
+        polygon_masks_ignore = results["gt_masks_ignore"].masks
 
-        h, w, _ = results['img_shape']
+        h, w, _ = results["img_shape"]
 
-        level_maps = self.generate_level_targets((h, w), polygon_masks,
-                                                 polygon_masks_ignore)
+        level_maps = self.generate_level_targets((h, w), polygon_masks, polygon_masks_ignore)
 
-        results['mask_fields'].clear()  # rm gt_masks encoded by polygons
-        mapping = {
-            'p3_maps': level_maps[0],
-            'p4_maps': level_maps[1],
-            'p5_maps': level_maps[2]
-        }
+        results["mask_fields"].clear()  # rm gt_masks encoded by polygons
+        mapping = {"p3_maps": level_maps[0], "p4_maps": level_maps[1], "p5_maps": level_maps[2]}
         for key, value in mapping.items():
             results[key] = value
 

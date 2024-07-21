@@ -1,12 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
 
+import mmocr.utils as utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-import mmocr.utils as utils
 from mmocr.models.builder import ENCODERS
+
 from .base_encoder import BaseEncoder
 
 
@@ -26,18 +26,17 @@ class SAREncoder(BaseEncoder):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 enc_bi_rnn=False,
-                 enc_do_rnn=0.0,
-                 enc_gru=False,
-                 d_model=512,
-                 d_enc=512,
-                 mask=True,
-                 init_cfg=[
-                     dict(type='Xavier', layer='Conv2d'),
-                     dict(type='Uniform', layer='BatchNorm2d')
-                 ],
-                 **kwargs):
+    def __init__(
+        self,
+        enc_bi_rnn=False,
+        enc_do_rnn=0.0,
+        enc_gru=False,
+        d_model=512,
+        d_enc=512,
+        mask=True,
+        init_cfg=[dict(type="Xavier", layer="Conv2d"), dict(type="Uniform", layer="BatchNorm2d")],
+        **kwargs
+    ):
         super().__init__(init_cfg=init_cfg)
         assert isinstance(enc_bi_rnn, bool)
         assert isinstance(enc_do_rnn, (int, float))
@@ -58,7 +57,8 @@ class SAREncoder(BaseEncoder):
             num_layers=2,
             batch_first=True,
             dropout=enc_do_rnn,
-            bidirectional=enc_bi_rnn)
+            bidirectional=enc_bi_rnn,
+        )
         if enc_gru:
             self.rnn_encoder = nn.GRU(**kwargs)
         else:
@@ -84,13 +84,10 @@ class SAREncoder(BaseEncoder):
 
         valid_ratios = None
         if img_metas is not None:
-            valid_ratios = [
-                img_meta.get('valid_ratio', 1.0) for img_meta in img_metas
-            ] if self.mask else None
+            valid_ratios = [img_meta.get("valid_ratio", 1.0) for img_meta in img_metas] if self.mask else None
 
         h_feat = feat.size(2)
-        feat_v = F.max_pool2d(
-            feat, kernel_size=(h_feat, 1), stride=1, padding=0)
+        feat_v = F.max_pool2d(feat, kernel_size=(h_feat, 1), stride=1, padding=0)
         feat_v = feat_v.squeeze(2)  # bsz * C * W
         feat_v = feat_v.permute(0, 2, 1).contiguous()  # bsz * W * C
 

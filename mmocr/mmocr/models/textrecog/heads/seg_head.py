@@ -2,9 +2,8 @@
 import torch.nn.functional as F
 from mmcv.cnn import ConvModule
 from mmcv.runner import BaseModule
-from torch import nn
-
 from mmocr.models.builder import HEADS
+from torch import nn
 
 
 @HEADS.register_module()
@@ -19,11 +18,7 @@ class SegHead(BaseModule):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 in_channels=128,
-                 num_classes=37,
-                 upsample_param=None,
-                 init_cfg=None):
+    def __init__(self, in_channels=128, num_classes=37, upsample_param=None, init_cfg=None):
         super().__init__(init_cfg=init_cfg)
         assert isinstance(num_classes, int)
         assert num_classes > 0
@@ -31,17 +26,10 @@ class SegHead(BaseModule):
 
         self.upsample_param = upsample_param
 
-        self.seg_conv = ConvModule(
-            in_channels,
-            in_channels,
-            3,
-            stride=1,
-            padding=1,
-            norm_cfg=dict(type='BN'))
+        self.seg_conv = ConvModule(in_channels, in_channels, 3, stride=1, padding=1, norm_cfg=dict(type="BN"))
 
         # prediction
-        self.pred_conv = nn.Conv2d(
-            in_channels, num_classes, kernel_size=1, stride=1, padding=0)
+        self.pred_conv = nn.Conv2d(in_channels, num_classes, kernel_size=1, stride=1, padding=0)
 
     def forward(self, out_neck):
         """

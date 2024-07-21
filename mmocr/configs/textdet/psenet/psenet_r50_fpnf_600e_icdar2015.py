@@ -1,9 +1,9 @@
 _base_ = [
-    '../../_base_/default_runtime.py',
-    '../../_base_/schedules/schedule_adam_step_600e.py',
-    '../../_base_/det_models/psenet_r50_fpnf.py',
-    '../../_base_/det_datasets/icdar2015.py',
-    '../../_base_/det_pipelines/psenet_pipeline.py'
+    "../../_base_/default_runtime.py",
+    "../../_base_/schedules/schedule_adam_step_600e.py",
+    "../../_base_/det_models/psenet_r50_fpnf.py",
+    "../../_base_/det_datasets/icdar2015.py",
+    "../../_base_/det_pipelines/psenet_pipeline.py",
 ]
 
 model = {{_base_.model_quad}}
@@ -19,17 +19,9 @@ data = dict(
     workers_per_gpu=2,
     val_dataloader=dict(samples_per_gpu=1),
     test_dataloader=dict(samples_per_gpu=1),
-    train=dict(
-        type='UniformConcatDataset',
-        datasets=train_list,
-        pipeline=train_pipeline),
-    val=dict(
-        type='UniformConcatDataset',
-        datasets=test_list,
-        pipeline=test_pipeline_icdar2015),
-    test=dict(
-        type='UniformConcatDataset',
-        datasets=test_list,
-        pipeline=test_pipeline_icdar2015))
+    train=dict(type="UniformConcatDataset", datasets=train_list, pipeline=train_pipeline),
+    val=dict(type="UniformConcatDataset", datasets=test_list, pipeline=test_pipeline_icdar2015),
+    test=dict(type="UniformConcatDataset", datasets=test_list, pipeline=test_pipeline_icdar2015),
+)
 
-evaluation = dict(interval=10, metric='hmean-iou')
+evaluation = dict(interval=10, metric="hmean-iou")

@@ -27,7 +27,7 @@ class OneOfWrapper:
 
     def __init__(self, transforms):
         assert isinstance(transforms, list) or isinstance(transforms, tuple)
-        assert len(transforms) > 0, 'Need at least one transform.'
+        assert len(transforms) > 0, "Need at least one transform."
         self.transforms = []
         for t in transforms:
             if isinstance(t, dict):
@@ -35,14 +35,14 @@ class OneOfWrapper:
             elif callable(t):
                 self.transforms.append(t)
             else:
-                raise TypeError('transform must be callable or a dict')
+                raise TypeError("transform must be callable or a dict")
 
     def __call__(self, results):
         return random.choice(self.transforms)(results)
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += f'(transforms={self.transforms})'
+        repr_str += f"(transforms={self.transforms})"
         return repr_str
 
 
@@ -61,13 +61,12 @@ class RandomWrapper:
         self.p = p
 
     def __call__(self, results):
-        return results if np.random.uniform() > self.p else self.transforms(
-            results)
+        return results if np.random.uniform() > self.p else self.transforms(results)
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += f'(transforms={self.transforms}, '
-        repr_str += f'p={self.p})'
+        repr_str += f"(transforms={self.transforms}, "
+        repr_str += f"p={self.p})"
         return repr_str
 
 
@@ -105,24 +104,23 @@ class TorchVisionWrapper:
         elif inspect.isclass(op):
             obj_cls = op
         else:
-            raise TypeError(
-                f'type must be a str or valid type, but got {type(type)}')
+            raise TypeError(f"type must be a str or valid type, but got {type(type)}")
         self.transform = obj_cls(**kwargs)
         self.kwargs = kwargs
 
     def __call__(self, results):
-        assert 'img' in results
+        assert "img" in results
         # BGR -> RGB
-        img = results['img'][..., ::-1]
+        img = results["img"][..., ::-1]
         img = Image.fromarray(img)
         img = self.transform(img)
         img = np.asarray(img)
         img = img[..., ::-1]
-        results['img'] = img
-        results['img_shape'] = img.shape
+        results["img"] = img
+        results["img_shape"] = img.shape
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += f'(transform={self.transform})'
+        repr_str += f"(transform={self.transform})"
         return repr_str

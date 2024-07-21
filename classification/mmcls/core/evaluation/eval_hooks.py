@@ -23,7 +23,7 @@ class EvalHook(BaseEvalHook):
         """perform evaluation and save ckpt."""
         results = self.test_fn(runner.model, self.dataloader)
         self.latest_results = results
-        runner.log_buffer.output['eval_iter_num'] = len(self.dataloader)
+        runner.log_buffer.output["eval_iter_num"] = len(self.dataloader)
         key_score = self.evaluate(runner, results)
         # the key_score may be `None` so it needs to skip the action to save
         # the best checkpoint
@@ -53,24 +53,19 @@ class DistEvalHook(BaseDistEvalHook):
         if self.broadcast_bn_buffer:
             model = runner.model
             for name, module in model.named_modules():
-                if isinstance(module,
-                              _BatchNorm) and module.track_running_stats:
+                if isinstance(module, _BatchNorm) and module.track_running_stats:
                     dist.broadcast(module.running_var, 0)
                     dist.broadcast(module.running_mean, 0)
 
         tmpdir = self.tmpdir
         if tmpdir is None:
-            tmpdir = osp.join(runner.work_dir, '.eval_hook')
+            tmpdir = osp.join(runner.work_dir, ".eval_hook")
 
-        results = self.test_fn(
-            runner.model,
-            self.dataloader,
-            tmpdir=tmpdir,
-            gpu_collect=self.gpu_collect)
+        results = self.test_fn(runner.model, self.dataloader, tmpdir=tmpdir, gpu_collect=self.gpu_collect)
         self.latest_results = results
         if runner.rank == 0:
-            print('\n')
-            runner.log_buffer.output['eval_iter_num'] = len(self.dataloader)
+            print("\n")
+            runner.log_buffer.output["eval_iter_num"] = len(self.dataloader)
             key_score = self.evaluate(runner, results)
             # the key_score may be `None` so it needs to skip the action to
             # save the best checkpoint

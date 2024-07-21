@@ -3,10 +3,9 @@ import math
 
 import torch.nn as nn
 from mmcv.runner import ModuleList
-
 from mmocr.models.builder import ENCODERS
-from mmocr.models.textrecog.layers import (Adaptive2DPositionalEncoding,
-                                           SatrnEncoderLayer)
+from mmocr.models.textrecog.layers import Adaptive2DPositionalEncoding, SatrnEncoderLayer
+
 from .base_encoder import BaseEncoder
 
 
@@ -29,29 +28,27 @@ class SatrnEncoder(BaseEncoder):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 n_layers=12,
-                 n_head=8,
-                 d_k=64,
-                 d_v=64,
-                 d_model=512,
-                 n_position=100,
-                 d_inner=256,
-                 dropout=0.1,
-                 init_cfg=None,
-                 **kwargs):
+    def __init__(
+        self,
+        n_layers=12,
+        n_head=8,
+        d_k=64,
+        d_v=64,
+        d_model=512,
+        n_position=100,
+        d_inner=256,
+        dropout=0.1,
+        init_cfg=None,
+        **kwargs
+    ):
         super().__init__(init_cfg=init_cfg)
         self.d_model = d_model
         self.position_enc = Adaptive2DPositionalEncoding(
-            d_hid=d_model,
-            n_height=n_position,
-            n_width=n_position,
-            dropout=dropout)
-        self.layer_stack = ModuleList([
-            SatrnEncoderLayer(
-                d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
-            for _ in range(n_layers)
-        ])
+            d_hid=d_model, n_height=n_position, n_width=n_position, dropout=dropout
+        )
+        self.layer_stack = ModuleList(
+            [SatrnEncoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout) for _ in range(n_layers)]
+        )
         self.layer_norm = nn.LayerNorm(d_model)
 
     def forward(self, feat, img_metas=None):
@@ -66,9 +63,7 @@ class SatrnEncoder(BaseEncoder):
         """
         valid_ratios = [1.0 for _ in range(feat.size(0))]
         if img_metas is not None:
-            valid_ratios = [
-                img_meta.get('valid_ratio', 1.0) for img_meta in img_metas
-            ]
+            valid_ratios = [img_meta.get("valid_ratio", 1.0) for img_meta in img_metas]
         feat += self.position_enc(feat)
         n, c, h, w = feat.size()
         mask = feat.new_zeros((n, h, w))

@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 
 class Config(object):
@@ -25,8 +23,8 @@ def read_params():
     cfg = Config()
 
     # params for layout analysis
-    cfg.layout_model_dir = './inference/picodet_lcnet_x1_0_fgd_layout_infer/'
-    cfg.layout_dict_path = './ppocr/utils/dict/layout_dict/layout_publaynet_dict.txt'
+    cfg.layout_model_dir = "./inference/picodet_lcnet_x1_0_fgd_layout_infer/"
+    cfg.layout_dict_path = "./ppocr/utils/dict/layout_dict/layout_publaynet_dict.txt"
     cfg.layout_score_threshold = 0.5
     cfg.layout_nms_threshold = 0.5
     return cfg

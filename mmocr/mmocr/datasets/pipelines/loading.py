@@ -28,19 +28,12 @@ class LoadTextAnnotations(LoadAnnotations):
             previous pipeline ``LoadImageFromFile`` to generate mask.
     """
 
-    def __init__(self,
-                 with_bbox=True,
-                 with_label=True,
-                 with_mask=False,
-                 with_seg=False,
-                 poly2mask=True,
-                 use_img_shape=False):
+    def __init__(
+        self, with_bbox=True, with_label=True, with_mask=False, with_seg=False, poly2mask=True, use_img_shape=False
+    ):
         super().__init__(
-            with_bbox=with_bbox,
-            with_label=with_label,
-            with_mask=with_mask,
-            with_seg=with_seg,
-            poly2mask=poly2mask)
+            with_bbox=with_bbox, with_label=with_label, with_mask=with_mask, with_seg=with_seg, poly2mask=poly2mask
+        )
 
         self.use_img_shape = use_img_shape
 
@@ -62,40 +55,31 @@ class LoadTextAnnotations(LoadAnnotations):
         return valid_polygons
 
     def _load_masks(self, results):
-        ann_info = results['ann_info']
-        h, w = results['img_info']['height'], results['img_info']['width']
+        ann_info = results["ann_info"]
+        h, w = results["img_info"]["height"], results["img_info"]["width"]
         if self.use_img_shape:
-            if results.get('ori_shape', None):
-                h, w = results['ori_shape'][:2]
-                results['img_info']['height'] = h
-                results['img_info']['width'] = w
+            if results.get("ori_shape", None):
+                h, w = results["ori_shape"][:2]
+                results["img_info"]["height"] = h
+                results["img_info"]["width"] = w
             else:
-                warnings.warn('"ori_shape" not in results, use the shape '
-                              'in "img_info" instead.')
-        gt_masks = ann_info['masks']
+                warnings.warn('"ori_shape" not in results, use the shape ' 'in "img_info" instead.')
+        gt_masks = ann_info["masks"]
         if self.poly2mask:
-            gt_masks = BitmapMasks(
-                [self._poly2mask(mask, h, w) for mask in gt_masks], h, w)
+            gt_masks = BitmapMasks([self._poly2mask(mask, h, w) for mask in gt_masks], h, w)
         else:
-            gt_masks = PolygonMasks(
-                [self.process_polygons(polygons) for polygons in gt_masks], h,
-                w)
-        gt_masks_ignore = ann_info.get('masks_ignore', None)
+            gt_masks = PolygonMasks([self.process_polygons(polygons) for polygons in gt_masks], h, w)
+        gt_masks_ignore = ann_info.get("masks_ignore", None)
         if gt_masks_ignore is not None:
             if self.poly2mask:
-                gt_masks_ignore = BitmapMasks(
-                    [self._poly2mask(mask, h, w) for mask in gt_masks_ignore],
-                    h, w)
+                gt_masks_ignore = BitmapMasks([self._poly2mask(mask, h, w) for mask in gt_masks_ignore], h, w)
             else:
-                gt_masks_ignore = PolygonMasks([
-                    self.process_polygons(polygons)
-                    for polygons in gt_masks_ignore
-                ], h, w)
-            results['gt_masks_ignore'] = gt_masks_ignore
-            results['mask_fields'].append('gt_masks_ignore')
+                gt_masks_ignore = PolygonMasks([self.process_polygons(polygons) for polygons in gt_masks_ignore], h, w)
+            results["gt_masks_ignore"] = gt_masks_ignore
+            results["mask_fields"].append("gt_masks_ignore")
 
-        results['gt_masks'] = gt_masks
-        results['mask_fields'].append('gt_masks')
+        results["gt_masks"] = gt_masks
+        results["mask_fields"].append("gt_masks")
         return results
 
 
@@ -117,22 +101,22 @@ class LoadImageFromNdarray(LoadImageFromFile):
         Returns:
             dict: The dict contains loaded image and meta information.
         """
-        assert results['img'].dtype == 'uint8'
+        assert results["img"].dtype == "uint8"
 
-        img = results['img']
-        if self.color_type == 'grayscale' and img.shape[2] == 3:
+        img = results["img"]
+        if self.color_type == "grayscale" and img.shape[2] == 3:
             img = mmcv.bgr2gray(img, keepdim=True)
-        if self.color_type == 'color' and img.shape[2] == 1:
+        if self.color_type == "color" and img.shape[2] == 1:
             img = mmcv.gray2bgr(img)
         if self.to_float32:
             img = img.astype(np.float32)
 
-        results['filename'] = None
-        results['ori_filename'] = None
-        results['img'] = img
-        results['img_shape'] = img.shape
-        results['ori_shape'] = img.shape
-        results['img_fields'] = ['img']
+        results["filename"] = None
+        results["ori_filename"] = None
+        results["img"] = img
+        results["img_shape"] = img.shape
+        results["ori_shape"] = img.shape
+        results["img_fields"] = ["img"]
         return results
 
 
@@ -144,14 +128,14 @@ class LoadImageFromLMDB(object):
     "results['img_info']['filename']", which is a data index of lmdb file.
     """
 
-    def __init__(self, color_type='color'):
+    def __init__(self, color_type="color"):
         self.color_type = color_type
         self.env = None
         self.txn = None
 
     def __call__(self, results):
-        img_key = results['img_info']['filename']
-        lmdb_path = results['img_prefix']
+        img_key = results["img_info"]["filename"]
+        lmdb_path = results["img_prefix"]
 
         # lmdb env
         if self.env is None:
@@ -165,24 +149,23 @@ class LoadImageFromLMDB(object):
             )
         # read image
         with self.env.begin(write=False) as txn:
-            imgbuf = txn.get(img_key.encode('utf-8'))
+            imgbuf = txn.get(img_key.encode("utf-8"))
             try:
                 img = mmcv.imfrombytes(imgbuf, flag=self.color_type)
             except IOError:
-                print('Corrupted image for {}'.format(img_key))
+                print("Corrupted image for {}".format(img_key))
                 return None
 
-            results['filename'] = img_key
-            results['ori_filename'] = img_key
-            results['img'] = img
-            results['img_shape'] = img.shape
-            results['ori_shape'] = img.shape
-            results['img_fields'] = ['img']
+            results["filename"] = img_key
+            results["ori_filename"] = img_key
+            results["img"] = img
+            results["img_shape"] = img.shape
+            results["ori_shape"] = img.shape
+            results["img_fields"] = ["img"]
             return results
 
     def __repr__(self):
-        return '{} (color_type={})'.format(self.__class__.__name__,
-                                           self.color_type)
+        return "{} (color_type={})".format(self.__class__.__name__, self.color_type)
 
     def __del__(self):
         if self.env is not None:

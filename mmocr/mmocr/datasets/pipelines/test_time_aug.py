@@ -54,8 +54,7 @@ class MultiRotateAugOCR:
         self.transforms = Compose(transforms)
         self.force_rotate = force_rotate
         if rotate_degrees is not None:
-            self.rotate_degrees = rotate_degrees if isinstance(
-                rotate_degrees, list) else [rotate_degrees]
+            self.rotate_degrees = rotate_degrees if isinstance(rotate_degrees, list) else [rotate_degrees]
             assert mmcv.is_list_of(self.rotate_degrees, int)
             for degree in self.rotate_degrees:
                 assert 0 <= degree < 360
@@ -75,7 +74,7 @@ class MultiRotateAugOCR:
            dict[str: list]: The augmented data, where each value is wrapped
                into a list.
         """
-        img_shape = results['img_shape']
+        img_shape = results["img_shape"]
         ori_height, ori_width = img_shape[:2]
         if not self.force_rotate and ori_height <= ori_width:
             rotate_degrees = [0]
@@ -87,11 +86,11 @@ class MultiRotateAugOCR:
             if degree == 0:
                 pass
             elif degree == 90:
-                _results['img'] = np.rot90(_results['img'], 1)
+                _results["img"] = np.rot90(_results["img"], 1)
             elif degree == 180:
-                _results['img'] = np.rot90(_results['img'], 2)
+                _results["img"] = np.rot90(_results["img"], 2)
             elif degree == 270:
-                _results['img'] = np.rot90(_results['img'], 3)
+                _results["img"] = np.rot90(_results["img"], 3)
             data = self.transforms(_results)
             aug_data.append(data)
         # list of dict to dict of list
@@ -103,6 +102,6 @@ class MultiRotateAugOCR:
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += f'(transforms={self.transforms}, '
-        repr_str += f'rotate_degrees={self.rotate_degrees})'
+        repr_str += f"(transforms={self.transforms}, "
+        repr_str += f"rotate_degrees={self.rotate_degrees})"
         return repr_str

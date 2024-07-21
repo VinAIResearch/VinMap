@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 from mmdet.datasets.builder import PIPELINES
-
 from mmocr.models.builder import build_convertor
 
 
@@ -22,10 +21,9 @@ class NerTransform:
         self.max_len = max_len
 
     def __call__(self, results):
-        texts = results['text']
+        texts = results["text"]
         input_ids = self.label_convertor.convert_text2id(texts)
-        labels = self.label_convertor.convert_entity2label(
-            results['label'], len(texts))
+        labels = self.label_convertor.convert_entity2label(results["label"], len(texts))
 
         attention_mask = [0] * self.max_len
         token_type_ids = [0] * self.max_len
@@ -38,7 +36,8 @@ class NerTransform:
             texts=texts,
             input_ids=input_ids,
             attention_mask=attention_mask,
-            token_type_ids=token_type_ids)
+            token_type_ids=token_type_ids,
+        )
         return results
 
 
@@ -48,16 +47,15 @@ class ToTensorNER:
 
     def __call__(self, results):
 
-        input_ids = torch.tensor(results['input_ids'])
-        labels = torch.tensor(results['labels'])
-        attention_masks = torch.tensor(results['attention_mask'])
-        token_type_ids = torch.tensor(results['token_type_ids'])
+        input_ids = torch.tensor(results["input_ids"])
+        labels = torch.tensor(results["labels"])
+        attention_masks = torch.tensor(results["attention_mask"])
+        token_type_ids = torch.tensor(results["token_type_ids"])
 
         results = dict(
             img=[],
             img_metas=dict(
-                input_ids=input_ids,
-                attention_masks=attention_masks,
-                labels=labels,
-                token_type_ids=token_type_ids))
+                input_ids=input_ids, attention_masks=attention_masks, labels=labels, token_type_ids=token_type_ids
+            ),
+        )
         return results

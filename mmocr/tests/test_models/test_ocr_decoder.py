@@ -3,21 +3,24 @@ import math
 
 import pytest
 import torch
-
-from mmocr.models.textrecog.decoders import (ABILanguageDecoder,
-                                             ABIVisionDecoder, BaseDecoder,
-                                             MasterDecoder, NRTRDecoder,
-                                             ParallelSARDecoder,
-                                             ParallelSARDecoderWithBS,
-                                             SequentialSARDecoder)
+from mmocr.models.textrecog.decoders import (
+    ABILanguageDecoder,
+    ABIVisionDecoder,
+    BaseDecoder,
+    MasterDecoder,
+    NRTRDecoder,
+    ParallelSARDecoder,
+    ParallelSARDecoderWithBS,
+    SequentialSARDecoder,
+)
 from mmocr.models.textrecog.decoders.sar_decoder_with_bs import DecodeNode
 
 
 def _create_dummy_input():
     feat = torch.rand(1, 512, 4, 40)
     out_enc = torch.rand(1, 512)
-    tgt_dict = {'padded_targets': torch.LongTensor([[1, 1, 1, 1, 36]])}
-    img_metas = [{'valid_ratio': 1.0}]
+    tgt_dict = {"padded_targets": torch.LongTensor([[1, 1, 1, 1, 36]])}
+    img_metas = [{"valid_ratio": 1.0}]
 
     return feat, out_enc, tgt_dict, img_metas
 
@@ -51,8 +54,7 @@ def test_parallel_sar_decoder():
 
 def test_sequential_sar_decoder():
     # test parallel sar decoder
-    decoder = SequentialSARDecoder(
-        num_classes=37, padding_idx=36, max_seq_len=5)
+    decoder = SequentialSARDecoder(num_classes=37, padding_idx=36, max_seq_len=5)
     decoder.init_weights()
     decoder.train()
 
@@ -71,13 +73,12 @@ def test_sequential_sar_decoder():
 
 def test_parallel_sar_decoder_with_beam_search():
     with pytest.raises(AssertionError):
-        ParallelSARDecoderWithBS(beam_width='beam')
+        ParallelSARDecoderWithBS(beam_width="beam")
     with pytest.raises(AssertionError):
         ParallelSARDecoderWithBS(beam_width=0)
 
     feat, out_enc, tgt_dict, img_metas = _create_dummy_input()
-    decoder = ParallelSARDecoderWithBS(
-        beam_width=1, num_classes=37, padding_idx=36, max_seq_len=5)
+    decoder = ParallelSARDecoderWithBS(beam_width=1, num_classes=37, padding_idx=36, max_seq_len=5)
     decoder.init_weights()
     decoder.train()
     with pytest.raises(AssertionError):
@@ -92,7 +93,7 @@ def test_parallel_sar_decoder_with_beam_search():
     with pytest.raises(AssertionError):
         DecodeNode(1, 1)
     with pytest.raises(AssertionError):
-        DecodeNode([1, 2], ['4', '3'])
+        DecodeNode([1, 2], ["4", "3"])
     with pytest.raises(AssertionError):
         DecodeNode([1, 2], [0.5])
     decode_node = DecodeNode([1, 2], [0.7, 0.8])
@@ -105,9 +106,9 @@ def test_transformer_decoder():
     decoder.train()
 
     out_enc = torch.rand(1, 25, 512)
-    tgt_dict = {'padded_targets': torch.LongTensor([[1, 1, 1, 1, 36]])}
-    img_metas = [{'valid_ratio': 1.0}]
-    tgt_dict['padded_targets'] = tgt_dict['padded_targets']
+    tgt_dict = {"padded_targets": torch.LongTensor([[1, 1, 1, 1, 36]])}
+    img_metas = [{"valid_ratio": 1.0}]
+    tgt_dict["padded_targets"] = tgt_dict["padded_targets"]
 
     out_train = decoder(None, out_enc, tgt_dict, img_metas, True)
     assert out_train.shape == torch.Size([1, 5, 36])
@@ -119,32 +120,24 @@ def test_transformer_decoder():
 def test_abi_language_decoder():
     decoder = ABILanguageDecoder(max_seq_len=25)
     logits = torch.randn(2, 25, 90)
-    result = decoder(
-        feat=None, out_enc=logits, targets_dict=None, img_metas=None)
-    assert result['feature'].shape == torch.Size([2, 25, 512])
-    assert result['logits'].shape == torch.Size([2, 25, 90])
+    result = decoder(feat=None, out_enc=logits, targets_dict=None, img_metas=None)
+    assert result["feature"].shape == torch.Size([2, 25, 512])
+    assert result["logits"].shape == torch.Size([2, 25, 90])
 
 
 def test_abi_vision_decoder():
-    model = ABIVisionDecoder(
-        in_channels=128, num_channels=16, max_seq_len=10, use_result=None)
+    model = ABIVisionDecoder(in_channels=128, num_channels=16, max_seq_len=10, use_result=None)
     x = torch.randn(2, 128, 8, 32)
     result = model(x, None)
-    assert result['feature'].shape == torch.Size([2, 10, 128])
-    assert result['logits'].shape == torch.Size([2, 10, 90])
-    assert result['attn_scores'].shape == torch.Size([2, 10, 8, 32])
+    assert result["feature"].shape == torch.Size([2, 10, 128])
+    assert result["logits"].shape == torch.Size([2, 10, 90])
+    assert result["attn_scores"].shape == torch.Size([2, 10, 8, 32])
 
 
 def test_master_decoder():
-    model = MasterDecoder(
-        start_idx=0,
-        padding_idx=36,
-        num_classes=37,
-        d_model=64,
-        n_head=2,
-        max_seq_len=5)
+    model = MasterDecoder(start_idx=0, padding_idx=36, num_classes=37, d_model=64, n_head=2, max_seq_len=5)
     feat = torch.randn(1, 64, 6, 40)
-    tgt_dict = {'padded_targets': torch.LongTensor([[0, 1, 1, 1, 36]])}
+    tgt_dict = {"padded_targets": torch.LongTensor([[0, 1, 1, 1, 36]])}
     result = model(feat, None, tgt_dict)
     assert result.shape == torch.Size([1, 5, 37])
     result = model.forward_test(feat, None, None)

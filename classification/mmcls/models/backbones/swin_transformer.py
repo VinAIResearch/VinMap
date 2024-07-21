@@ -13,8 +13,7 @@ from mmcv.runner.base_module import BaseModule, ModuleList
 from mmcv.utils.parrots_wrapper import _BatchNorm
 
 from ..builder import BACKBONES
-from ..utils import (ShiftWindowMSA, resize_pos_embed,
-                     resize_relative_position_bias_table, to_2tuple)
+from ..utils import ShiftWindowMSA, resize_pos_embed, resize_relative_position_bias_table, to_2tuple
 from .base_backbone import BaseBackbone
 
 
@@ -46,43 +45,45 @@ class SwinBlock(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads,
-                 window_size=7,
-                 shift=False,
-                 ffn_ratio=4.,
-                 drop_path=0.,
-                 pad_small_map=False,
-                 attn_cfgs=dict(),
-                 ffn_cfgs=dict(),
-                 norm_cfg=dict(type='LN'),
-                 with_cp=False,
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        num_heads,
+        window_size=7,
+        shift=False,
+        ffn_ratio=4.0,
+        drop_path=0.0,
+        pad_small_map=False,
+        attn_cfgs=dict(),
+        ffn_cfgs=dict(),
+        norm_cfg=dict(type="LN"),
+        with_cp=False,
+        init_cfg=None,
+    ):
 
         super(SwinBlock, self).__init__(init_cfg)
         self.with_cp = with_cp
 
         _attn_cfgs = {
-            'embed_dims': embed_dims,
-            'num_heads': num_heads,
-            'shift_size': window_size // 2 if shift else 0,
-            'window_size': window_size,
-            'dropout_layer': dict(type='DropPath', drop_prob=drop_path),
-            'pad_small_map': pad_small_map,
-            **attn_cfgs
+            "embed_dims": embed_dims,
+            "num_heads": num_heads,
+            "shift_size": window_size // 2 if shift else 0,
+            "window_size": window_size,
+            "dropout_layer": dict(type="DropPath", drop_prob=drop_path),
+            "pad_small_map": pad_small_map,
+            **attn_cfgs,
         }
         self.norm1 = build_norm_layer(norm_cfg, embed_dims)[1]
         self.attn = ShiftWindowMSA(**_attn_cfgs)
 
         _ffn_cfgs = {
-            'embed_dims': embed_dims,
-            'feedforward_channels': int(embed_dims * ffn_ratio),
-            'num_fcs': 2,
-            'ffn_drop': 0,
-            'dropout_layer': dict(type='DropPath', drop_prob=drop_path),
-            'act_cfg': dict(type='GELU'),
-            **ffn_cfgs
+            "embed_dims": embed_dims,
+            "feedforward_channels": int(embed_dims * ffn_ratio),
+            "num_fcs": 2,
+            "ffn_drop": 0,
+            "dropout_layer": dict(type="DropPath", drop_prob=drop_path),
+            "act_cfg": dict(type="GELU"),
+            **ffn_cfgs,
         }
         self.norm2 = build_norm_layer(norm_cfg, embed_dims)[1]
         self.ffn = FFN(**_ffn_cfgs)
@@ -136,18 +137,20 @@ class SwinBlockSequence(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 depth,
-                 num_heads,
-                 window_size=7,
-                 downsample=False,
-                 downsample_cfg=dict(),
-                 drop_paths=0.,
-                 block_cfgs=dict(),
-                 with_cp=False,
-                 pad_small_map=False,
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        depth,
+        num_heads,
+        window_size=7,
+        downsample=False,
+        downsample_cfg=dict(),
+        drop_paths=0.0,
+        block_cfgs=dict(),
+        with_cp=False,
+        pad_small_map=False,
+        init_cfg=None,
+    ):
         super().__init__(init_cfg)
 
         if not isinstance(drop_paths, Sequence):
@@ -160,24 +163,24 @@ class SwinBlockSequence(BaseModule):
         self.blocks = ModuleList()
         for i in range(depth):
             _block_cfg = {
-                'embed_dims': embed_dims,
-                'num_heads': num_heads,
-                'window_size': window_size,
-                'shift': False if i % 2 == 0 else True,
-                'drop_path': drop_paths[i],
-                'with_cp': with_cp,
-                'pad_small_map': pad_small_map,
-                **block_cfgs[i]
+                "embed_dims": embed_dims,
+                "num_heads": num_heads,
+                "window_size": window_size,
+                "shift": False if i % 2 == 0 else True,
+                "drop_path": drop_paths[i],
+                "with_cp": with_cp,
+                "pad_small_map": pad_small_map,
+                **block_cfgs[i],
             }
             block = SwinBlock(**_block_cfg)
             self.blocks.append(block)
 
         if downsample:
             _downsample_cfg = {
-                'in_channels': embed_dims,
-                'out_channels': 2 * embed_dims,
-                'norm_cfg': dict(type='LN'),
-                **downsample_cfg
+                "in_channels": embed_dims,
+                "out_channels": 2 * embed_dims,
+                "norm_cfg": dict(type="LN"),
+                **downsample_cfg,
             }
             self.downsample = PatchMerging(**_downsample_cfg)
         else:
@@ -272,64 +275,55 @@ class SwinTransformer(BaseBackbone):
         >>> print(output.shape)
         (1, 2592, 4)
     """
+
     arch_zoo = {
-        **dict.fromkeys(['t', 'tiny'],
-                        {'embed_dims': 96,
-                         'depths':     [2, 2,  6,  2],
-                         'num_heads':  [3, 6, 12, 24]}),
-        **dict.fromkeys(['s', 'small'],
-                        {'embed_dims': 96,
-                         'depths':     [2, 2, 18,  2],
-                         'num_heads':  [3, 6, 12, 24]}),
-        **dict.fromkeys(['b', 'base'],
-                        {'embed_dims': 128,
-                         'depths':     [2, 2, 18,  2],
-                         'num_heads':  [4, 8, 16, 32]}),
-        **dict.fromkeys(['l', 'large'],
-                        {'embed_dims': 192,
-                         'depths':     [2,  2, 18,  2],
-                         'num_heads':  [6, 12, 24, 48]}),
+        **dict.fromkeys(["t", "tiny"], {"embed_dims": 96, "depths": [2, 2, 6, 2], "num_heads": [3, 6, 12, 24]}),
+        **dict.fromkeys(["s", "small"], {"embed_dims": 96, "depths": [2, 2, 18, 2], "num_heads": [3, 6, 12, 24]}),
+        **dict.fromkeys(["b", "base"], {"embed_dims": 128, "depths": [2, 2, 18, 2], "num_heads": [4, 8, 16, 32]}),
+        **dict.fromkeys(["l", "large"], {"embed_dims": 192, "depths": [2, 2, 18, 2], "num_heads": [6, 12, 24, 48]}),
     }  # yapf: disable
 
     _version = 3
     num_extra_tokens = 0
 
-    def __init__(self,
-                 arch='tiny',
-                 img_size=224,
-                 patch_size=4,
-                 in_channels=3,
-                 window_size=7,
-                 drop_rate=0.,
-                 drop_path_rate=0.1,
-                 out_indices=(3, ),
-                 out_after_downsample=False,
-                 use_abs_pos_embed=False,
-                 interpolate_mode='bicubic',
-                 with_cp=False,
-                 frozen_stages=-1,
-                 norm_eval=False,
-                 pad_small_map=False,
-                 norm_cfg=dict(type='LN'),
-                 stage_cfgs=dict(),
-                 patch_cfg=dict(),
-                 init_cfg=None):
+    def __init__(
+        self,
+        arch="tiny",
+        img_size=224,
+        patch_size=4,
+        in_channels=3,
+        window_size=7,
+        drop_rate=0.0,
+        drop_path_rate=0.1,
+        out_indices=(3,),
+        out_after_downsample=False,
+        use_abs_pos_embed=False,
+        interpolate_mode="bicubic",
+        with_cp=False,
+        frozen_stages=-1,
+        norm_eval=False,
+        pad_small_map=False,
+        norm_cfg=dict(type="LN"),
+        stage_cfgs=dict(),
+        patch_cfg=dict(),
+        init_cfg=None,
+    ):
         super(SwinTransformer, self).__init__(init_cfg=init_cfg)
 
         if isinstance(arch, str):
             arch = arch.lower()
-            assert arch in set(self.arch_zoo), \
-                f'Arch {arch} is not in default archs {set(self.arch_zoo)}'
+            assert arch in set(self.arch_zoo), f"Arch {arch} is not in default archs {set(self.arch_zoo)}"
             self.arch_settings = self.arch_zoo[arch]
         else:
-            essential_keys = {'embed_dims', 'depths', 'num_heads'}
-            assert isinstance(arch, dict) and set(arch) == essential_keys, \
-                f'Custom arch needs a dict with keys {essential_keys}'
+            essential_keys = {"embed_dims", "depths", "num_heads"}
+            assert (
+                isinstance(arch, dict) and set(arch) == essential_keys
+            ), f"Custom arch needs a dict with keys {essential_keys}"
             self.arch_settings = arch
 
-        self.embed_dims = self.arch_settings['embed_dims']
-        self.depths = self.arch_settings['depths']
-        self.num_heads = self.arch_settings['num_heads']
+        self.embed_dims = self.arch_settings["embed_dims"]
+        self.depths = self.arch_settings["depths"]
+        self.num_heads = self.arch_settings["num_heads"]
         self.num_layers = len(self.depths)
         self.out_indices = out_indices
         self.out_after_downsample = out_after_downsample
@@ -341,10 +335,10 @@ class SwinTransformer(BaseBackbone):
             in_channels=in_channels,
             input_size=img_size,
             embed_dims=self.embed_dims,
-            conv_type='Conv2d',
+            conv_type="Conv2d",
             kernel_size=patch_size,
             stride=patch_size,
-            norm_cfg=dict(type='LN'),
+            norm_cfg=dict(type="LN"),
         )
         _patch_cfg.update(patch_cfg)
         self.patch_embed = PatchEmbed(**_patch_cfg)
@@ -352,42 +346,36 @@ class SwinTransformer(BaseBackbone):
 
         if self.use_abs_pos_embed:
             num_patches = self.patch_resolution[0] * self.patch_resolution[1]
-            self.absolute_pos_embed = nn.Parameter(
-                torch.zeros(1, num_patches, self.embed_dims))
-            self._register_load_state_dict_pre_hook(
-                self._prepare_abs_pos_embed)
+            self.absolute_pos_embed = nn.Parameter(torch.zeros(1, num_patches, self.embed_dims))
+            self._register_load_state_dict_pre_hook(self._prepare_abs_pos_embed)
 
-        self._register_load_state_dict_pre_hook(
-            self._prepare_relative_position_bias_table)
+        self._register_load_state_dict_pre_hook(self._prepare_relative_position_bias_table)
 
         self.drop_after_pos = nn.Dropout(p=drop_rate)
         self.norm_eval = norm_eval
 
         # stochastic depth
         total_depth = sum(self.depths)
-        dpr = [
-            x.item() for x in torch.linspace(0, drop_path_rate, total_depth)
-        ]  # stochastic depth decay rule
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, total_depth)]  # stochastic depth decay rule
 
         self.stages = ModuleList()
         embed_dims = [self.embed_dims]
-        for i, (depth,
-                num_heads) in enumerate(zip(self.depths, self.num_heads)):
+        for i, (depth, num_heads) in enumerate(zip(self.depths, self.num_heads)):
             if isinstance(stage_cfgs, Sequence):
                 stage_cfg = stage_cfgs[i]
             else:
                 stage_cfg = deepcopy(stage_cfgs)
             downsample = True if i < self.num_layers - 1 else False
             _stage_cfg = {
-                'embed_dims': embed_dims[-1],
-                'depth': depth,
-                'num_heads': num_heads,
-                'window_size': window_size,
-                'downsample': downsample,
-                'drop_paths': dpr[:depth],
-                'with_cp': with_cp,
-                'pad_small_map': pad_small_map,
-                **stage_cfg
+                "embed_dims": embed_dims[-1],
+                "depth": depth,
+                "num_heads": num_heads,
+                "window_size": window_size,
+                "downsample": downsample,
+                "drop_paths": dpr[:depth],
+                "with_cp": with_cp,
+                "pad_small_map": pad_small_map,
+                **stage_cfg,
             }
 
             stage = SwinBlockSequence(**_stage_cfg)
@@ -403,18 +391,16 @@ class SwinTransformer(BaseBackbone):
 
         for i in out_indices:
             if norm_cfg is not None:
-                norm_layer = build_norm_layer(norm_cfg,
-                                              self.num_features[i])[1]
+                norm_layer = build_norm_layer(norm_cfg, self.num_features[i])[1]
             else:
                 norm_layer = nn.Identity()
 
-            self.add_module(f'norm{i}', norm_layer)
+            self.add_module(f"norm{i}", norm_layer)
 
     def init_weights(self):
         super(SwinTransformer, self).init_weights()
 
-        if (isinstance(self.init_cfg, dict)
-                and self.init_cfg['type'] == 'Pretrained'):
+        if isinstance(self.init_cfg, dict) and self.init_cfg["type"] == "Pretrained":
             # Suppress default init if use pretrained model.
             return
 
@@ -425,49 +411,42 @@ class SwinTransformer(BaseBackbone):
         x, hw_shape = self.patch_embed(x)
         if self.use_abs_pos_embed:
             x = x + resize_pos_embed(
-                self.absolute_pos_embed, self.patch_resolution, hw_shape,
-                self.interpolate_mode, self.num_extra_tokens)
+                self.absolute_pos_embed, self.patch_resolution, hw_shape, self.interpolate_mode, self.num_extra_tokens
+            )
         x = self.drop_after_pos(x)
 
         outs = []
         for i, stage in enumerate(self.stages):
-            x, hw_shape = stage(
-                x, hw_shape, do_downsample=self.out_after_downsample)
+            x, hw_shape = stage(x, hw_shape, do_downsample=self.out_after_downsample)
             if i in self.out_indices:
-                norm_layer = getattr(self, f'norm{i}')
+                norm_layer = getattr(self, f"norm{i}")
                 out = norm_layer(x)
-                out = out.view(-1, *hw_shape,
-                               self.num_features[i]).permute(0, 3, 1,
-                                                             2).contiguous()
+                out = out.view(-1, *hw_shape, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
                 outs.append(out)
             if stage.downsample is not None and not self.out_after_downsample:
                 x, hw_shape = stage.downsample(x, hw_shape)
 
         return tuple(outs)
 
-    def _load_from_state_dict(self, state_dict, prefix, local_metadata, *args,
-                              **kwargs):
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, *args, **kwargs):
         """load checkpoints."""
         # Names of some parameters in has been changed.
-        version = local_metadata.get('version', None)
-        if (version is None
-                or version < 2) and self.__class__ is SwinTransformer:
+        version = local_metadata.get("version", None)
+        if (version is None or version < 2) and self.__class__ is SwinTransformer:
             final_stage_num = len(self.stages) - 1
             state_dict_keys = list(state_dict.keys())
             for k in state_dict_keys:
-                if k.startswith('norm.') or k.startswith('backbone.norm.'):
-                    convert_key = k.replace('norm.', f'norm{final_stage_num}.')
+                if k.startswith("norm.") or k.startswith("backbone.norm."):
+                    convert_key = k.replace("norm.", f"norm{final_stage_num}.")
                     state_dict[convert_key] = state_dict[k]
                     del state_dict[k]
-        if (version is None
-                or version < 3) and self.__class__ is SwinTransformer:
+        if (version is None or version < 3) and self.__class__ is SwinTransformer:
             state_dict_keys = list(state_dict.keys())
             for k in state_dict_keys:
-                if 'attn_mask' in k:
+                if "attn_mask" in k:
                     del state_dict[k]
 
-        super()._load_from_state_dict(state_dict, prefix, local_metadata,
-                                      *args, **kwargs)
+        super()._load_from_state_dict(state_dict, prefix, local_metadata, *args, **kwargs)
 
     def _freeze_stages(self):
         if self.frozen_stages >= 0:
@@ -482,7 +461,7 @@ class SwinTransformer(BaseBackbone):
                 param.requires_grad = False
         for i in self.out_indices:
             if i <= self.frozen_stages:
-                for param in getattr(self, f'norm{i}').parameters():
+                for param in getattr(self, f"norm{i}").parameters():
                     param.requires_grad = False
 
     def train(self, mode=True):
@@ -495,34 +474,32 @@ class SwinTransformer(BaseBackbone):
                     m.eval()
 
     def _prepare_abs_pos_embed(self, state_dict, prefix, *args, **kwargs):
-        name = prefix + 'absolute_pos_embed'
+        name = prefix + "absolute_pos_embed"
         if name not in state_dict.keys():
             return
 
         ckpt_pos_embed_shape = state_dict[name].shape
         if self.absolute_pos_embed.shape != ckpt_pos_embed_shape:
             from mmcls.utils import get_root_logger
+
             logger = get_root_logger()
             logger.info(
-                'Resize the absolute_pos_embed shape from '
-                f'{ckpt_pos_embed_shape} to {self.absolute_pos_embed.shape}.')
+                "Resize the absolute_pos_embed shape from "
+                f"{ckpt_pos_embed_shape} to {self.absolute_pos_embed.shape}."
+            )
 
-            ckpt_pos_embed_shape = to_2tuple(
-                int(np.sqrt(ckpt_pos_embed_shape[1] - self.num_extra_tokens)))
+            ckpt_pos_embed_shape = to_2tuple(int(np.sqrt(ckpt_pos_embed_shape[1] - self.num_extra_tokens)))
             pos_embed_shape = self.patch_embed.init_out_size
 
-            state_dict[name] = resize_pos_embed(state_dict[name],
-                                                ckpt_pos_embed_shape,
-                                                pos_embed_shape,
-                                                self.interpolate_mode,
-                                                self.num_extra_tokens)
+            state_dict[name] = resize_pos_embed(
+                state_dict[name], ckpt_pos_embed_shape, pos_embed_shape, self.interpolate_mode, self.num_extra_tokens
+            )
 
-    def _prepare_relative_position_bias_table(self, state_dict, prefix, *args,
-                                              **kwargs):
+    def _prepare_relative_position_bias_table(self, state_dict, prefix, *args, **kwargs):
         state_dict_model = self.state_dict()
         all_keys = list(state_dict_model.keys())
         for key in all_keys:
-            if 'relative_position_bias_table' in key:
+            if "relative_position_bias_table" in key:
                 ckpt_key = prefix + key
                 if ckpt_key not in state_dict:
                     continue
@@ -534,15 +511,18 @@ class SwinTransformer(BaseBackbone):
                     src_size = int(L1**0.5)
                     dst_size = int(L2**0.5)
                     new_rel_pos_bias = resize_relative_position_bias_table(
-                        src_size, dst_size,
-                        relative_position_bias_table_pretrained, nH1)
+                        src_size, dst_size, relative_position_bias_table_pretrained, nH1
+                    )
                     from mmcls.utils import get_root_logger
+
                     logger = get_root_logger()
-                    logger.info('Resize the relative_position_bias_table from '
-                                f'{state_dict[ckpt_key].shape} to '
-                                f'{new_rel_pos_bias.shape}')
+                    logger.info(
+                        "Resize the relative_position_bias_table from "
+                        f"{state_dict[ckpt_key].shape} to "
+                        f"{new_rel_pos_bias.shape}"
+                    )
                     state_dict[ckpt_key] = new_rel_pos_bias
 
                     # The index buffer need to be re-generated.
-                    index_buffer = ckpt_key.replace('bias_table', 'index')
+                    index_buffer = ckpt_key.replace("bias_table", "index")
                     del state_dict[index_buffer]

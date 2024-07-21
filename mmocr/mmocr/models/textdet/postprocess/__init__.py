@@ -7,8 +7,13 @@ from .pan_postprocessor import PANPostprocessor
 from .pse_postprocessor import PSEPostprocessor
 from .textsnake_postprocessor import TextSnakePostprocessor
 
+
 __all__ = [
-    'BasePostprocessor', 'PSEPostprocessor', 'PANPostprocessor',
-    'DBPostprocessor', 'DRRGPostprocessor', 'FCEPostprocessor',
-    'TextSnakePostprocessor'
+    "BasePostprocessor",
+    "PSEPostprocessor",
+    "PANPostprocessor",
+    "DBPostprocessor",
+    "DRRGPostprocessor",
+    "FCEPostprocessor",
+    "TextSnakePostprocessor",
 ]

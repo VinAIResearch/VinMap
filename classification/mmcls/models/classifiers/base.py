@@ -6,9 +6,8 @@ from typing import Sequence
 import mmcv
 import torch
 import torch.distributed as dist
-from mmcv.runner import BaseModule, auto_fp16
-
 from mmcls.core.visualization import imshow_infos
+from mmcv.runner import BaseModule, auto_fp16
 
 
 class BaseClassifier(BaseModule, metaclass=ABCMeta):
@@ -20,11 +19,11 @@ class BaseClassifier(BaseModule, metaclass=ABCMeta):
 
     @property
     def with_neck(self):
-        return hasattr(self, 'neck') and self.neck is not None
+        return hasattr(self, "neck") and self.neck is not None
 
     @property
     def with_head(self):
-        return hasattr(self, 'head') and self.head is not None
+        return hasattr(self, "head") and self.head is not None
 
     @abstractmethod
     def extract_feat(self, imgs, stage=None):
@@ -32,7 +31,7 @@ class BaseClassifier(BaseModule, metaclass=ABCMeta):
 
     def extract_feats(self, imgs, stage=None):
         assert isinstance(imgs, Sequence)
-        kwargs = {} if stage is None else {'stage': stage}
+        kwargs = {} if stage is None else {"stage": stage}
         for img in imgs:
             yield self.extract_feat(img, **kwargs)
 
@@ -59,16 +58,16 @@ class BaseClassifier(BaseModule, metaclass=ABCMeta):
         """
         if isinstance(imgs, torch.Tensor):
             imgs = [imgs]
-        for var, name in [(imgs, 'imgs')]:
+        for var, name in [(imgs, "imgs")]:
             if not isinstance(var, list):
-                raise TypeError(f'{name} must be a list, but got {type(var)}')
+                raise TypeError(f"{name} must be a list, but got {type(var)}")
 
         if len(imgs) == 1:
             return self.simple_test(imgs[0], **kwargs)
         else:
-            raise NotImplementedError('aug_test has not been implemented')
+            raise NotImplementedError("aug_test has not been implemented")
 
-    @auto_fp16(apply_to=('img', ))
+    @auto_fp16(apply_to=("img",))
     def forward(self, img, return_loss=True, **kwargs):
         """Calls either forward_train or forward_test depending on whether
         return_loss=True.
@@ -95,13 +94,11 @@ class BaseClassifier(BaseModule, metaclass=ABCMeta):
                 for name, value in loss_value.items():
                     log_vars[name] = value
             else:
-                raise TypeError(
-                    f'{loss_name} is not a tensor or list of tensors')
+                raise TypeError(f"{loss_name} is not a tensor or list of tensors")
 
-        loss = sum(_value for _key, _value in log_vars.items()
-                   if 'loss' in _key)
+        loss = sum(_value for _key, _value in log_vars.items() if "loss" in _key)
 
-        log_vars['loss'] = loss
+        log_vars["loss"] = loss
         for loss_name, loss_value in log_vars.items():
             # reduce loss when distributed training
             if dist.is_available() and dist.is_initialized():
@@ -139,8 +136,7 @@ class BaseClassifier(BaseModule, metaclass=ABCMeta):
         losses = self(**data)
         loss, log_vars = self._parse_losses(losses)
 
-        outputs = dict(
-            loss=loss, log_vars=log_vars, num_samples=len(data['img'].data))
+        outputs = dict(loss=loss, log_vars=log_vars, num_samples=len(data["img"].data))
 
         return outputs
 
@@ -170,22 +166,23 @@ class BaseClassifier(BaseModule, metaclass=ABCMeta):
         losses = self(**data)
         loss, log_vars = self._parse_losses(losses)
 
-        outputs = dict(
-            loss=loss, log_vars=log_vars, num_samples=len(data['img'].data))
+        outputs = dict(loss=loss, log_vars=log_vars, num_samples=len(data["img"].data))
 
         return outputs
 
-    def show_result(self,
-                    img,
-                    result,
-                    text_color='white',
-                    font_scale=0.5,
-                    row_width=20,
-                    show=False,
-                    fig_size=(15, 10),
-                    win_name='',
-                    wait_time=0,
-                    out_file=None):
+    def show_result(
+        self,
+        img,
+        result,
+        text_color="white",
+        font_scale=0.5,
+        row_width=20,
+        show=False,
+        fig_size=(15, 10),
+        win_name="",
+        wait_time=0,
+        out_file=None,
+    ):
         """Draw `result` over `img`.
 
         Args:
@@ -219,6 +216,7 @@ class BaseClassifier(BaseModule, metaclass=ABCMeta):
             show=show,
             fig_size=fig_size,
             wait_time=wait_time,
-            out_file=out_file)
+            out_file=out_file,
+        )
 
         return img

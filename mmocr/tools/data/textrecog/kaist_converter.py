@@ -7,7 +7,6 @@ import os.path as osp
 import xml.etree.ElementTree as ET
 
 import mmcv
-
 from mmocr.datasets.pipelines.crop import crop_img
 from mmocr.utils.fileio import list_to_file
 
@@ -28,16 +27,16 @@ def collect_files(img_dir, gt_dir, ratio):
     assert isinstance(gt_dir, str)
     assert gt_dir
     assert isinstance(ratio, float)
-    assert ratio < 1.0, 'val_ratio should be a float between 0.0 to 1.0'
+    assert ratio < 1.0, "val_ratio should be a float between 0.0 to 1.0"
 
     ann_list, imgs_list = [], []
     for img_file in os.listdir(img_dir):
-        ann_list.append(osp.join(gt_dir, img_file.split('.')[0] + '.xml'))
+        ann_list.append(osp.join(gt_dir, img_file.split(".")[0] + ".xml"))
         imgs_list.append(osp.join(img_dir, img_file))
 
     all_files = list(zip(sorted(imgs_list), sorted(ann_list)))
-    assert len(all_files), f'No images found in {img_dir}'
-    print(f'Loaded {len(all_files)} images from {img_dir}')
+    assert len(all_files), f"No images found in {img_dir}"
+    print(f"Loaded {len(all_files)} images from {img_dir}")
 
     trn_files, val_files = [], []
     if ratio > 0:
@@ -49,7 +48,7 @@ def collect_files(img_dir, gt_dir, ratio):
     else:
         trn_files, val_files = all_files, []
 
-    print(f'training #{len(trn_files)}, val #{len(val_files)}')
+    print(f"training #{len(trn_files)}, val #{len(val_files)}")
 
     return trn_files, val_files
 
@@ -68,8 +67,7 @@ def collect_annotations(files, nproc=1):
     assert isinstance(nproc, int)
 
     if nproc > 1:
-        images = mmcv.track_parallel_progress(
-            load_img_info, files, nproc=nproc)
+        images = mmcv.track_parallel_progress(load_img_info, files, nproc=nproc)
     else:
         images = mmcv.track_progress(load_img_info, files)
 
@@ -88,18 +86,18 @@ def load_img_info(files):
     assert isinstance(files, tuple)
 
     img_file, gt_file = files
-    assert osp.basename(gt_file).split('.')[0] == osp.basename(img_file).split(
-        '.')[0]
+    assert osp.basename(gt_file).split(".")[0] == osp.basename(img_file).split(".")[0]
     # read imgs while ignoring orientations
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
 
     img_info = dict(
         file_name=osp.join(osp.basename(img_file)),
         height=img.shape[0],
         width=img.shape[1],
-        segm_file=osp.join(osp.basename(gt_file)))
+        segm_file=osp.join(osp.basename(gt_file)),
+    )
 
-    if osp.splitext(gt_file)[1] == '.xml':
+    if osp.splitext(gt_file)[1] == ".xml":
         img_info = load_xml_info(gt_file, img_info)
     else:
         raise NotImplementedError
@@ -142,14 +140,14 @@ def load_xml_info(gt_file, img_info):
     obj = ET.parse(gt_file)
     root = obj.getroot()
     anno_info = []
-    for word in root.iter('word'):
-        x, y = max(0, int(word.attrib['x'])), max(0, int(word.attrib['y']))
-        w, h = int(word.attrib['width']), int(word.attrib['height'])
+    for word in root.iter("word"):
+        x, y = max(0, int(word.attrib["x"])), max(0, int(word.attrib["y"]))
+        w, h = int(word.attrib["width"]), int(word.attrib["height"])
         bbox = [x, y, x + w, y, x + w, y + h, x, y + h]
         chars = []
-        for character in word.iter('character'):
-            chars.append(character.attrib['char'])
-        word = ''.join(chars)
+        for character in word.iter("character"):
+            chars.append(character.attrib["char"])
+        word = "".join(chars)
         if len(word) == 0:
             continue
         anno = dict(bbox=bbox, word=word)
@@ -172,28 +170,28 @@ def generate_ann(root_path, split, image_infos, preserve_vertical, format):
         format (str): Annotation format, should be either 'txt' or 'jsonl'
     """
 
-    dst_image_root = osp.join(root_path, 'crops', split)
-    ignore_image_root = osp.join(root_path, 'ignores', split)
-    if split == 'training':
-        dst_label_file = osp.join(root_path, f'train_label.{format}')
-    elif split == 'val':
-        dst_label_file = osp.join(root_path, f'val_label.{format}')
+    dst_image_root = osp.join(root_path, "crops", split)
+    ignore_image_root = osp.join(root_path, "ignores", split)
+    if split == "training":
+        dst_label_file = osp.join(root_path, f"train_label.{format}")
+    elif split == "val":
+        dst_label_file = osp.join(root_path, f"val_label.{format}")
     mmcv.mkdir_or_exist(dst_image_root)
     mmcv.mkdir_or_exist(ignore_image_root)
 
     lines = []
     for image_info in image_infos:
         index = 1
-        src_img_path = osp.join(root_path, 'imgs', image_info['file_name'])
+        src_img_path = osp.join(root_path, "imgs", image_info["file_name"])
         image = mmcv.imread(src_img_path)
-        src_img_root = image_info['file_name'].split('.')[0]
+        src_img_root = image_info["file_name"].split(".")[0]
 
-        for anno in image_info['anno_info']:
-            word = anno['word']
-            dst_img = crop_img(image, anno['bbox'], 0, 0)
+        for anno in image_info["anno_info"]:
+            word = anno["word"]
+            dst_img = crop_img(image, anno["bbox"], 0, 0)
             h, w, _ = dst_img.shape
 
-            dst_img_name = f'{src_img_root}_{index}.png'
+            dst_img_name = f"{src_img_root}_{index}.png"
             index += 1
             # Skip invalid annotations
             if min(dst_img.shape) == 0:
@@ -205,18 +203,15 @@ def generate_ann(root_path, split, image_infos, preserve_vertical, format):
                 dst_img_path = osp.join(dst_image_root, dst_img_name)
             mmcv.imwrite(dst_img, dst_img_path)
 
-            if format == 'txt':
-                lines.append(f'{osp.basename(dst_image_root)}/{dst_img_name} '
-                             f'{word}')
-            elif format == 'jsonl':
+            if format == "txt":
+                lines.append(f"{osp.basename(dst_image_root)}/{dst_img_name} " f"{word}")
+            elif format == "jsonl":
                 lines.append(
                     json.dumps(
-                        {
-                            'filename':
-                            f'{osp.basename(dst_image_root)}/{dst_img_name}',
-                            'text': word
-                        },
-                        ensure_ascii=False))
+                        {"filename": f"{osp.basename(dst_image_root)}/{dst_img_name}", "text": word},
+                        ensure_ascii=False,
+                    )
+                )
             else:
                 raise NotImplementedError
 
@@ -224,22 +219,14 @@ def generate_ann(root_path, split, image_infos, preserve_vertical, format):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training and val set of KAIST ')
-    parser.add_argument('root_path', help='Root dir path of KAIST')
+    parser = argparse.ArgumentParser(description="Generate training and val set of KAIST ")
+    parser.add_argument("root_path", help="Root dir path of KAIST")
+    parser.add_argument("--val-ratio", help="Split ratio for val set", default=0.0, type=float)
+    parser.add_argument("--preserve-vertical", help="Preserve samples containing vertical texts", action="store_true")
     parser.add_argument(
-        '--val-ratio', help='Split ratio for val set', default=0.0, type=float)
-    parser.add_argument(
-        '--preserve-vertical',
-        help='Preserve samples containing vertical texts',
-        action='store_true')
-    parser.add_argument(
-        '--format',
-        default='jsonl',
-        help='Use jsonl or string to format annotations',
-        choices=['jsonl', 'txt'])
-    parser.add_argument(
-        '--nproc', default=1, type=int, help='Number of process')
+        "--format", default="jsonl", help="Use jsonl or string to format annotations", choices=["jsonl", "txt"]
+    )
+    parser.add_argument("--nproc", default=1, type=int, help="Number of process")
     args = parser.parse_args()
     return args
 
@@ -249,24 +236,19 @@ def main():
     root_path = args.root_path
     ratio = args.val_ratio
 
-    trn_files, val_files = collect_files(
-        osp.join(root_path, 'imgs'), osp.join(root_path, 'annotations'), ratio)
+    trn_files, val_files = collect_files(osp.join(root_path, "imgs"), osp.join(root_path, "annotations"), ratio)
 
     # Train set
     trn_infos = collect_annotations(trn_files, nproc=args.nproc)
-    with mmcv.Timer(
-            print_tmpl='It takes {}s to convert KAIST Training annotation'):
-        generate_ann(root_path, 'training', trn_infos, args.preserve_vertical,
-                     args.format)
+    with mmcv.Timer(print_tmpl="It takes {}s to convert KAIST Training annotation"):
+        generate_ann(root_path, "training", trn_infos, args.preserve_vertical, args.format)
 
     # Val set
     if len(val_files) > 0:
         val_infos = collect_annotations(val_files, nproc=args.nproc)
-        with mmcv.Timer(
-                print_tmpl='It takes {}s to convert KAIST Val annotation'):
-            generate_ann(root_path, 'val', val_infos, args.preserve_vertical,
-                         args.format)
+        with mmcv.Timer(print_tmpl="It takes {}s to convert KAIST Val annotation"):
+            generate_ann(root_path, "val", val_infos, args.preserve_vertical, args.format)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

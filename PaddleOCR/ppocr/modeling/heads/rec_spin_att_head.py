@@ -17,9 +17,7 @@ This code is refer from:
 https://github.com/hikopensource/DAVAR-Lab-OCR/davarocr/davar_rcg/models/sequence_heads/att_head.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import paddle
 import paddle.nn as nn
@@ -33,8 +31,7 @@ class SPINAttentionHead(nn.Layer):
         self.hidden_size = hidden_size
         self.num_classes = out_channels
 
-        self.attention_cell = AttentionLSTMCell(
-            in_channels, hidden_size, out_channels, use_gru=False)
+        self.attention_cell = AttentionLSTMCell(in_channels, hidden_size, out_channels, use_gru=False)
         self.generator = nn.Linear(hidden_size, out_channels)
 
     def _char_to_onehot(self, input_char, onehot_dim):
@@ -43,21 +40,18 @@ class SPINAttentionHead(nn.Layer):
 
     def forward(self, inputs, targets=None, batch_max_length=25):
         batch_size = paddle.shape(inputs)[0]
-        num_steps = batch_max_length + 1 # +1 for [sos] at end of sentence
+        num_steps = batch_max_length + 1  # +1 for [sos] at end of sentence
 
-        hidden = (paddle.zeros((batch_size, self.hidden_size)),
-                    paddle.zeros((batch_size, self.hidden_size)))
+        hidden = (paddle.zeros((batch_size, self.hidden_size)), paddle.zeros((batch_size, self.hidden_size)))
         output_hiddens = []
-        if self.training: # for train
+        if self.training:  # for train
             targets = targets[0]
             for i in range(num_steps):
-                char_onehots = self._char_to_onehot(
-                    targets[:, i], onehot_dim=self.num_classes)
-                (outputs, hidden), alpha = self.attention_cell(hidden, inputs,
-                                                               char_onehots)
+                char_onehots = self._char_to_onehot(targets[:, i], onehot_dim=self.num_classes)
+                (outputs, hidden), alpha = self.attention_cell(hidden, inputs, char_onehots)
                 output_hiddens.append(paddle.unsqueeze(outputs, axis=1))
             output = paddle.concat(output_hiddens, axis=1)
-            probs = self.generator(output)        
+            probs = self.generator(output)
         else:
             targets = paddle.zeros(shape=[batch_size], dtype="int32")
             probs = None
@@ -66,17 +60,13 @@ class SPINAttentionHead(nn.Layer):
             alpha = None
 
             for i in range(num_steps):
-                char_onehots = self._char_to_onehot(
-                    targets, onehot_dim=self.num_classes)
-                (outputs, hidden), alpha = self.attention_cell(hidden, inputs,
-                                                               char_onehots)
+                char_onehots = self._char_to_onehot(targets, onehot_dim=self.num_classes)
+                (outputs, hidden), alpha = self.attention_cell(hidden, inputs, char_onehots)
                 probs_step = self.generator(outputs)
                 if probs is None:
                     probs = paddle.unsqueeze(probs_step, axis=1)
                 else:
-                    probs = paddle.concat(
-                        [probs, paddle.unsqueeze(
-                            probs_step, axis=1)], axis=1)
+                    probs = paddle.concat([probs, paddle.unsqueeze(probs_step, axis=1)], axis=1)
                 next_input = probs_step.argmax(axis=1)
                 targets = next_input
         if not self.training:
@@ -91,11 +81,9 @@ class AttentionLSTMCell(nn.Layer):
         self.h2h = nn.Linear(hidden_size, hidden_size)
         self.score = nn.Linear(hidden_size, 1, bias_attr=False)
         if not use_gru:
-            self.rnn = nn.LSTMCell(
-                input_size=input_size + num_embeddings, hidden_size=hidden_size)
+            self.rnn = nn.LSTMCell(input_size=input_size + num_embeddings, hidden_size=hidden_size)
         else:
-            self.rnn = nn.GRUCell(
-                input_size=input_size + num_embeddings, hidden_size=hidden_size)
+            self.rnn = nn.GRUCell(input_size=input_size + num_embeddings, hidden_size=hidden_size)
 
         self.hidden_size = hidden_size
 

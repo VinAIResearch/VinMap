@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import numpy as np
 import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
-import numpy as np
 
 
 class AttentionHead(nn.Layer):
@@ -29,8 +27,7 @@ class AttentionHead(nn.Layer):
         self.hidden_size = hidden_size
         self.num_classes = out_channels
 
-        self.attention_cell = AttentionGRUCell(
-            in_channels, hidden_size, out_channels, use_gru=False)
+        self.attention_cell = AttentionGRUCell(in_channels, hidden_size, out_channels, use_gru=False)
         self.generator = nn.Linear(hidden_size, out_channels)
 
     def _char_to_onehot(self, input_char, onehot_dim):
@@ -46,10 +43,8 @@ class AttentionHead(nn.Layer):
 
         if targets is not None:
             for i in range(num_steps):
-                char_onehots = self._char_to_onehot(
-                    targets[:, i], onehot_dim=self.num_classes)
-                (outputs, hidden), alpha = self.attention_cell(hidden, inputs,
-                                                               char_onehots)
+                char_onehots = self._char_to_onehot(targets[:, i], onehot_dim=self.num_classes)
+                (outputs, hidden), alpha = self.attention_cell(hidden, inputs, char_onehots)
                 output_hiddens.append(paddle.unsqueeze(outputs, axis=1))
             output = paddle.concat(output_hiddens, axis=1)
             probs = self.generator(output)
@@ -61,17 +56,13 @@ class AttentionHead(nn.Layer):
             alpha = None
 
             for i in range(num_steps):
-                char_onehots = self._char_to_onehot(
-                    targets, onehot_dim=self.num_classes)
-                (outputs, hidden), alpha = self.attention_cell(hidden, inputs,
-                                                               char_onehots)
+                char_onehots = self._char_to_onehot(targets, onehot_dim=self.num_classes)
+                (outputs, hidden), alpha = self.attention_cell(hidden, inputs, char_onehots)
                 probs_step = self.generator(outputs)
                 if probs is None:
                     probs = paddle.unsqueeze(probs_step, axis=1)
                 else:
-                    probs = paddle.concat(
-                        [probs, paddle.unsqueeze(
-                            probs_step, axis=1)], axis=1)
+                    probs = paddle.concat([probs, paddle.unsqueeze(probs_step, axis=1)], axis=1)
                 next_input = probs_step.argmax(axis=1)
                 targets = next_input
         if not self.training:
@@ -86,8 +77,7 @@ class AttentionGRUCell(nn.Layer):
         self.h2h = nn.Linear(hidden_size, hidden_size)
         self.score = nn.Linear(hidden_size, 1, bias_attr=False)
 
-        self.rnn = nn.GRUCell(
-            input_size=input_size + num_embeddings, hidden_size=hidden_size)
+        self.rnn = nn.GRUCell(input_size=input_size + num_embeddings, hidden_size=hidden_size)
 
         self.hidden_size = hidden_size
 
@@ -117,8 +107,7 @@ class AttentionLSTM(nn.Layer):
         self.hidden_size = hidden_size
         self.num_classes = out_channels
 
-        self.attention_cell = AttentionLSTMCell(
-            in_channels, hidden_size, out_channels, use_gru=False)
+        self.attention_cell = AttentionLSTMCell(in_channels, hidden_size, out_channels, use_gru=False)
         self.generator = nn.Linear(hidden_size, out_channels)
 
     def _char_to_onehot(self, input_char, onehot_dim):
@@ -129,17 +118,14 @@ class AttentionLSTM(nn.Layer):
         batch_size = inputs.shape[0]
         num_steps = batch_max_length
 
-        hidden = (paddle.zeros((batch_size, self.hidden_size)), paddle.zeros(
-            (batch_size, self.hidden_size)))
+        hidden = (paddle.zeros((batch_size, self.hidden_size)), paddle.zeros((batch_size, self.hidden_size)))
         output_hiddens = []
 
         if targets is not None:
             for i in range(num_steps):
                 # one-hot vectors for a i-th char
-                char_onehots = self._char_to_onehot(
-                    targets[:, i], onehot_dim=self.num_classes)
-                hidden, alpha = self.attention_cell(hidden, inputs,
-                                                    char_onehots)
+                char_onehots = self._char_to_onehot(targets[:, i], onehot_dim=self.num_classes)
+                hidden, alpha = self.attention_cell(hidden, inputs, char_onehots)
 
                 hidden = (hidden[1][0], hidden[1][1])
                 output_hiddens.append(paddle.unsqueeze(hidden[0], axis=1))
@@ -153,18 +139,14 @@ class AttentionLSTM(nn.Layer):
             alpha = None
 
             for i in range(num_steps):
-                char_onehots = self._char_to_onehot(
-                    targets, onehot_dim=self.num_classes)
-                hidden, alpha = self.attention_cell(hidden, inputs,
-                                                    char_onehots)
+                char_onehots = self._char_to_onehot(targets, onehot_dim=self.num_classes)
+                hidden, alpha = self.attention_cell(hidden, inputs, char_onehots)
                 probs_step = self.generator(hidden[0])
                 hidden = (hidden[1][0], hidden[1][1])
                 if probs is None:
                     probs = paddle.unsqueeze(probs_step, axis=1)
                 else:
-                    probs = paddle.concat(
-                        [probs, paddle.unsqueeze(
-                            probs_step, axis=1)], axis=1)
+                    probs = paddle.concat([probs, paddle.unsqueeze(probs_step, axis=1)], axis=1)
 
                 next_input = probs_step.argmax(axis=1)
 
@@ -181,11 +163,9 @@ class AttentionLSTMCell(nn.Layer):
         self.h2h = nn.Linear(hidden_size, hidden_size)
         self.score = nn.Linear(hidden_size, 1, bias_attr=False)
         if not use_gru:
-            self.rnn = nn.LSTMCell(
-                input_size=input_size + num_embeddings, hidden_size=hidden_size)
+            self.rnn = nn.LSTMCell(input_size=input_size + num_embeddings, hidden_size=hidden_size)
         else:
-            self.rnn = nn.GRUCell(
-                input_size=input_size + num_embeddings, hidden_size=hidden_size)
+            self.rnn = nn.GRUCell(input_size=input_size + num_embeddings, hidden_size=hidden_size)
 
         self.hidden_size = hidden_size
 

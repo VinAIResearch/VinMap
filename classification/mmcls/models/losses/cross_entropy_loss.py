@@ -6,12 +6,7 @@ from ..builder import LOSSES
 from .utils import weight_reduce_loss
 
 
-def cross_entropy(pred,
-                  label,
-                  weight=None,
-                  reduction='mean',
-                  avg_factor=None,
-                  class_weight=None):
+def cross_entropy(pred, label, weight=None, reduction="mean", avg_factor=None, class_weight=None):
     """Calculate the CrossEntropy loss.
 
     Args:
@@ -29,23 +24,17 @@ def cross_entropy(pred,
         torch.Tensor: The calculated loss
     """
     # element-wise losses
-    loss = F.cross_entropy(pred, label, weight=class_weight, reduction='none')
+    loss = F.cross_entropy(pred, label, weight=class_weight, reduction="none")
 
     # apply weights and do the reduction
     if weight is not None:
         weight = weight.float()
-    loss = weight_reduce_loss(
-        loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
+    loss = weight_reduce_loss(loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
 
     return loss
 
 
-def soft_cross_entropy(pred,
-                       label,
-                       weight=None,
-                       reduction='mean',
-                       class_weight=None,
-                       avg_factor=None):
+def soft_cross_entropy(pred, label, weight=None, reduction="mean", class_weight=None, avg_factor=None):
     """Calculate the Soft CrossEntropy loss. The label can be float.
 
     Args:
@@ -72,19 +61,14 @@ def soft_cross_entropy(pred,
     # apply weights and do the reduction
     if weight is not None:
         weight = weight.float()
-    loss = weight_reduce_loss(
-        loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
+    loss = weight_reduce_loss(loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
 
     return loss
 
 
-def binary_cross_entropy(pred,
-                         label,
-                         weight=None,
-                         reduction='mean',
-                         avg_factor=None,
-                         class_weight=None,
-                         pos_weight=None):
+def binary_cross_entropy(
+    pred, label, weight=None, reduction="mean", avg_factor=None, class_weight=None, pos_weight=None
+):
     r"""Calculate the binary CrossEntropy loss with logits.
 
     Args:
@@ -113,11 +97,8 @@ def binary_cross_entropy(pred,
         N = pred.size()[0]
         class_weight = class_weight.repeat(N, 1)
     loss = F.binary_cross_entropy_with_logits(
-        pred,
-        label,
-        weight=class_weight,
-        pos_weight=pos_weight,
-        reduction='none')
+        pred, label, weight=class_weight, pos_weight=pos_weight, reduction="none"
+    )
 
     # apply weights and do the reduction
     if weight is not None:
@@ -125,8 +106,7 @@ def binary_cross_entropy(pred,
         weight = weight.float()
         if pred.dim() > 1:
             weight = weight.reshape(-1, 1)
-    loss = weight_reduce_loss(
-        loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
+    loss = weight_reduce_loss(loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
     return loss
 
 
@@ -149,19 +129,13 @@ class CrossEntropyLoss(nn.Module):
             BCE loss when ``use_sigmoid`` is True. Default None.
     """
 
-    def __init__(self,
-                 use_sigmoid=False,
-                 use_soft=False,
-                 reduction='mean',
-                 loss_weight=1.0,
-                 class_weight=None,
-                 pos_weight=None):
+    def __init__(
+        self, use_sigmoid=False, use_soft=False, reduction="mean", loss_weight=1.0, class_weight=None, pos_weight=None
+    ):
         super(CrossEntropyLoss, self).__init__()
         self.use_sigmoid = use_sigmoid
         self.use_soft = use_soft
-        assert not (
-            self.use_soft and self.use_sigmoid
-        ), 'use_sigmoid and use_soft could not be set simultaneously'
+        assert not (self.use_soft and self.use_sigmoid), "use_sigmoid and use_soft could not be set simultaneously"
 
         self.reduction = reduction
         self.loss_weight = loss_weight
@@ -175,16 +149,9 @@ class CrossEntropyLoss(nn.Module):
         else:
             self.cls_criterion = cross_entropy
 
-    def forward(self,
-                cls_score,
-                label,
-                weight=None,
-                avg_factor=None,
-                reduction_override=None,
-                **kwargs):
-        assert reduction_override in (None, 'none', 'mean', 'sum')
-        reduction = (
-            reduction_override if reduction_override else self.reduction)
+    def forward(self, cls_score, label, weight=None, avg_factor=None, reduction_override=None, **kwargs):
+        assert reduction_override in (None, "none", "mean", "sum")
+        reduction = reduction_override if reduction_override else self.reduction
 
         if self.class_weight is not None:
             class_weight = cls_score.new_tensor(self.class_weight)
@@ -194,16 +161,11 @@ class CrossEntropyLoss(nn.Module):
         # only BCE loss has pos_weight
         if self.pos_weight is not None and self.use_sigmoid:
             pos_weight = cls_score.new_tensor(self.pos_weight)
-            kwargs.update({'pos_weight': pos_weight})
+            kwargs.update({"pos_weight": pos_weight})
         else:
             pos_weight = None
 
         loss_cls = self.loss_weight * self.cls_criterion(
-            cls_score,
-            label,
-            weight,
-            class_weight=class_weight,
-            reduction=reduction,
-            avg_factor=avg_factor,
-            **kwargs)
+            cls_score, label, weight, class_weight=class_weight, reduction=reduction, avg_factor=avg_factor, **kwargs
+        )
         return loss_cls

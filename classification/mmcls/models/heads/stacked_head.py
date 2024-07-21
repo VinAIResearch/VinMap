@@ -12,13 +12,7 @@ from .cls_head import ClsHead
 
 class LinearBlock(BaseModule):
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 dropout_rate=0.,
-                 norm_cfg=None,
-                 act_cfg=None,
-                 init_cfg=None):
+    def __init__(self, in_channels, out_channels, dropout_rate=0.0, norm_cfg=None, act_cfg=None, init_cfg=None):
         super().__init__(init_cfg=init_cfg)
         self.fc = nn.Linear(in_channels, out_channels)
 
@@ -60,25 +54,27 @@ class StackedLinearClsHead(ClsHead):
             hidden layer, except the last layer. Defaults to use "ReLU".
     """
 
-    def __init__(self,
-                 num_classes: int,
-                 in_channels: int,
-                 mid_channels: Sequence,
-                 dropout_rate: float = 0.,
-                 norm_cfg: Dict = None,
-                 act_cfg: Dict = dict(type='ReLU'),
-                 **kwargs):
+    def __init__(
+        self,
+        num_classes: int,
+        in_channels: int,
+        mid_channels: Sequence,
+        dropout_rate: float = 0.0,
+        norm_cfg: Dict = None,
+        act_cfg: Dict = dict(type="ReLU"),
+        **kwargs,
+    ):
         super(StackedLinearClsHead, self).__init__(**kwargs)
-        assert num_classes > 0, \
-            f'`num_classes` of StackedLinearClsHead must be a positive ' \
-            f'integer, got {num_classes} instead.'
+        assert num_classes > 0, (
+            f"`num_classes` of StackedLinearClsHead must be a positive " f"integer, got {num_classes} instead."
+        )
         self.num_classes = num_classes
 
         self.in_channels = in_channels
 
-        assert isinstance(mid_channels, Sequence), \
-            f'`mid_channels` of StackedLinearClsHead should be a sequence, ' \
-            f'instead of {type(mid_channels)}'
+        assert isinstance(mid_channels, Sequence), (
+            f"`mid_channels` of StackedLinearClsHead should be a sequence, " f"instead of {type(mid_channels)}"
+        )
         self.mid_channels = mid_channels
 
         self.dropout_rate = dropout_rate
@@ -97,16 +93,14 @@ class StackedLinearClsHead(ClsHead):
                     hidden_channels,
                     dropout_rate=self.dropout_rate,
                     norm_cfg=self.norm_cfg,
-                    act_cfg=self.act_cfg))
+                    act_cfg=self.act_cfg,
+                )
+            )
             in_channels = hidden_channels
 
         self.layers.append(
-            LinearBlock(
-                self.mid_channels[-1],
-                self.num_classes,
-                dropout_rate=0.,
-                norm_cfg=None,
-                act_cfg=None))
+            LinearBlock(self.mid_channels[-1], self.num_classes, dropout_rate=0.0, norm_cfg=None, act_cfg=None)
+        )
 
     def init_weights(self):
         self.layers.init_weights()
@@ -146,8 +140,7 @@ class StackedLinearClsHead(ClsHead):
         cls_score = self.fc(x)
 
         if softmax:
-            pred = (
-                F.softmax(cls_score, dim=1) if cls_score is not None else None)
+            pred = F.softmax(cls_score, dim=1) if cls_score is not None else None
         else:
             pred = cls_score
 

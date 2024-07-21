@@ -1,9 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import cv2
 import numpy as np
-
 from mmocr.core import points2boundary
 from mmocr.models.builder import POSTPROCESSOR
+
 from .base_postprocessor import BasePostprocessor
 from .utils import box_score_fast, unclip
 
@@ -25,15 +25,17 @@ class DBPostprocessor(BasePostprocessor):
         max_candidates (int): The maximum candidate number.
     """
 
-    def __init__(self,
-                 text_repr_type='poly',
-                 mask_thr=0.3,
-                 min_text_score=0.3,
-                 min_text_width=5,
-                 unclip_ratio=1.5,
-                 epsilon_ratio=0.01,
-                 max_candidates=3000,
-                 **kwargs):
+    def __init__(
+        self,
+        text_repr_type="poly",
+        mask_thr=0.3,
+        min_text_score=0.3,
+        min_text_width=5,
+        unclip_ratio=1.5,
+        epsilon_ratio=0.01,
+        max_candidates=3000,
+        **kwargs
+    ):
         super().__init__(text_repr_type)
         self.mask_thr = mask_thr
         self.min_text_score = min_text_score
@@ -58,8 +60,7 @@ class DBPostprocessor(BasePostprocessor):
         score_map = prob_map.data.cpu().numpy().astype(np.float32)
         text_mask = text_mask.data.cpu().numpy().astype(np.uint8)  # to numpy
 
-        contours, _ = cv2.findContours((text_mask * 255).astype(np.uint8),
-                                       cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours((text_mask * 255).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
         boundaries = []
         for i, poly in enumerate(contours):
@@ -78,10 +79,9 @@ class DBPostprocessor(BasePostprocessor):
                 continue
             poly = poly.reshape(-1, 2)
 
-            if self.text_repr_type == 'quad':
-                poly = points2boundary(poly, self.text_repr_type, score,
-                                       self.min_text_width)
-            elif self.text_repr_type == 'poly':
+            if self.text_repr_type == "quad":
+                poly = points2boundary(poly, self.text_repr_type, score, self.min_text_width)
+            elif self.text_repr_type == "poly":
                 poly = poly.flatten().tolist()
                 if score is not None:
                     poly = poly + [score]

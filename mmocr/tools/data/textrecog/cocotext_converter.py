@@ -6,78 +6,60 @@ import os.path as osp
 from functools import partial
 
 import mmcv
-
 from mmocr.utils.fileio import list_to_file
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training and validation set of COCO Text v2 ')
-    parser.add_argument('root_path', help='Root dir path of COCO Text v2')
+    parser = argparse.ArgumentParser(description="Generate training and validation set of COCO Text v2 ")
+    parser.add_argument("root_path", help="Root dir path of COCO Text v2")
+    parser.add_argument("--nproc", default=1, type=int, help="Number of processes")
+    parser.add_argument("--preserve-vertical", help="Preserve samples containing vertical texts", action="store_true")
     parser.add_argument(
-        '--nproc', default=1, type=int, help='Number of processes')
-    parser.add_argument(
-        '--preserve-vertical',
-        help='Preserve samples containing vertical texts',
-        action='store_true')
-    parser.add_argument(
-        '--format',
-        default='jsonl',
-        help='Use jsonl or string to format annotations',
-        choices=['jsonl', 'txt'])
+        "--format", default="jsonl", help="Use jsonl or string to format annotations", choices=["jsonl", "txt"]
+    )
     args = parser.parse_args()
     return args
 
 
-def process_img(args, src_image_root, dst_image_root, ignore_image_root,
-                preserve_vertical, split, format):
+def process_img(args, src_image_root, dst_image_root, ignore_image_root, preserve_vertical, split, format):
     # Dirty hack for multi-processing
     img_idx, img_info, anns = args
-    src_img = mmcv.imread(osp.join(src_image_root, img_info['file_name']))
+    src_img = mmcv.imread(osp.join(src_image_root, img_info["file_name"]))
     labels = []
     for ann_idx, ann in enumerate(anns):
-        text_label = ann['utf8_string']
+        text_label = ann["utf8_string"]
 
         # Ignore illegible or non-English words
-        if ann['language'] == 'not english':
+        if ann["language"] == "not english":
             continue
-        if ann['legibility'] == 'illegible':
+        if ann["legibility"] == "illegible":
             continue
 
-        x, y, w, h = ann['bbox']
+        x, y, w, h = ann["bbox"]
         x, y = max(0, math.floor(x)), max(0, math.floor(y))
         w, h = math.ceil(w), math.ceil(h)
-        dst_img = src_img[y:y + h, x:x + w]
-        dst_img_name = f'img_{img_idx}_{ann_idx}.jpg'
+        dst_img = src_img[y : y + h, x : x + w]
+        dst_img_name = f"img_{img_idx}_{ann_idx}.jpg"
 
-        if not preserve_vertical and h / w > 2 and split == 'train':
+        if not preserve_vertical and h / w > 2 and split == "train":
             dst_img_path = osp.join(ignore_image_root, dst_img_name)
         else:
             dst_img_path = osp.join(dst_image_root, dst_img_name)
         mmcv.imwrite(dst_img, dst_img_path)
 
-        if format == 'txt':
-            labels.append(f'{osp.basename(dst_image_root)}/{dst_img_name}'
-                          f' {text_label}')
-        elif format == 'jsonl':
+        if format == "txt":
+            labels.append(f"{osp.basename(dst_image_root)}/{dst_img_name}" f" {text_label}")
+        elif format == "jsonl":
             labels.append(
-                json.dumps({
-                    'filename':
-                    f'{osp.basename(dst_image_root)}/{dst_img_name}',
-                    'text': text_label
-                }))
+                json.dumps({"filename": f"{osp.basename(dst_image_root)}/{dst_img_name}", "text": text_label})
+            )
         else:
             raise NotImplementedError
 
     return labels
 
 
-def convert_cocotext(root_path,
-                     split,
-                     preserve_vertical,
-                     format,
-                     nproc,
-                     img_start_idx=0):
+def convert_cocotext(root_path, split, preserve_vertical, format, nproc, img_start_idx=0):
     """Collect the annotation information and crop the images.
 
     The annotation format is as the following:
@@ -125,17 +107,16 @@ def convert_cocotext(root_path,
         img_info (dict): The dict of the img and annotation information
     """
 
-    annotation_path = osp.join(root_path, 'annotations/cocotext.v2.json')
+    annotation_path = osp.join(root_path, "annotations/cocotext.v2.json")
     if not osp.exists(annotation_path):
-        raise Exception(
-            f'{annotation_path} not exists, please check and try again.')
+        raise Exception(f"{annotation_path} not exists, please check and try again.")
 
     annotation = mmcv.load(annotation_path)
     # outputs
-    dst_label_file = osp.join(root_path, f'{split}_label.{format}')
-    dst_image_root = osp.join(root_path, 'crops', split)
-    ignore_image_root = osp.join(root_path, 'ignores', split)
-    src_image_root = osp.join(root_path, 'imgs')
+    dst_label_file = osp.join(root_path, f"{split}_label.{format}")
+    dst_image_root = osp.join(root_path, "crops", split)
+    ignore_image_root = osp.join(root_path, "ignores", split)
+    src_image_root = osp.join(root_path, "imgs")
     mmcv.mkdir_or_exist(dst_image_root)
     mmcv.mkdir_or_exist(ignore_image_root)
 
@@ -146,43 +127,45 @@ def convert_cocotext(root_path,
         ignore_image_root=ignore_image_root,
         preserve_vertical=preserve_vertical,
         split=split,
-        format=format)
+        format=format,
+    )
     tasks = []
-    for img_idx, img_info in enumerate(annotation['imgs'].values()):
-        if img_info['set'] == split:
-            ann_ids = annotation['imgToAnns'][str(img_info['id'])]
-            anns = [annotation['anns'][str(ann_id)] for ann_id in ann_ids]
+    for img_idx, img_info in enumerate(annotation["imgs"].values()):
+        if img_info["set"] == split:
+            ann_ids = annotation["imgToAnns"][str(img_info["id"])]
+            anns = [annotation["anns"][str(ann_id)] for ann_id in ann_ids]
             tasks.append((img_idx + img_start_idx, img_info, anns))
-    labels_list = mmcv.track_parallel_progress(
-        process_img_with_path, tasks, keep_order=True, nproc=nproc)
+    labels_list = mmcv.track_parallel_progress(process_img_with_path, tasks, keep_order=True, nproc=nproc)
     final_labels = []
     for label_list in labels_list:
         final_labels += label_list
     list_to_file(dst_label_file, final_labels)
 
-    return len(annotation['imgs'])
+    return len(annotation["imgs"])
 
 
 def main():
     args = parse_args()
     root_path = args.root_path
-    print('Processing training set...')
+    print("Processing training set...")
     num_train_imgs = convert_cocotext(
         root_path=root_path,
-        split='train',
-        preserve_vertical=args.preserve_vertical,
-        format=args.format,
-        nproc=args.nproc)
-    print('Processing validation set...')
-    convert_cocotext(
-        root_path=root_path,
-        split='val',
+        split="train",
         preserve_vertical=args.preserve_vertical,
         format=args.format,
         nproc=args.nproc,
-        img_start_idx=num_train_imgs)
-    print('Finish')
+    )
+    print("Processing validation set...")
+    convert_cocotext(
+        root_path=root_path,
+        split="val",
+        preserve_vertical=args.preserve_vertical,
+        format=args.format,
+        nproc=args.nproc,
+        img_start_idx=num_train_imgs,
+    )
+    print("Finish")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

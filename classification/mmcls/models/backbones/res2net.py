@@ -15,38 +15,26 @@ from .resnet import ResNet
 class Bottle2neck(_Bottleneck):
     expansion = 4
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 scales=4,
-                 base_width=26,
-                 base_channels=64,
-                 stage_type='normal',
-                 **kwargs):
+    def __init__(
+        self, in_channels, out_channels, scales=4, base_width=26, base_channels=64, stage_type="normal", **kwargs
+    ):
         """Bottle2neck block for Res2Net."""
         super(Bottle2neck, self).__init__(in_channels, out_channels, **kwargs)
-        assert scales > 1, 'Res2Net degenerates to ResNet when scales = 1.'
+        assert scales > 1, "Res2Net degenerates to ResNet when scales = 1."
 
         mid_channels = out_channels // self.expansion
         width = int(math.floor(mid_channels * (base_width / base_channels)))
 
-        self.norm1_name, norm1 = build_norm_layer(
-            self.norm_cfg, width * scales, postfix=1)
-        self.norm3_name, norm3 = build_norm_layer(
-            self.norm_cfg, self.out_channels, postfix=3)
+        self.norm1_name, norm1 = build_norm_layer(self.norm_cfg, width * scales, postfix=1)
+        self.norm3_name, norm3 = build_norm_layer(self.norm_cfg, self.out_channels, postfix=3)
 
         self.conv1 = build_conv_layer(
-            self.conv_cfg,
-            self.in_channels,
-            width * scales,
-            kernel_size=1,
-            stride=self.conv1_stride,
-            bias=False)
+            self.conv_cfg, self.in_channels, width * scales, kernel_size=1, stride=self.conv1_stride, bias=False
+        )
         self.add_module(self.norm1_name, norm1)
 
-        if stage_type == 'stage':
-            self.pool = nn.AvgPool2d(
-                kernel_size=3, stride=self.conv2_stride, padding=1)
+        if stage_type == "stage":
+            self.pool = nn.AvgPool2d(kernel_size=3, stride=self.conv2_stride, padding=1)
 
         self.convs = ModuleList()
         self.bns = ModuleList()
@@ -60,22 +48,18 @@ class Bottle2neck(_Bottleneck):
                     stride=self.conv2_stride,
                     padding=self.dilation,
                     dilation=self.dilation,
-                    bias=False))
-            self.bns.append(
-                build_norm_layer(self.norm_cfg, width, postfix=i + 1)[1])
+                    bias=False,
+                )
+            )
+            self.bns.append(build_norm_layer(self.norm_cfg, width, postfix=i + 1)[1])
 
-        self.conv3 = build_conv_layer(
-            self.conv_cfg,
-            width * scales,
-            self.out_channels,
-            kernel_size=1,
-            bias=False)
+        self.conv3 = build_conv_layer(self.conv_cfg, width * scales, self.out_channels, kernel_size=1, bias=False)
         self.add_module(self.norm3_name, norm3)
 
         self.stage_type = stage_type
         self.scales = scales
         self.width = width
-        delattr(self, 'conv2')
+        delattr(self, "conv2")
         delattr(self, self.norm2_name)
 
     def forward(self, x):
@@ -93,7 +77,7 @@ class Bottle2neck(_Bottleneck):
             sp = self.relu(self.bns[0](sp))
             out = sp
             for i in range(1, self.scales - 1):
-                if self.stage_type == 'stage':
+                if self.stage_type == "stage":
                     sp = spx[i]
                 else:
                     sp = sp + spx[i]
@@ -101,9 +85,9 @@ class Bottle2neck(_Bottleneck):
                 sp = self.relu(self.bns[i](sp))
                 out = torch.cat((out, sp), 1)
 
-            if self.stage_type == 'normal' and self.scales != 1:
+            if self.stage_type == "normal" and self.scales != 1:
                 out = torch.cat((out, spx[self.scales - 1]), 1)
-            elif self.stage_type == 'stage' and self.scales != 1:
+            elif self.stage_type == "stage" and self.scales != 1:
                 out = torch.cat((out, self.pool(spx[self.scales - 1])), 1)
 
             out = self.conv3(out)
@@ -145,47 +129,33 @@ class Res2Layer(Sequential):
         base_width (int): Basic width of each scale. Default: 26
     """
 
-    def __init__(self,
-                 block,
-                 in_channels,
-                 out_channels,
-                 num_blocks,
-                 stride=1,
-                 avg_down=True,
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN'),
-                 scales=4,
-                 base_width=26,
-                 **kwargs):
+    def __init__(
+        self,
+        block,
+        in_channels,
+        out_channels,
+        num_blocks,
+        stride=1,
+        avg_down=True,
+        conv_cfg=None,
+        norm_cfg=dict(type="BN"),
+        scales=4,
+        base_width=26,
+        **kwargs
+    ):
         self.block = block
 
         downsample = None
         if stride != 1 or in_channels != out_channels:
             if avg_down:
                 downsample = nn.Sequential(
-                    nn.AvgPool2d(
-                        kernel_size=stride,
-                        stride=stride,
-                        ceil_mode=True,
-                        count_include_pad=False),
-                    build_conv_layer(
-                        conv_cfg,
-                        in_channels,
-                        out_channels,
-                        kernel_size=1,
-                        stride=1,
-                        bias=False),
+                    nn.AvgPool2d(kernel_size=stride, stride=stride, ceil_mode=True, count_include_pad=False),
+                    build_conv_layer(conv_cfg, in_channels, out_channels, kernel_size=1, stride=1, bias=False),
                     build_norm_layer(norm_cfg, out_channels)[1],
                 )
             else:
                 downsample = nn.Sequential(
-                    build_conv_layer(
-                        conv_cfg,
-                        in_channels,
-                        out_channels,
-                        kernel_size=1,
-                        stride=stride,
-                        bias=False),
+                    build_conv_layer(conv_cfg, in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
                     build_norm_layer(norm_cfg, out_channels)[1],
                 )
 
@@ -200,8 +170,10 @@ class Res2Layer(Sequential):
                 norm_cfg=norm_cfg,
                 scales=scales,
                 base_width=base_width,
-                stage_type='stage',
-                **kwargs))
+                stage_type="stage",
+                **kwargs
+            )
+        )
         in_channels = out_channels
         for _ in range(1, num_blocks):
             layers.append(
@@ -213,7 +185,9 @@ class Res2Layer(Sequential):
                     norm_cfg=norm_cfg,
                     scales=scales,
                     base_width=base_width,
-                    **kwargs))
+                    **kwargs
+                )
+            )
         super(Res2Layer, self).__init__(*layers)
 
 
@@ -278,29 +252,15 @@ class Res2Net(ResNet):
     arch_settings = {
         50: (Bottle2neck, (3, 4, 6, 3)),
         101: (Bottle2neck, (3, 4, 23, 3)),
-        152: (Bottle2neck, (3, 8, 36, 3))
+        152: (Bottle2neck, (3, 8, 36, 3)),
     }
 
-    def __init__(self,
-                 scales=4,
-                 base_width=26,
-                 style='pytorch',
-                 deep_stem=True,
-                 avg_down=True,
-                 init_cfg=None,
-                 **kwargs):
+    def __init__(
+        self, scales=4, base_width=26, style="pytorch", deep_stem=True, avg_down=True, init_cfg=None, **kwargs
+    ):
         self.scales = scales
         self.base_width = base_width
-        super(Res2Net, self).__init__(
-            style=style,
-            deep_stem=deep_stem,
-            avg_down=avg_down,
-            init_cfg=init_cfg,
-            **kwargs)
+        super(Res2Net, self).__init__(style=style, deep_stem=deep_stem, avg_down=avg_down, init_cfg=init_cfg, **kwargs)
 
     def make_res_layer(self, **kwargs):
-        return Res2Layer(
-            scales=self.scales,
-            base_width=self.base_width,
-            base_channels=self.base_channels,
-            **kwargs)
+        return Res2Layer(scales=self.scales, base_width=self.base_width, base_channels=self.base_channels, **kwargs)

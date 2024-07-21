@@ -1,8 +1,10 @@
 import argparse
-import numpy as np
-from scipy.spatial import ConvexHull
 import json
 import os
+
+import numpy as np
+from scipy.spatial import ConvexHull
+
 
 def minimum_bounding_rectangle(points):
     """
@@ -13,15 +15,16 @@ def minimum_bounding_rectangle(points):
     :rval: an nx2 matrix of coordinates
     """
     from scipy.ndimage.interpolation import rotate
-    pi2 = np.pi/2.
-    tmp=ConvexHull(points).vertices
-    hull_points=[]
+
+    pi2 = np.pi / 2.0
+    tmp = ConvexHull(points).vertices
+    hull_points = []
     # get the convex hull for the points
     for pt in tmp:
         hull_points.append(points[int(pt)])
-    hull_points=np.array(hull_points,dtype=np.float32)
+    hull_points = np.array(hull_points, dtype=np.float32)
     # calculate edge angles
-    edges = np.zeros((len(hull_points)-1, 2))
+    edges = np.zeros((len(hull_points) - 1, 2))
     edges = hull_points[1:] - hull_points[:-1]
 
     angles = np.zeros((len(edges)))
@@ -32,11 +35,7 @@ def minimum_bounding_rectangle(points):
 
     # find rotation matrices
     # XXX both work
-    rotations = np.vstack([
-        np.cos(angles),
-        np.cos(angles-pi2),
-        np.cos(angles+pi2),
-        np.cos(angles)]).T
+    rotations = np.vstack([np.cos(angles), np.cos(angles - pi2), np.cos(angles + pi2), np.cos(angles)]).T
     rotations = rotations.reshape((-1, 2, 2))
 
     # apply rotations to the hull
@@ -65,41 +64,41 @@ def minimum_bounding_rectangle(points):
     rval[2] = np.dot([x2, y1], r)
     rval[3] = np.dot([x1, y1], r)
 
-    return np.array(rval,dtype=np.int32)
+    return np.array(rval, dtype=np.int32)
+
 
 def collinear(points):
     points.sort()
-    if points[0][0]==points[1][0]==points[2][0] or points[0][1]==points[1][1]==points[2][1]:
+    if points[0][0] == points[1][0] == points[2][0] or points[0][1] == points[1][1] == points[2][1]:
         return 1
     return 0
 
+
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Convert JSON annotations to ICDAR format'
-    )
-    parser.add_argument('-label_root','--label_root', help='label root')
-    parser.add_argument('-label_des','--label_des', help='label destination')
+    parser = argparse.ArgumentParser(description="Convert JSON annotations to ICDAR format")
+    parser.add_argument("-label_root", "--label_root", help="label root")
+    parser.add_argument("-label_des", "--label_des", help="label destination")
     args = parser.parse_args()
     return args
 
+
 if __name__ == "__main__":
     args = parse_args()
-    path=args.label_root
-    destination=args.label_des
-    files=os.listdir(path)
+    path = args.label_root
+    destination = args.label_des
+    files = os.listdir(path)
 
-    
     for file in files:
-        outfile = open(destination+'/'+file.replace('.json','.txt'), "w", encoding="utf-8")
-        f=open(path+'/'+file)
-        data=json.load(f)
+        outfile = open(destination + "/" + file.replace(".json", ".txt"), "w", encoding="utf-8")
+        f = open(path + "/" + file)
+        data = json.load(f)
         for dic in data:
-            if(collinear(dic['points'])==1):
+            if collinear(dic["points"]) == 1:
                 continue
-            hull=minimum_bounding_rectangle(dic['points'])
-            txt=dic['text']
-            if txt=='###' or len(txt.split(' '))!=1:
+            hull = minimum_bounding_rectangle(dic["points"])
+            txt = dic["text"]
+            if txt == "###" or len(txt.split(" ")) != 1:
                 continue
             for cmp in hull:
-                outfile.write(str(cmp[0])+','+str(cmp[1])+',')
-            outfile.write(dic['text']+'\n')
+                outfile.write(str(cmp[0]) + "," + str(cmp[1]) + ",")
+            outfile.write(dic["text"] + "\n")

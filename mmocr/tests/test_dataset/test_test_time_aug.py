@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
 import pytest
-
 from mmocr.datasets.pipelines.test_time_aug import MultiRotateAugOCR
 
 
@@ -18,17 +17,17 @@ def test_resize_ocr():
         MultiRotateAugOCR(transforms=[], rotate_degrees=[20.5])
 
     # test call with input_img1
-    results = {'img_shape': input_img1.shape, 'img': input_img1}
+    results = {"img_shape": input_img1.shape, "img": input_img1}
     results = rci(results)
-    assert np.allclose([64, 256, 3], results['img_shape'])
-    assert len(results['img']) == 1
-    assert len(results['img_shape']) == 1
-    assert np.allclose([64, 256, 3], results['img_shape'][0])
+    assert np.allclose([64, 256, 3], results["img_shape"])
+    assert len(results["img"]) == 1
+    assert len(results["img_shape"]) == 1
+    assert np.allclose([64, 256, 3], results["img_shape"][0])
 
     # test call with input_img2
-    results = {'img_shape': input_img2.shape, 'img': input_img2}
+    results = {"img_shape": input_img2.shape, "img": input_img2}
     results = rci(results)
-    assert np.allclose([64, 32, 3], results['img_shape'])
-    assert len(results['img']) == 3
-    assert len(results['img_shape']) == 3
-    assert np.allclose([64, 32, 3], results['img_shape'][0])
+    assert np.allclose([64, 32, 3], results["img_shape"])
+    assert len(results["img"]) == 3
+    assert len(results["img_shape"]) == 3
+    assert np.allclose([64, 32, 3], results["img_shape"][0])

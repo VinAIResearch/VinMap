@@ -12,31 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import fastdeploy as fd
-import cv2
 import os
+
+import cv2
+import fastdeploy as fd
 
 
 def parse_arguments():
     import argparse
     import ast
+
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--det_model", required=True, help="Path of Detection model of PPOCR.")
-    parser.add_argument(
-        "--cls_model",
-        required=True,
-        help="Path of Classification model of PPOCR.")
-    parser.add_argument(
-        "--rec_model",
-        required=True,
-        help="Path of Recognization model of PPOCR.")
-    parser.add_argument(
-        "--rec_label_file",
-        required=True,
-        help="Path of Recognization model of PPOCR.")
-    parser.add_argument(
-        "--image", type=str, required=True, help="Path of test image file.")
+    parser.add_argument("--det_model", required=True, help="Path of Detection model of PPOCR.")
+    parser.add_argument("--cls_model", required=True, help="Path of Classification model of PPOCR.")
+    parser.add_argument("--rec_model", required=True, help="Path of Recognization model of PPOCR.")
+    parser.add_argument("--rec_label_file", required=True, help="Path of Recognization model of PPOCR.")
+    parser.add_argument("--image", type=str, required=True, help="Path of test image file.")
     return parser.parse_args()
 
 
@@ -67,14 +58,11 @@ rec_label_file = args.rec_label_file
 
 det_option, cls_option, rec_option = build_option(args)
 
-det_model = fd.vision.ocr.DBDetector(
-    det_model_file, det_params_file, runtime_option=det_option)
+det_model = fd.vision.ocr.DBDetector(det_model_file, det_params_file, runtime_option=det_option)
 
-cls_model = fd.vision.ocr.Classifier(
-    cls_model_file, cls_params_file, runtime_option=cls_option)
+cls_model = fd.vision.ocr.Classifier(cls_model_file, cls_params_file, runtime_option=cls_option)
 
-rec_model = fd.vision.ocr.Recognizer(
-    rec_model_file, rec_params_file, rec_label_file, runtime_option=rec_option)
+rec_model = fd.vision.ocr.Recognizer(rec_model_file, rec_params_file, rec_label_file, runtime_option=rec_option)
 
 # Rec model enable static shape infer.
 # When deploy on Ascend, it must be true.
@@ -82,8 +70,7 @@ rec_model.preprocessor.static_shape_infer = True
 
 # Create PP-OCRv3, if cls_model is not needed,
 # just set cls_model=None .
-ppocr_v3 = fd.vision.ocr.PPOCRv3(
-    det_model=det_model, cls_model=cls_model, rec_model=rec_model)
+ppocr_v3 = fd.vision.ocr.PPOCRv3(det_model=det_model, cls_model=cls_model, rec_model=rec_model)
 
 # The batch size must be set to 1, when enable static shape infer.
 ppocr_v3.cls_batch_size = 1

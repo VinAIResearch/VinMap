@@ -12,24 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+
+
 sys.path.insert(0, ".")
 import copy
+
+import cv2
 import paddlehub
+import paddlehub as hub
+from deploy.hubserving.ocr_cls.params import read_params
 from paddlehub.common.logger import logger
 from paddlehub.module.module import moduleinfo, runnable, serving
-import cv2
-import paddlehub as hub
-
-from tools.infer.utility import base64_to_cv2
 from tools.infer.predict_cls import TextClassifier
-from tools.infer.utility import parse_args
-from deploy.hubserving.ocr_cls.params import read_params
+from tools.infer.utility import base64_to_cv2, parse_args
 
 
 @moduleinfo(
@@ -38,7 +37,8 @@ from deploy.hubserving.ocr_cls.params import read_params
     summary="ocr angle cls service",
     author="paddle-dev",
     author_email="paddle-dev@baidu.com",
-    type="cv/text_angle_cls")
+    type="cv/text_angle_cls",
+)
 class OCRCls(hub.Module):
     def _initialize(self, use_gpu=False, enable_mkldnn=False):
         """
@@ -63,7 +63,9 @@ class OCRCls(hub.Module):
 
         self.text_classifier = TextClassifier(cfg)
 
-    def merge_configs(self, ):
+    def merge_configs(
+        self,
+    ):
         # deafult cfg
         backup_argv = copy.deepcopy(sys.argv)
         sys.argv = sys.argv[:1]
@@ -80,8 +82,7 @@ class OCRCls(hub.Module):
     def read_images(self, paths=[]):
         images = []
         for img_path in paths:
-            assert os.path.isfile(
-                img_path), "The {} isn't a valid file.".format(img_path)
+            assert os.path.isfile(img_path), "The {} isn't a valid file.".format(img_path)
             img = cv2.imread(img_path)
             if img is None:
                 logger.info("error in loading image:{}".format(img_path))
@@ -119,10 +120,12 @@ class OCRCls(hub.Module):
             img_list, cls_res, predict_time = self.text_classifier(img_list)
             for dno in range(len(cls_res)):
                 angle, score = cls_res[dno]
-                rec_res_final.append({
-                    'angle': angle,
-                    'confidence': float(score),
-                })
+                rec_res_final.append(
+                    {
+                        "angle": angle,
+                        "confidence": float(score),
+                    }
+                )
         except Exception as e:
             print(e)
             return [[]]
@@ -139,13 +142,13 @@ class OCRCls(hub.Module):
         return results
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ocr = OCRCls()
     ocr._initialize()
     image_path = [
-        './doc/imgs_words/ch/word_1.jpg',
-        './doc/imgs_words/ch/word_2.jpg',
-        './doc/imgs_words/ch/word_3.jpg',
+        "./doc/imgs_words/ch/word_1.jpg",
+        "./doc/imgs_words/ch/word_2.jpg",
+        "./doc/imgs_words/ch/word_3.jpg",
     ]
     res = ocr.predict(paths=image_path)
     print(res)

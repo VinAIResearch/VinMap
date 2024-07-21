@@ -9,7 +9,15 @@ from .single_stage_text_detector import SingleStageTextDetector
 from .text_detector_mixin import TextDetectorMixin
 from .textsnake import TextSnake
 
+
 __all__ = [
-    'TextDetectorMixin', 'SingleStageTextDetector', 'OCRMaskRCNN', 'DBNet',
-    'PANet', 'PSENet', 'TextSnake', 'FCENet', 'DRRG'
+    "TextDetectorMixin",
+    "SingleStageTextDetector",
+    "OCRMaskRCNN",
+    "DBNet",
+    "PANet",
+    "PSENet",
+    "TextSnake",
+    "FCENet",
+    "DRRG",
 ]

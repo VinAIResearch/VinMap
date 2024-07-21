@@ -4,12 +4,12 @@ from typing import Sequence
 import numpy as np
 import torch
 import torch.nn as nn
+from mmcls.utils import get_root_logger
 from mmcv.cnn import build_norm_layer
 from mmcv.cnn.bricks.transformer import FFN, PatchEmbed
 from mmcv.cnn.utils.weight_init import trunc_normal_
 from mmcv.runner.base_module import BaseModule, ModuleList
 
-from mmcls.utils import get_root_logger
 from ..builder import BACKBONES
 from ..utils import MultiheadAttention, resize_pos_embed, to_2tuple
 from .base_backbone import BaseBackbone
@@ -38,24 +38,25 @@ class TransformerEncoderLayer(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads,
-                 feedforward_channels,
-                 drop_rate=0.,
-                 attn_drop_rate=0.,
-                 drop_path_rate=0.,
-                 num_fcs=2,
-                 qkv_bias=True,
-                 act_cfg=dict(type='GELU'),
-                 norm_cfg=dict(type='LN'),
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        num_heads,
+        feedforward_channels,
+        drop_rate=0.0,
+        attn_drop_rate=0.0,
+        drop_path_rate=0.0,
+        num_fcs=2,
+        qkv_bias=True,
+        act_cfg=dict(type="GELU"),
+        norm_cfg=dict(type="LN"),
+        init_cfg=None,
+    ):
         super(TransformerEncoderLayer, self).__init__(init_cfg=init_cfg)
 
         self.embed_dims = embed_dims
 
-        self.norm1_name, norm1 = build_norm_layer(
-            norm_cfg, self.embed_dims, postfix=1)
+        self.norm1_name, norm1 = build_norm_layer(norm_cfg, self.embed_dims, postfix=1)
         self.add_module(self.norm1_name, norm1)
 
         self.attn = MultiheadAttention(
@@ -63,11 +64,11 @@ class TransformerEncoderLayer(BaseModule):
             num_heads=num_heads,
             attn_drop=attn_drop_rate,
             proj_drop=drop_rate,
-            dropout_layer=dict(type='DropPath', drop_prob=drop_path_rate),
-            qkv_bias=qkv_bias)
+            dropout_layer=dict(type="DropPath", drop_prob=drop_path_rate),
+            qkv_bias=qkv_bias,
+        )
 
-        self.norm2_name, norm2 = build_norm_layer(
-            norm_cfg, self.embed_dims, postfix=2)
+        self.norm2_name, norm2 = build_norm_layer(norm_cfg, self.embed_dims, postfix=2)
         self.add_module(self.norm2_name, norm2)
 
         self.ffn = FFN(
@@ -75,8 +76,9 @@ class TransformerEncoderLayer(BaseModule):
             feedforward_channels=feedforward_channels,
             num_fcs=num_fcs,
             ffn_drop=drop_rate,
-            dropout_layer=dict(type='DropPath', drop_prob=drop_path_rate),
-            act_cfg=act_cfg)
+            dropout_layer=dict(type="DropPath", drop_prob=drop_path_rate),
+            act_cfg=act_cfg,
+        )
 
     @property
     def norm1(self):
@@ -147,87 +149,73 @@ class VisionTransformer(BaseBackbone):
         init_cfg (dict, optional): Initialization config dict.
             Defaults to None.
     """
+
     arch_zoo = {
         **dict.fromkeys(
-            ['s', 'small'], {
-                'embed_dims': 768,
-                'num_layers': 8,
-                'num_heads': 8,
-                'feedforward_channels': 768 * 3,
-            }),
+            ["s", "small"],
+            {
+                "embed_dims": 768,
+                "num_layers": 8,
+                "num_heads": 8,
+                "feedforward_channels": 768 * 3,
+            },
+        ),
         **dict.fromkeys(
-            ['b', 'base'], {
-                'embed_dims': 768,
-                'num_layers': 12,
-                'num_heads': 12,
-                'feedforward_channels': 3072
-            }),
+            ["b", "base"], {"embed_dims": 768, "num_layers": 12, "num_heads": 12, "feedforward_channels": 3072}
+        ),
         **dict.fromkeys(
-            ['l', 'large'], {
-                'embed_dims': 1024,
-                'num_layers': 24,
-                'num_heads': 16,
-                'feedforward_channels': 4096
-            }),
+            ["l", "large"], {"embed_dims": 1024, "num_layers": 24, "num_heads": 16, "feedforward_channels": 4096}
+        ),
         **dict.fromkeys(
-            ['deit-t', 'deit-tiny'], {
-                'embed_dims': 192,
-                'num_layers': 12,
-                'num_heads': 3,
-                'feedforward_channels': 192 * 4
-            }),
+            ["deit-t", "deit-tiny"],
+            {"embed_dims": 192, "num_layers": 12, "num_heads": 3, "feedforward_channels": 192 * 4},
+        ),
         **dict.fromkeys(
-            ['deit-s', 'deit-small'], {
-                'embed_dims': 384,
-                'num_layers': 12,
-                'num_heads': 6,
-                'feedforward_channels': 384 * 4
-            }),
+            ["deit-s", "deit-small"],
+            {"embed_dims": 384, "num_layers": 12, "num_heads": 6, "feedforward_channels": 384 * 4},
+        ),
         **dict.fromkeys(
-            ['deit-b', 'deit-base'], {
-                'embed_dims': 768,
-                'num_layers': 12,
-                'num_heads': 12,
-                'feedforward_channels': 768 * 4
-            }),
+            ["deit-b", "deit-base"],
+            {"embed_dims": 768, "num_layers": 12, "num_heads": 12, "feedforward_channels": 768 * 4},
+        ),
     }
     # Some structures have multiple extra tokens, like DeiT.
     num_extra_tokens = 1  # cls_token
 
-    def __init__(self,
-                 arch='base',
-                 img_size=224,
-                 patch_size=16,
-                 in_channels=3,
-                 out_indices=-1,
-                 drop_rate=0.,
-                 drop_path_rate=0.,
-                 qkv_bias=True,
-                 norm_cfg=dict(type='LN', eps=1e-6),
-                 final_norm=True,
-                 with_cls_token=True,
-                 output_cls_token=True,
-                 interpolate_mode='bicubic',
-                 patch_cfg=dict(),
-                 layer_cfgs=dict(),
-                 init_cfg=None):
+    def __init__(
+        self,
+        arch="base",
+        img_size=224,
+        patch_size=16,
+        in_channels=3,
+        out_indices=-1,
+        drop_rate=0.0,
+        drop_path_rate=0.0,
+        qkv_bias=True,
+        norm_cfg=dict(type="LN", eps=1e-6),
+        final_norm=True,
+        with_cls_token=True,
+        output_cls_token=True,
+        interpolate_mode="bicubic",
+        patch_cfg=dict(),
+        layer_cfgs=dict(),
+        init_cfg=None,
+    ):
         super(VisionTransformer, self).__init__(init_cfg)
 
         if isinstance(arch, str):
             arch = arch.lower()
-            assert arch in set(self.arch_zoo), \
-                f'Arch {arch} is not in default archs {set(self.arch_zoo)}'
+            assert arch in set(self.arch_zoo), f"Arch {arch} is not in default archs {set(self.arch_zoo)}"
             self.arch_settings = self.arch_zoo[arch]
         else:
-            essential_keys = {
-                'embed_dims', 'num_layers', 'num_heads', 'feedforward_channels'
-            }
-            assert isinstance(arch, dict) and essential_keys <= set(arch), \
-                f'Custom arch needs a dict with keys {essential_keys}'
+            essential_keys = {"embed_dims", "num_layers", "num_heads", "feedforward_channels"}
+            assert isinstance(arch, dict) and essential_keys <= set(
+                arch
+            ), f"Custom arch needs a dict with keys {essential_keys}"
             self.arch_settings = arch
 
-        self.embed_dims = self.arch_settings['embed_dims']
-        self.num_layers = self.arch_settings['num_layers']
+        self.embed_dims = self.arch_settings["embed_dims"]
+        self.num_layers = self.arch_settings["num_layers"]
         self.img_size = to_2tuple(img_size)
 
         # Set patch embedding
@@ -235,7 +223,7 @@ class VisionTransformer(BaseBackbone):
             in_channels=in_channels,
             input_size=img_size,
             embed_dims=self.embed_dims,
-            conv_type='Conv2d',
+            conv_type="Conv2d",
             kernel_size=patch_size,
             stride=patch_size,
         )
@@ -246,31 +234,29 @@ class VisionTransformer(BaseBackbone):
 
         # Set cls token
         if output_cls_token:
-            assert with_cls_token is True, f'with_cls_token must be True if' \
-                f'set output_cls_token to True, but got {with_cls_token}'
+            assert with_cls_token is True, (
+                f"with_cls_token must be True if" f"set output_cls_token to True, but got {with_cls_token}"
+            )
         self.with_cls_token = with_cls_token
         self.output_cls_token = output_cls_token
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dims))
 
         # Set position embedding
         self.interpolate_mode = interpolate_mode
-        self.pos_embed = nn.Parameter(
-            torch.zeros(1, num_patches + self.num_extra_tokens,
-                        self.embed_dims))
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + self.num_extra_tokens, self.embed_dims))
         self._register_load_state_dict_pre_hook(self._prepare_pos_embed)
 
         self.drop_after_pos = nn.Dropout(p=drop_rate)
 
         if isinstance(out_indices, int):
             out_indices = [out_indices]
-        assert isinstance(out_indices, Sequence), \
-            f'"out_indices" must by a sequence or int, ' \
-            f'get {type(out_indices)} instead.'
+        assert isinstance(out_indices, Sequence), (
+            f'"out_indices" must by a sequence or int, ' f"get {type(out_indices)} instead."
+        )
         for i, index in enumerate(out_indices):
             if index < 0:
                 out_indices[i] = self.num_layers + index
-            assert 0 <= out_indices[i] <= self.num_layers, \
-                f'Invalid out_indices {index}'
+            assert 0 <= out_indices[i] <= self.num_layers, f"Invalid out_indices {index}"
         self.out_indices = out_indices
 
         # stochastic depth decay rule
@@ -282,20 +268,19 @@ class VisionTransformer(BaseBackbone):
         for i in range(self.num_layers):
             _layer_cfg = dict(
                 embed_dims=self.embed_dims,
-                num_heads=self.arch_settings['num_heads'],
-                feedforward_channels=self.
-                arch_settings['feedforward_channels'],
+                num_heads=self.arch_settings["num_heads"],
+                feedforward_channels=self.arch_settings["feedforward_channels"],
                 drop_rate=drop_rate,
                 drop_path_rate=dpr[i],
                 qkv_bias=qkv_bias,
-                norm_cfg=norm_cfg)
+                norm_cfg=norm_cfg,
+            )
             _layer_cfg.update(layer_cfgs[i])
             self.layers.append(TransformerEncoderLayer(**_layer_cfg))
 
         self.final_norm = final_norm
         if final_norm:
-            self.norm1_name, norm1 = build_norm_layer(
-                norm_cfg, self.embed_dims, postfix=1)
+            self.norm1_name, norm1 = build_norm_layer(norm_cfg, self.embed_dims, postfix=1)
             self.add_module(self.norm1_name, norm1)
 
     @property
@@ -305,33 +290,29 @@ class VisionTransformer(BaseBackbone):
     def init_weights(self):
         super(VisionTransformer, self).init_weights()
 
-        if not (isinstance(self.init_cfg, dict)
-                and self.init_cfg['type'] == 'Pretrained'):
+        if not (isinstance(self.init_cfg, dict) and self.init_cfg["type"] == "Pretrained"):
             trunc_normal_(self.pos_embed, std=0.02)
 
     def _prepare_pos_embed(self, state_dict, prefix, *args, **kwargs):
-        name = prefix + 'pos_embed'
+        name = prefix + "pos_embed"
         if name not in state_dict.keys():
             return
 
         ckpt_pos_embed_shape = state_dict[name].shape
         if self.pos_embed.shape != ckpt_pos_embed_shape:
             from mmcv.utils import print_log
+
             logger = get_root_logger()
             print_log(
-                f'Resize the pos_embed shape from {ckpt_pos_embed_shape} '
-                f'to {self.pos_embed.shape}.',
-                logger=logger)
+                f"Resize the pos_embed shape from {ckpt_pos_embed_shape} " f"to {self.pos_embed.shape}.", logger=logger
+            )
 
-            ckpt_pos_embed_shape = to_2tuple(
-                int(np.sqrt(ckpt_pos_embed_shape[1] - self.num_extra_tokens)))
+            ckpt_pos_embed_shape = to_2tuple(int(np.sqrt(ckpt_pos_embed_shape[1] - self.num_extra_tokens)))
             pos_embed_shape = self.patch_embed.init_out_size
 
-            state_dict[name] = resize_pos_embed(state_dict[name],
-                                                ckpt_pos_embed_shape,
-                                                pos_embed_shape,
-                                                self.interpolate_mode,
-                                                self.num_extra_tokens)
+            state_dict[name] = resize_pos_embed(
+                state_dict[name], ckpt_pos_embed_shape, pos_embed_shape, self.interpolate_mode, self.num_extra_tokens
+            )
 
     @staticmethod
     def resize_pos_embed(*args, **kwargs):
@@ -350,7 +331,8 @@ class VisionTransformer(BaseBackbone):
             self.patch_resolution,
             patch_resolution,
             mode=self.interpolate_mode,
-            num_extra_tokens=self.num_extra_tokens)
+            num_extra_tokens=self.num_extra_tokens,
+        )
         x = self.drop_after_pos(x)
 
         if not self.with_cls_token:

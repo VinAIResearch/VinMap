@@ -5,7 +5,6 @@ import os.path as osp
 import xml.etree.ElementTree as ET
 
 import mmcv
-
 from mmocr.utils import convert_annotations
 
 
@@ -26,14 +25,14 @@ def collect_files(img_dir, gt_dir):
 
     ann_list, imgs_list = [], []
     for img_file in os.listdir(img_dir):
-        ann_path = osp.join(gt_dir, img_file.split('.')[0] + '.xml')
+        ann_path = osp.join(gt_dir, img_file.split(".")[0] + ".xml")
         if os.path.exists(ann_path):
             ann_list.append(ann_path)
             imgs_list.append(osp.join(img_dir, img_file))
 
     files = list(zip(imgs_list, ann_list))
-    assert len(files), f'No images found in {img_dir}'
-    print(f'Loaded {len(files)} images from {img_dir}')
+    assert len(files), f"No images found in {img_dir}"
+    print(f"Loaded {len(files)} images from {img_dir}")
 
     return files
 
@@ -52,8 +51,7 @@ def collect_annotations(files, nproc=1):
     assert isinstance(nproc, int)
 
     if nproc > 1:
-        images = mmcv.track_parallel_progress(
-            load_img_info, files, nproc=nproc)
+        images = mmcv.track_parallel_progress(load_img_info, files, nproc=nproc)
     else:
         images = mmcv.track_progress(load_img_info, files)
 
@@ -72,22 +70,22 @@ def load_img_info(files):
     assert isinstance(files, tuple)
 
     img_file, gt_file = files
-    assert osp.basename(gt_file).split('.')[0] == osp.basename(img_file).split(
-        '.')[0]
+    assert osp.basename(gt_file).split(".")[0] == osp.basename(img_file).split(".")[0]
     # read imgs while ignoring orientations
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
 
     try:
         img_info = dict(
             file_name=osp.join(osp.basename(img_file)),
             height=img.shape[0],
             width=img.shape[1],
-            segm_file=osp.join(osp.basename(gt_file)))
+            segm_file=osp.join(osp.basename(gt_file)),
+        )
     except AttributeError:
-        print(f'Skip broken img {img_file}')
+        print(f"Skip broken img {img_file}")
         return None
 
-    if osp.splitext(gt_file)[1] == '.xml':
+    if osp.splitext(gt_file)[1] == ".xml":
         img_info = load_xml_info(gt_file, img_info)
     else:
         raise NotImplementedError
@@ -124,25 +122,20 @@ def load_xml_info(gt_file, img_info):
     obj = ET.parse(gt_file)
     root = obj.getroot()
     anno_info = []
-    for object in root.iter('object'):
-        word = object.find('name').text
+    for object in root.iter("object"):
+        word = object.find("name").text
         iscrowd = 1 if len(word) == 0 else 0
-        x1 = int(object.find('bndbox').find('xmin').text)
-        y1 = int(object.find('bndbox').find('ymin').text)
-        x2 = int(object.find('bndbox').find('xmax').text)
-        y2 = int(object.find('bndbox').find('ymax').text)
+        x1 = int(object.find("bndbox").find("xmin").text)
+        y1 = int(object.find("bndbox").find("ymin").text)
+        x2 = int(object.find("bndbox").find("xmax").text)
+        y2 = int(object.find("bndbox").find("ymax").text)
 
         x = max(0, min(x1, x2))
         y = max(0, min(y1, y2))
         w, h = abs(x2 - x1), abs(y2 - y1)
         bbox = [x1, y1, w, h]
         segmentation = [x, y, x + w, y, x + w, y + h, x, y + h]
-        anno = dict(
-            iscrowd=iscrowd,
-            category_id=1,
-            bbox=bbox,
-            area=w * h,
-            segmentation=[segmentation])
+        anno = dict(iscrowd=iscrowd, category_id=1, bbox=bbox, area=w * h, segmentation=[segmentation])
         anno_info.append(anno)
 
     img_info.update(anno_info=anno_info)
@@ -171,13 +164,10 @@ def split_train_val_list(full_list, val_ratio):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Generate training and val set of ILST ')
-    parser.add_argument('root_path', help='Root dir path of ILST')
-    parser.add_argument(
-        '--val-ratio', help='Split ratio for val set', default=0., type=float)
-    parser.add_argument(
-        '--nproc', default=1, type=int, help='Number of processes')
+    parser = argparse.ArgumentParser(description="Generate training and val set of ILST ")
+    parser.add_argument("root_path", help="Root dir path of ILST")
+    parser.add_argument("--val-ratio", help="Split ratio for val set", default=0.0, type=float)
+    parser.add_argument("--nproc", default=1, type=int, help="Number of processes")
     args = parser.parse_args()
     return args
 
@@ -185,21 +175,20 @@ def parse_args():
 def main():
     args = parse_args()
     root_path = args.root_path
-    with mmcv.Timer(print_tmpl='It takes {}s to convert ILST annotation'):
-        files = collect_files(
-            osp.join(root_path, 'imgs'), osp.join(root_path, 'annotations'))
+    with mmcv.Timer(print_tmpl="It takes {}s to convert ILST annotation"):
+        files = collect_files(osp.join(root_path, "imgs"), osp.join(root_path, "annotations"))
         image_infos = collect_annotations(files, nproc=args.nproc)
         if args.val_ratio:
             image_infos = split_train_val_list(image_infos, args.val_ratio)
-            splits = ['training', 'val']
+            splits = ["training", "val"]
         else:
             image_infos = [image_infos]
-            splits = ['training']
+            splits = ["training"]
         for i, split in enumerate(splits):
             convert_annotations(
-                list(filter(None, image_infos[i])),
-                osp.join(root_path, 'instances_' + split + '.json'))
+                list(filter(None, image_infos[i])), osp.join(root_path, "instances_" + split + ".json")
+            )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

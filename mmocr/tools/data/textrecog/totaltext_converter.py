@@ -9,10 +9,9 @@ import mmcv
 import numpy as np
 import scipy.io as scio
 import yaml
-from shapely.geometry import Polygon
-
 from mmocr.datasets.pipelines.crop import crop_img
 from mmocr.utils.fileio import list_to_file
+from shapely.geometry import Polygon
 
 
 def collect_files(img_dir, gt_dir):
@@ -32,21 +31,19 @@ def collect_files(img_dir, gt_dir):
 
     # note that we handle png and jpg only. Pls convert others such as gif to
     # jpg or png offline
-    suffixes = ['.png', '.PNG', '.jpg', '.JPG', '.jpeg', '.JPEG']
+    suffixes = [".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG"]
     # suffixes = ['.png']
 
     imgs_list = []
     for suffix in suffixes:
-        imgs_list.extend(glob.glob(osp.join(img_dir, '*' + suffix)))
+        imgs_list.extend(glob.glob(osp.join(img_dir, "*" + suffix)))
 
     imgs_list = sorted(imgs_list)
-    ann_list = sorted(
-        [osp.join(gt_dir, gt_file) for gt_file in os.listdir(gt_dir)])
+    ann_list = sorted([osp.join(gt_dir, gt_file) for gt_file in os.listdir(gt_dir)])
 
-    files = [(img_file, gt_file)
-             for (img_file, gt_file) in zip(imgs_list, ann_list)]
-    assert len(files), f'No images found in {img_dir}'
-    print(f'Loaded {len(files)} images from {img_dir}')
+    files = [(img_file, gt_file) for (img_file, gt_file) in zip(imgs_list, ann_list)]
+    assert len(files), f"No images found in {img_dir}"
+    print(f"Loaded {len(files)} images from {img_dir}")
 
     return files
 
@@ -65,8 +62,7 @@ def collect_annotations(files, nproc=1):
     assert isinstance(nproc, int)
 
     if nproc > 1:
-        images = mmcv.track_parallel_progress(
-            load_img_info, files, nproc=nproc)
+        images = mmcv.track_parallel_progress(load_img_info, files, nproc=nproc)
     else:
         images = mmcv.track_progress(load_img_info, files)
 
@@ -92,10 +88,10 @@ def get_contours_mat(gt_path):
     data = scio.loadmat(gt_path)
     # 'gt' for the latest version; 'polygt' for the legacy version
     keys = data.keys()
-    if 'gt' in keys:
-        data_polygt = data.get('gt')
-    elif 'polygt' in keys:
-        data_polygt = data.get('polygt')
+    if "gt" in keys:
+        data_polygt = data.get("gt")
+    elif "polygt" in keys:
+        data_polygt = data.get("polygt")
 
     for i, lines in enumerate(data_polygt):
         X = np.array(lines[1])
@@ -103,8 +99,8 @@ def get_contours_mat(gt_path):
 
         point_num = len(X[0])
         word = lines[4]
-        if len(word) == 0 or word == '#':
-            word = '###'
+        if len(word) == 0 or word == "#":
+            word = "###"
         else:
             word = word[0]
 
@@ -137,7 +133,7 @@ def load_mat_info(img_info, gt_file):
     contours, words = get_contours_mat(gt_file)
     anno_info = []
     for contour, word in zip(contours, words):
-        if contour.shape[0] == 2 or word == '###':
+        if contour.shape[0] == 2 or word == "###":
             continue
         coordinates = np.array(contour).reshape(-1, 2)
         polygon = Polygon(coordinates)
@@ -169,23 +165,23 @@ def process_line(line, contours, words):
             for the text instances
     """
 
-    line = '{' + line.replace('[[', '[').replace(']]', ']') + '}'
-    ann_dict = re.sub('([0-9]) +([0-9])', r'\1,\2', line)
-    ann_dict = re.sub('([0-9]) +([ 0-9])', r'\1,\2', ann_dict)
-    ann_dict = re.sub('([0-9]) -([0-9])', r'\1,-\2', ann_dict)
+    line = "{" + line.replace("[[", "[").replace("]]", "]") + "}"
+    ann_dict = re.sub("([0-9]) +([0-9])", r"\1,\2", line)
+    ann_dict = re.sub("([0-9]) +([ 0-9])", r"\1,\2", ann_dict)
+    ann_dict = re.sub("([0-9]) -([0-9])", r"\1,-\2", ann_dict)
     ann_dict = ann_dict.replace("[u',']", "[u'#']")
     ann_dict = yaml.safe_load(ann_dict)
 
-    X = np.array([ann_dict['x']])
-    Y = np.array([ann_dict['y']])
+    X = np.array([ann_dict["x"]])
+    Y = np.array([ann_dict["y"]])
 
-    if len(ann_dict['transcriptions']) == 0:
-        word = '###'
+    if len(ann_dict["transcriptions"]) == 0:
+        word = "###"
     else:
-        word = ann_dict['transcriptions'][0]
-        if len(ann_dict['transcriptions']) > 1:
-            for ann_word in ann_dict['transcriptions'][1:]:
-                word += ',' + ann_word
+        word = ann_dict["transcriptions"][0]
+        if len(ann_dict["transcriptions"]) > 1:
+            for ann_word in ann_dict["transcriptions"][1:]:
+                word += "," + ann_word
         word = str(eval(word))
     words.append(word)
 
@@ -218,27 +214,27 @@ def get_contours_txt(gt_path):
     contours = []
     words = []
 
-    with open(gt_path, 'r') as f:
-        tmp_line = ''
+    with open(gt_path, "r") as f:
+        tmp_line = ""
         for idx, line in enumerate(f):
             line = line.strip()
             if idx == 0:
                 tmp_line = line
                 continue
-            if not line.startswith('x:'):
-                tmp_line += ' ' + line
+            if not line.startswith("x:"):
+                tmp_line += " " + line
                 continue
             else:
                 complete_line = tmp_line
                 tmp_line = line
             contours, words = process_line(complete_line, contours, words)
 
-        if tmp_line != '':
+        if tmp_line != "":
             contours, words = process_line(tmp_line, contours, words)
 
         for word in words:
-            if word == '#':
-                word = '###'
+            if word == "#":
+                word = "###"
 
     return contours, words
 
@@ -258,7 +254,7 @@ def load_txt_info(gt_file, img_info):
     contours, words = get_contours_txt(gt_file)
     anno_info = []
     for contour, word in zip(contours, words):
-        if contour.shape[0] == 2 or word == '###':
+        if contour.shape[0] == 2 or word == "###":
             continue
         coordinates = np.array(contour).reshape(-1, 2)
         polygon = Polygon(coordinates)
@@ -283,34 +279,33 @@ def generate_ann(root_path, split, image_infos):
             annotation information
     """
 
-    dst_image_root = osp.join(root_path, 'dst_imgs', split)
-    if split == 'training':
-        dst_label_file = osp.join(root_path, 'train_label.txt')
-    elif split == 'test':
-        dst_label_file = osp.join(root_path, 'test_label.txt')
+    dst_image_root = osp.join(root_path, "dst_imgs", split)
+    if split == "training":
+        dst_label_file = osp.join(root_path, "train_label.txt")
+    elif split == "test":
+        dst_label_file = osp.join(root_path, "test_label.txt")
     os.makedirs(dst_image_root, exist_ok=True)
 
     lines = []
     for image_info in image_infos:
         index = 1
-        src_img_path = osp.join(root_path, 'imgs', image_info['file_name'])
+        src_img_path = osp.join(root_path, "imgs", image_info["file_name"])
         image = mmcv.imread(src_img_path)
-        src_img_root = osp.splitext(image_info['file_name'])[0].split('/')[1]
+        src_img_root = osp.splitext(image_info["file_name"])[0].split("/")[1]
 
-        for anno in image_info['anno_info']:
-            word = anno['word']
-            dst_img = crop_img(image, anno['bbox'])
+        for anno in image_info["anno_info"]:
+            word = anno["word"]
+            dst_img = crop_img(image, anno["bbox"])
 
             # Skip invalid annotations
-            if min(dst_img.shape) == 0 or word == '###':
+            if min(dst_img.shape) == 0 or word == "###":
                 continue
 
-            dst_img_name = f'{src_img_root}_{index}.png'
+            dst_img_name = f"{src_img_root}_{index}.png"
             index += 1
             dst_img_path = osp.join(dst_image_root, dst_img_name)
             mmcv.imwrite(dst_img, dst_img_path)
-            lines.append(f'{osp.basename(dst_image_root)}/{dst_img_name} '
-                         f'{word}')
+            lines.append(f"{osp.basename(dst_image_root)}/{dst_img_name} " f"{word}")
     list_to_file(dst_label_file, lines)
 
 
@@ -327,7 +322,7 @@ def load_img_info(files):
 
     img_file, gt_file = files
     # read imgs with ignoring orientations
-    img = mmcv.imread(img_file, 'unchanged')
+    img = mmcv.imread(img_file, "unchanged")
 
     split_name = osp.basename(osp.dirname(img_file))
     img_info = dict(
@@ -336,11 +331,12 @@ def load_img_info(files):
         height=img.shape[0],
         width=img.shape[1],
         # anno_info=anno_info,
-        segm_file=osp.join(split_name, osp.basename(gt_file)))
+        segm_file=osp.join(split_name, osp.basename(gt_file)),
+    )
 
-    if osp.splitext(gt_file)[1] == '.mat':
+    if osp.splitext(gt_file)[1] == ".mat":
         img_info = load_mat_info(img_info, gt_file)
-    elif osp.splitext(gt_file)[1] == '.txt':
+    elif osp.splitext(gt_file)[1] == ".txt":
         img_info = load_txt_info(gt_file, img_info)
     else:
         raise NotImplementedError
@@ -349,11 +345,9 @@ def load_img_info(files):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Convert totaltext annotations to COCO format')
-    parser.add_argument('root_path', help='Totaltext root path')
-    parser.add_argument(
-        '--nproc', default=1, type=int, help='Number of process')
+    parser = argparse.ArgumentParser(description="Convert totaltext annotations to COCO format")
+    parser.add_argument("root_path", help="Totaltext root path")
+    parser.add_argument("--nproc", default=1, type=int, help="Number of process")
     args = parser.parse_args()
     return args
 
@@ -361,23 +355,21 @@ def parse_args():
 def main():
     args = parse_args()
     root_path = args.root_path
-    img_dir = osp.join(root_path, 'imgs')
-    gt_dir = osp.join(root_path, 'annotations')
+    img_dir = osp.join(root_path, "imgs")
+    gt_dir = osp.join(root_path, "annotations")
 
     set_name = {}
-    for split in ['training', 'test']:
-        set_name.update({split: split + '_label' + '.txt'})
+    for split in ["training", "test"]:
+        set_name.update({split: split + "_label" + ".txt"})
         assert osp.exists(osp.join(img_dir, split))
 
     for split, ann_name in set_name.items():
-        print(f'Converting {split} into {ann_name}')
-        with mmcv.Timer(
-                print_tmpl='It takes {}s to convert totaltext annotation'):
-            files = collect_files(
-                osp.join(img_dir, split), osp.join(gt_dir, split))
+        print(f"Converting {split} into {ann_name}")
+        with mmcv.Timer(print_tmpl="It takes {}s to convert totaltext annotation"):
+            files = collect_files(osp.join(img_dir, split), osp.join(gt_dir, split))
             image_infos = collect_annotations(files, nproc=args.nproc)
             generate_ann(root_path, split, image_infos)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

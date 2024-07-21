@@ -6,10 +6,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.runner import BaseModule
-
 from mmocr.models.builder import HEADS, build_loss
 from mmocr.models.textdet.modules import GCN, LocalGraphs, ProposalLocalGraphs
 from mmocr.utils import check_argument
+
 from .head_mixin import HeadMixin
 
 
@@ -44,42 +44,42 @@ class DRRGHead(HeadMixin, BaseModule):
         init_cfg (dict or list[dict], optional): Initialization configs.
     """
 
-    def __init__(self,
-                 in_channels,
-                 k_at_hops=(8, 4),
-                 num_adjacent_linkages=3,
-                 node_geo_feat_len=120,
-                 pooling_scale=1.0,
-                 pooling_output_size=(4, 3),
-                 nms_thr=0.3,
-                 min_width=8.0,
-                 max_width=24.0,
-                 comp_shrink_ratio=1.03,
-                 comp_ratio=0.4,
-                 comp_score_thr=0.3,
-                 text_region_thr=0.2,
-                 center_region_thr=0.2,
-                 center_region_area_thr=50,
-                 local_graph_thr=0.7,
-                 loss=dict(type='DRRGLoss'),
-                 postprocessor=dict(type='DRRGPostprocessor', link_thr=0.85),
-                 train_cfg=None,
-                 test_cfg=None,
-                 init_cfg=dict(
-                     type='Normal',
-                     override=dict(name='out_conv'),
-                     mean=0,
-                     std=0.01),
-                 **kwargs):
-        old_keys = ['text_repr_type', 'decoding_type', 'link_thr']
+    def __init__(
+        self,
+        in_channels,
+        k_at_hops=(8, 4),
+        num_adjacent_linkages=3,
+        node_geo_feat_len=120,
+        pooling_scale=1.0,
+        pooling_output_size=(4, 3),
+        nms_thr=0.3,
+        min_width=8.0,
+        max_width=24.0,
+        comp_shrink_ratio=1.03,
+        comp_ratio=0.4,
+        comp_score_thr=0.3,
+        text_region_thr=0.2,
+        center_region_thr=0.2,
+        center_region_area_thr=50,
+        local_graph_thr=0.7,
+        loss=dict(type="DRRGLoss"),
+        postprocessor=dict(type="DRRGPostprocessor", link_thr=0.85),
+        train_cfg=None,
+        test_cfg=None,
+        init_cfg=dict(type="Normal", override=dict(name="out_conv"), mean=0, std=0.01),
+        **kwargs,
+    ):
+        old_keys = ["text_repr_type", "decoding_type", "link_thr"]
         for key in old_keys:
             if kwargs.get(key, None):
                 postprocessor[key] = kwargs.get(key)
                 warnings.warn(
-                    f'{key} is deprecated, please specify '
-                    'it in postprocessor config dict. See '
-                    'https://github.com/open-mmlab/mmocr/pull/640'
-                    ' for details.', UserWarning)
+                    f"{key} is deprecated, please specify "
+                    "it in postprocessor config dict. See "
+                    "https://github.com/open-mmlab/mmocr/pull/640"
+                    " for details.",
+                    UserWarning,
+                )
         BaseModule.__init__(self, init_cfg=init_cfg)
         HeadMixin.__init__(self, loss, postprocessor)
 
@@ -123,29 +123,37 @@ class DRRGHead(HeadMixin, BaseModule):
         self.test_cfg = test_cfg
 
         self.out_conv = nn.Conv2d(
-            in_channels=self.in_channels,
-            out_channels=self.out_channels,
-            kernel_size=1,
-            stride=1,
-            padding=0)
+            in_channels=self.in_channels, out_channels=self.out_channels, kernel_size=1, stride=1, padding=0
+        )
 
-        self.graph_train = LocalGraphs(self.k_at_hops,
-                                       self.num_adjacent_linkages,
-                                       self.node_geo_feat_len,
-                                       self.pooling_scale,
-                                       self.pooling_output_size,
-                                       self.local_graph_thr)
+        self.graph_train = LocalGraphs(
+            self.k_at_hops,
+            self.num_adjacent_linkages,
+            self.node_geo_feat_len,
+            self.pooling_scale,
+            self.pooling_output_size,
+            self.local_graph_thr,
+        )
 
         self.graph_test = ProposalLocalGraphs(
-            self.k_at_hops, self.num_adjacent_linkages, self.node_geo_feat_len,
-            self.pooling_scale, self.pooling_output_size, self.nms_thr,
-            self.min_width, self.max_width, self.comp_shrink_ratio,
-            self.comp_ratio, self.comp_score_thr, self.text_region_thr,
-            self.center_region_thr, self.center_region_area_thr)
+            self.k_at_hops,
+            self.num_adjacent_linkages,
+            self.node_geo_feat_len,
+            self.pooling_scale,
+            self.pooling_output_size,
+            self.nms_thr,
+            self.min_width,
+            self.max_width,
+            self.comp_shrink_ratio,
+            self.comp_ratio,
+            self.comp_score_thr,
+            self.text_region_thr,
+            self.center_region_thr,
+            self.center_region_area_thr,
+        )
 
         pool_w, pool_h = self.pooling_output_size
-        node_feat_len = (pool_w * pool_h) * (
-            self.in_channels + self.out_channels) + self.node_geo_feat_len
+        node_feat_len = (pool_w * pool_h) * (self.in_channels + self.out_channels) + self.node_geo_feat_len
         self.gcn = GCN(node_feat_len)
 
     def forward(self, inputs, gt_comp_attribs):
@@ -167,8 +175,7 @@ class DRRGHead(HeadMixin, BaseModule):
         """
         pred_maps = self.out_conv(inputs)
         feat_maps = torch.cat([inputs, pred_maps], dim=1)
-        node_feats, adjacent_matrices, knn_inds, gt_labels = self.graph_train(
-            feat_maps, np.stack(gt_comp_attribs))
+        node_feats, adjacent_matrices, knn_inds, gt_labels = self.graph_train(feat_maps, np.stack(gt_comp_attribs))
 
         gcn_pred = self.gcn(node_feats, adjacent_matrices, knn_inds)
 
@@ -196,14 +203,12 @@ class DRRGHead(HeadMixin, BaseModule):
 
         none_flag, graph_data = self.graph_test(pred_maps, feat_maps)
 
-        (local_graphs_node_feat, adjacent_matrices, pivots_knn_inds,
-         pivot_local_graphs, text_comps) = graph_data
+        (local_graphs_node_feat, adjacent_matrices, pivots_knn_inds, pivot_local_graphs, text_comps) = graph_data
 
         if none_flag:
             return None, None, None
 
-        gcn_pred = self.gcn(local_graphs_node_feat, adjacent_matrices,
-                            pivots_knn_inds)
+        gcn_pred = self.gcn(local_graphs_node_feat, adjacent_matrices, pivots_knn_inds)
         pred_labels = F.softmax(gcn_pred, dim=1)
 
         edges = []
@@ -215,9 +220,7 @@ class DRRGHead(HeadMixin, BaseModule):
             for k_ind, neighbor_ind in enumerate(pivots_knn_inds[pivot_ind]):
                 neighbor = pivot_local_graph[neighbor_ind.item()]
                 edges.append([pivot, neighbor])
-                scores.append(
-                    pred_labels[pivot_ind * pivots_knn_inds.shape[1] + k_ind,
-                                1].item())
+                scores.append(pred_labels[pivot_ind * pivots_knn_inds.shape[1] + k_ind, 1].item())
 
         edges = np.asarray(edges)
         scores = np.asarray(scores)
@@ -248,9 +251,7 @@ class DRRGHead(HeadMixin, BaseModule):
             boundaries = self.postprocessor(edges, scores, text_comps)
 
         if rescale:
-            boundaries = self.resize_boundary(
-                boundaries,
-                1.0 / self.downsample_ratio / img_metas[0]['scale_factor'])
+            boundaries = self.resize_boundary(boundaries, 1.0 / self.downsample_ratio / img_metas[0]["scale_factor"])
 
         results = dict(boundary_result=boundaries)
 

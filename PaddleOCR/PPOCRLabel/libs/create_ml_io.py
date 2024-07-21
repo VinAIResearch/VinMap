@@ -13,17 +13,18 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 import json
+import os
 from pathlib import Path
 
 from libs.constants import DEFAULT_ENCODING
-import os
 
-JSON_EXT = '.json'
+
+JSON_EXT = ".json"
 ENCODE_METHOD = DEFAULT_ENCODING
 
 
 class CreateMLWriter:
-    def __init__(self, foldername, filename, imgsize, shapes, outputfile, databasesrc='Unknown', localimgpath=None):
+    def __init__(self, foldername, filename, imgsize, shapes, outputfile, databasesrc="Unknown", localimgpath=None):
         self.foldername = foldername
         self.filename = filename
         self.databasesrc = databasesrc
@@ -42,10 +43,7 @@ class CreateMLWriter:
         else:
             outputdict = []
 
-        outputimagedict = {
-            "image": self.filename,
-            "annotations": []
-        }
+        outputimagedict = {"image": self.filename, "annotations": []}
 
         for shape in self.shapes:
             points = shape["points"]
@@ -57,15 +55,7 @@ class CreateMLWriter:
 
             height, width, x, y = self.calculate_coordinates(x1, x2, y1, y2)
 
-            shapedict = {
-                "label": shape["label"],
-                "coordinates": {
-                    "x": x,
-                    "y": y,
-                    "width": width,
-                    "height": height
-                }
-            }
+            shapedict = {"label": shape["label"], "coordinates": {"x": x, "y": y, "width": width, "height": height}}
             outputimagedict["annotations"].append(shapedict)
 
         # check if image already in output

@@ -50,10 +50,9 @@ def scaled_all_reduce(tensors: List[Tensor], num_gpus: int) -> List[Tensor]:
 
 
 @torch.no_grad()
-def update_bn_stats(model: nn.Module,
-                    loader: DataLoader,
-                    num_samples: int = 8192,
-                    logger: Optional[logging.Logger] = None) -> None:
+def update_bn_stats(
+    model: nn.Module, loader: DataLoader, num_samples: int = 8192, logger: Optional[logging.Logger] = None
+) -> None:
     """Computes precise BN stats on training data.
 
     Args:
@@ -71,27 +70,17 @@ def update_bn_stats(model: nn.Module,
     num_iter = num_samples // (loader.batch_size * world_size)
     num_iter = min(num_iter, len(loader))
     # Retrieve the BN layers
-    bn_layers = [
-        m for m in model.modules()
-        if m.training and isinstance(m, (_BatchNorm))
-    ]
+    bn_layers = [m for m in model.modules() if m.training and isinstance(m, (_BatchNorm))]
 
     if len(bn_layers) == 0:
-        print_log('No BN found in model', logger=logger, level=logging.WARNING)
+        print_log("No BN found in model", logger=logger, level=logging.WARNING)
         return
-    print_log(
-        f'{len(bn_layers)} BN found, run {num_iter} iters...', logger=logger)
+    print_log(f"{len(bn_layers)} BN found, run {num_iter} iters...", logger=logger)
 
     # Finds all the other norm layers with training=True.
-    other_norm_layers = [
-        m for m in model.modules()
-        if m.training and isinstance(m, (_InstanceNorm, GroupNorm))
-    ]
+    other_norm_layers = [m for m in model.modules() if m.training and isinstance(m, (_InstanceNorm, GroupNorm))]
     if len(other_norm_layers) > 0:
-        print_log(
-            'IN/GN stats will not be updated in PreciseHook.',
-            logger=logger,
-            level=logging.INFO)
+        print_log("IN/GN stats will not be updated in PreciseHook.", logger=logger, level=logging.INFO)
 
     # Initialize BN stats storage for computing
     # mean(mean(batch)) and mean(var(batch))
@@ -156,15 +145,9 @@ class PreciseBNHook(Hook):
         self.num_samples = num_samples
 
     def _perform_precise_bn(self, runner: EpochBasedRunner) -> None:
-        print_log(
-            f'Running Precise BN for {self.num_samples} items...',
-            logger=runner.logger)
-        update_bn_stats(
-            runner.model,
-            runner.data_loader,
-            self.num_samples,
-            logger=runner.logger)
-        print_log('Finish Precise BN, BN stats updated.', logger=runner.logger)
+        print_log(f"Running Precise BN for {self.num_samples} items...", logger=runner.logger)
+        update_bn_stats(runner.model, runner.data_loader, self.num_samples, logger=runner.logger)
+        print_log("Finish Precise BN, BN stats updated.", logger=runner.logger)
 
     def after_train_epoch(self, runner: EpochBasedRunner) -> None:
         """Calculate prcise BN and broadcast BN stats across GPUs.
@@ -172,8 +155,7 @@ class PreciseBNHook(Hook):
         Args:
             runner (obj:`EpochBasedRunner`): runner object.
         """
-        assert isinstance(runner, EpochBasedRunner), \
-            'PreciseBN only supports `EpochBasedRunner` by now'
+        assert isinstance(runner, EpochBasedRunner), "PreciseBN only supports `EpochBasedRunner` by now"
 
         # if by epoch, do perform precise every `self.interval` epochs;
         if self.every_n_epochs(runner, self.interval):

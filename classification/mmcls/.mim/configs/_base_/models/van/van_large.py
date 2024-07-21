@@ -1,1 +1,1 @@
-_base_ = ['./van-b3.py']
+_base_ = ["./van-b3.py"]

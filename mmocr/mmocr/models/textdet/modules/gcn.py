@@ -29,7 +29,7 @@ class GraphConv(nn.Module):
         assert d == self.in_dim
         agg_feats = self.aggregator(features, A)
         cat_feats = torch.cat([features, agg_feats], dim=2)
-        out = torch.einsum('bnd,df->bnf', cat_feats, self.weight)
+        out = torch.einsum("bnd,df->bnf", cat_feats, self.weight)
         out = F.relu(out + self.bias)
         return out
 
@@ -49,8 +49,7 @@ class GCN(nn.Module):
         self.conv2 = GraphConv(512, 256)
         self.conv3 = GraphConv(256, 128)
         self.conv4 = GraphConv(128, 64)
-        self.classifier = nn.Sequential(
-            nn.Linear(64, 32), nn.PReLU(32), nn.Linear(32, 2))
+        self.classifier = nn.Sequential(nn.Linear(64, 32), nn.PReLU(32), nn.Linear(32, 2))
 
     def forward(self, x, A, knn_inds):
 
@@ -66,8 +65,7 @@ class GCN(nn.Module):
         x = self.conv4(x, A)
         k = knn_inds.size(-1)
         mid_feat_len = x.size(-1)
-        edge_feat = torch.zeros((num_local_graphs, k, mid_feat_len),
-                                device=x.device)
+        edge_feat = torch.zeros((num_local_graphs, k, mid_feat_len), device=x.device)
         for graph_ind in range(num_local_graphs):
             edge_feat[graph_ind, :, :] = x[graph_ind, knn_inds[graph_ind]]
         edge_feat = edge_feat.view(-1, mid_feat_len)

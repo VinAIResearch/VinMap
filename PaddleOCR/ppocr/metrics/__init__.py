@@ -12,38 +12,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import copy
 
+
 __all__ = ["build_metric"]
 
-from .det_metric import DetMetric, DetFCEMetric
-from .rec_metric import RecMetric, CNTMetric, CANMetric
 from .cls_metric import ClsMetric
-from .e2e_metric import E2EMetric
-from .distillation_metric import DistillationMetric
-from .table_metric import TableMetric
-from .kie_metric import KIEMetric
-from .vqa_token_ser_metric import VQASerTokenMetric
-from .vqa_token_re_metric import VQAReTokenMetric
-from .sr_metric import SRMetric
 from .ct_metric import CTMetric
+from .det_metric import DetFCEMetric, DetMetric
+from .distillation_metric import DistillationMetric
+from .e2e_metric import E2EMetric
+from .kie_metric import KIEMetric
+from .rec_metric import CANMetric, CNTMetric, RecMetric
+from .sr_metric import SRMetric
+from .table_metric import TableMetric
+from .vqa_token_re_metric import VQAReTokenMetric
+from .vqa_token_ser_metric import VQASerTokenMetric
 
 
 def build_metric(config):
     support_dict = [
-        "DetMetric", "DetFCEMetric", "RecMetric", "ClsMetric", "E2EMetric",
-        "DistillationMetric", "TableMetric", 'KIEMetric', 'VQASerTokenMetric',
-        'VQAReTokenMetric', 'SRMetric', 'CTMetric', 'CNTMetric', 'CANMetric'
+        "DetMetric",
+        "DetFCEMetric",
+        "RecMetric",
+        "ClsMetric",
+        "E2EMetric",
+        "DistillationMetric",
+        "TableMetric",
+        "KIEMetric",
+        "VQASerTokenMetric",
+        "VQAReTokenMetric",
+        "SRMetric",
+        "CTMetric",
+        "CNTMetric",
+        "CANMetric",
     ]
 
     config = copy.deepcopy(config)
     module_name = config.pop("name")
-    assert module_name in support_dict, Exception(
-        "metric only support {}".format(support_dict))
+    assert module_name in support_dict, Exception("metric only support {}".format(support_dict))
     module_class = eval(module_name)(**config)
     return module_class

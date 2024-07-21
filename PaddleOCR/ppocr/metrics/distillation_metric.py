@@ -12,23 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
 import copy
+import importlib
 
-from .rec_metric import RecMetric
+from .cls_metric import ClsMetric
 from .det_metric import DetMetric
 from .e2e_metric import E2EMetric
-from .cls_metric import ClsMetric
-from .vqa_token_ser_metric import VQASerTokenMetric
+from .rec_metric import RecMetric
 from .vqa_token_re_metric import VQAReTokenMetric
+from .vqa_token_ser_metric import VQASerTokenMetric
 
 
 class DistillationMetric(object):
-    def __init__(self,
-                 key=None,
-                 base_metric_name=None,
-                 main_indicator=None,
-                 **kwargs):
+    def __init__(self, key=None, base_metric_name=None, main_indicator=None, **kwargs):
         self.main_indicator = main_indicator
         self.key = key
         self.main_indicator = main_indicator
@@ -40,8 +36,7 @@ class DistillationMetric(object):
         self.metrics = dict()
         mod = importlib.import_module(__name__)
         for key in preds:
-            self.metrics[key] = getattr(mod, self.base_metric_name)(
-                main_indicator=self.main_indicator, **self.kwargs)
+            self.metrics[key] = getattr(mod, self.base_metric_name)(main_indicator=self.main_indicator, **self.kwargs)
             self.metrics[key].reset()
 
     def __call__(self, preds, batch, **kwargs):

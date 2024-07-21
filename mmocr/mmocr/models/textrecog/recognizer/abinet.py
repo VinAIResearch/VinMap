@@ -2,10 +2,17 @@
 import warnings
 
 import torch
+from mmocr.models.builder import (
+    RECOGNIZERS,
+    build_backbone,
+    build_convertor,
+    build_decoder,
+    build_encoder,
+    build_fuser,
+    build_loss,
+    build_preprocessor,
+)
 
-from mmocr.models.builder import (RECOGNIZERS, build_backbone, build_convertor,
-                                  build_decoder, build_encoder, build_fuser,
-                                  build_loss, build_preprocessor)
 from .encode_decode_recognizer import EncodeDecodeRecognizer
 
 
@@ -17,20 +24,22 @@ class ABINet(EncodeDecodeRecognizer):
     <https://arxiv.org/pdf/2103.06495.pdf>`_
     """
 
-    def __init__(self,
-                 preprocessor=None,
-                 backbone=None,
-                 encoder=None,
-                 decoder=None,
-                 iter_size=1,
-                 fuser=None,
-                 loss=None,
-                 label_convertor=None,
-                 train_cfg=None,
-                 test_cfg=None,
-                 max_seq_len=40,
-                 pretrained=None,
-                 init_cfg=None):
+    def __init__(
+        self,
+        preprocessor=None,
+        backbone=None,
+        encoder=None,
+        decoder=None,
+        iter_size=1,
+        fuser=None,
+        loss=None,
+        label_convertor=None,
+        train_cfg=None,
+        test_cfg=None,
+        max_seq_len=40,
+        pretrained=None,
+        init_cfg=None,
+    ):
         super(EncodeDecodeRecognizer, self).__init__(init_cfg=init_cfg)
 
         # Label convertor (str2tensor, tensor2str)
@@ -70,9 +79,11 @@ class ABINet(EncodeDecodeRecognizer):
         self.max_seq_len = max_seq_len
 
         if pretrained is not None:
-            warnings.warn('DeprecationWarning: pretrained is a deprecated \
-                key, please consider using init_cfg')
-            self.init_cfg = dict(type='Pretrained', checkpoint=pretrained)
+            warnings.warn(
+                "DeprecationWarning: pretrained is a deprecated \
+                key, please consider using init_cfg"
+            )
+            self.init_cfg = dict(type="Pretrained", checkpoint=pretrained)
 
         self.iter_size = iter_size
 
@@ -95,12 +106,12 @@ class ABINet(EncodeDecodeRecognizer):
             dict[str, tensor]: A dictionary of loss components.
         """
         for img_meta in img_metas:
-            valid_ratio = 1.0 * img_meta['resize_shape'][1] / img.size(-1)
-            img_meta['valid_ratio'] = valid_ratio
+            valid_ratio = 1.0 * img_meta["resize_shape"][1] / img.size(-1)
+            img_meta["valid_ratio"] = valid_ratio
 
         feat = self.extract_feat(img)
 
-        gt_labels = [img_meta['text'] for img_meta in img_metas]
+        gt_labels = [img_meta["text"] for img_meta in img_metas]
 
         targets_dict = self.label_convertor.str2tensor(gt_labels)
 
@@ -108,27 +119,21 @@ class ABINet(EncodeDecodeRecognizer):
         out_enc = None
         if self.encoder is not None:
             out_enc = self.encoder(feat)
-            text_logits = out_enc['logits']
+            text_logits = out_enc["logits"]
 
         out_decs = []
         out_fusers = []
         for _ in range(self.iter_size):
             if self.decoder is not None:
-                out_dec = self.decoder(
-                    feat,
-                    text_logits,
-                    targets_dict,
-                    img_metas,
-                    train_mode=True)
+                out_dec = self.decoder(feat, text_logits, targets_dict, img_metas, train_mode=True)
                 out_decs.append(out_dec)
 
             if self.fuser is not None:
-                out_fuser = self.fuser(out_enc['feature'], out_dec['feature'])
-                text_logits = out_fuser['logits']
+                out_fuser = self.fuser(out_enc["feature"], out_dec["feature"])
+                text_logits = out_fuser["logits"]
                 out_fusers.append(out_fuser)
 
-        outputs = dict(
-            out_enc=out_enc, out_decs=out_decs, out_fusers=out_fusers)
+        outputs = dict(out_enc=out_enc, out_decs=out_decs, out_fusers=out_fusers)
 
         losses = self.loss(outputs, targets_dict, img_metas)
 
@@ -145,8 +150,8 @@ class ABINet(EncodeDecodeRecognizer):
             list[str]: Text label result of each image.
         """
         for img_meta in img_metas:
-            valid_ratio = 1.0 * img_meta['resize_shape'][1] / img.size(-1)
-            img_meta['valid_ratio'] = valid_ratio
+            valid_ratio = 1.0 * img_meta["resize_shape"][1] / img.size(-1)
+            img_meta["valid_ratio"] = valid_ratio
 
         feat = self.extract_feat(img)
 
@@ -154,19 +159,18 @@ class ABINet(EncodeDecodeRecognizer):
         out_enc = None
         if self.encoder is not None:
             out_enc = self.encoder(feat)
-            text_logits = out_enc['logits']
+            text_logits = out_enc["logits"]
 
         out_decs = []
         out_fusers = []
         for _ in range(self.iter_size):
             if self.decoder is not None:
-                out_dec = self.decoder(
-                    feat, text_logits, img_metas=img_metas, train_mode=False)
+                out_dec = self.decoder(feat, text_logits, img_metas=img_metas, train_mode=False)
                 out_decs.append(out_dec)
 
             if self.fuser is not None:
-                out_fuser = self.fuser(out_enc['feature'], out_dec['feature'])
-                text_logits = out_fuser['logits']
+                out_fuser = self.fuser(out_enc["feature"], out_dec["feature"])
+                text_logits = out_fuser["logits"]
                 out_fusers.append(out_fuser)
 
         if len(out_fusers) > 0:
@@ -178,10 +182,9 @@ class ABINet(EncodeDecodeRecognizer):
 
         # early return to avoid post processing
         if torch.onnx.is_in_onnx_export():
-            return ret['logits']
+            return ret["logits"]
 
-        label_indexes, label_scores = self.label_convertor.tensor2idx(
-            ret['logits'].softmax(dim=-1), img_metas)
+        label_indexes, label_scores = self.label_convertor.tensor2idx(ret["logits"].softmax(dim=-1), img_metas)
         label_strings = self.label_convertor.idx2str(label_indexes)
 
         # flatten batch results

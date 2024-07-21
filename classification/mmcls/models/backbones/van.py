@@ -31,22 +31,14 @@ class MixFFN(BaseModule):
             Default: None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 feedforward_channels,
-                 act_cfg=dict(type='GELU'),
-                 ffn_drop=0.,
-                 init_cfg=None):
+    def __init__(self, embed_dims, feedforward_channels, act_cfg=dict(type="GELU"), ffn_drop=0.0, init_cfg=None):
         super(MixFFN, self).__init__(init_cfg=init_cfg)
 
         self.embed_dims = embed_dims
         self.feedforward_channels = feedforward_channels
         self.act_cfg = act_cfg
 
-        self.fc1 = Conv2d(
-            in_channels=embed_dims,
-            out_channels=feedforward_channels,
-            kernel_size=1)
+        self.fc1 = Conv2d(in_channels=embed_dims, out_channels=feedforward_channels, kernel_size=1)
         self.dwconv = Conv2d(
             in_channels=feedforward_channels,
             out_channels=feedforward_channels,
@@ -54,12 +46,10 @@ class MixFFN(BaseModule):
             stride=1,
             padding=1,
             bias=True,
-            groups=feedforward_channels)
+            groups=feedforward_channels,
+        )
         self.act = build_activation_layer(act_cfg)
-        self.fc2 = Conv2d(
-            in_channels=feedforward_channels,
-            out_channels=embed_dims,
-            kernel_size=1)
+        self.fc2 = Conv2d(in_channels=feedforward_channels, out_channels=embed_dims, kernel_size=1)
         self.drop = nn.Dropout(ffn_drop)
 
     def forward(self, x):
@@ -95,11 +85,8 @@ class LKA(BaseModule):
 
         # a spatial local convolution (depth-wise convolution)
         self.DW_conv = Conv2d(
-            in_channels=embed_dims,
-            out_channels=embed_dims,
-            kernel_size=5,
-            padding=2,
-            groups=embed_dims)
+            in_channels=embed_dims, out_channels=embed_dims, kernel_size=5, padding=2, groups=embed_dims
+        )
 
         # a spatial long-range convolution (depth-wise dilation convolution)
         self.DW_D_conv = Conv2d(
@@ -109,10 +96,10 @@ class LKA(BaseModule):
             stride=1,
             padding=9,
             groups=embed_dims,
-            dilation=3)
+            dilation=3,
+        )
 
-        self.conv1 = Conv2d(
-            in_channels=embed_dims, out_channels=embed_dims, kernel_size=1)
+        self.conv1 = Conv2d(in_channels=embed_dims, out_channels=embed_dims, kernel_size=1)
 
     def forward(self, x):
         u = x.clone()
@@ -134,15 +121,13 @@ class SpatialAttention(BaseModule):
             Default: None.
     """
 
-    def __init__(self, embed_dims, act_cfg=dict(type='GELU'), init_cfg=None):
+    def __init__(self, embed_dims, act_cfg=dict(type="GELU"), init_cfg=None):
         super(SpatialAttention, self).__init__(init_cfg=init_cfg)
 
-        self.proj_1 = Conv2d(
-            in_channels=embed_dims, out_channels=embed_dims, kernel_size=1)
+        self.proj_1 = Conv2d(in_channels=embed_dims, out_channels=embed_dims, kernel_size=1)
         self.activation = build_activation_layer(act_cfg)
         self.spatial_gating_unit = LKA(embed_dims)
-        self.proj_2 = Conv2d(
-            in_channels=embed_dims, out_channels=embed_dims, kernel_size=1)
+        self.proj_2 = Conv2d(in_channels=embed_dims, out_channels=embed_dims, kernel_size=1)
 
     def forward(self, x):
         shorcut = x.clone()
@@ -171,36 +156,39 @@ class VANBlock(BaseModule):
             Default: None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 ffn_ratio=4.,
-                 drop_rate=0.,
-                 drop_path_rate=0.,
-                 act_cfg=dict(type='GELU'),
-                 norm_cfg=dict(type='BN', eps=1e-5),
-                 layer_scale_init_value=1e-2,
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        ffn_ratio=4.0,
+        drop_rate=0.0,
+        drop_path_rate=0.0,
+        act_cfg=dict(type="GELU"),
+        norm_cfg=dict(type="BN", eps=1e-5),
+        layer_scale_init_value=1e-2,
+        init_cfg=None,
+    ):
         super(VANBlock, self).__init__(init_cfg=init_cfg)
         self.out_channels = embed_dims
 
         self.norm1 = build_norm_layer(norm_cfg, embed_dims)[1]
         self.attn = SpatialAttention(embed_dims, act_cfg=act_cfg)
-        self.drop_path = DropPath(
-            drop_path_rate) if drop_path_rate > 0. else nn.Identity()
+        self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
 
         self.norm2 = build_norm_layer(norm_cfg, embed_dims)[1]
         mlp_hidden_dim = int(embed_dims * ffn_ratio)
         self.mlp = MixFFN(
-            embed_dims=embed_dims,
-            feedforward_channels=mlp_hidden_dim,
-            act_cfg=act_cfg,
-            ffn_drop=drop_rate)
-        self.layer_scale_1 = nn.Parameter(
-            layer_scale_init_value * torch.ones((embed_dims)),
-            requires_grad=True) if layer_scale_init_value > 0 else None
-        self.layer_scale_2 = nn.Parameter(
-            layer_scale_init_value * torch.ones((embed_dims)),
-            requires_grad=True) if layer_scale_init_value > 0 else None
+            embed_dims=embed_dims, feedforward_channels=mlp_hidden_dim, act_cfg=act_cfg, ffn_drop=drop_rate
+        )
+        self.layer_scale_1 = (
+            nn.Parameter(layer_scale_init_value * torch.ones((embed_dims)), requires_grad=True)
+            if layer_scale_init_value > 0
+            else None
+        )
+        self.layer_scale_2 = (
+            nn.Parameter(layer_scale_init_value * torch.ones((embed_dims)), requires_grad=True)
+            if layer_scale_init_value > 0
+            else None
+        )
 
     def forward(self, x):
         identity = x
@@ -228,7 +216,7 @@ class VANPatchEmbed(PatchEmbed):
         2. Do not use 'flatten' and 'transpose'.
     """
 
-    def __init__(self, *args, norm_cfg=dict(type='BN'), **kwargs):
+    def __init__(self, *args, norm_cfg=dict(type="BN"), **kwargs):
         super(VANPatchEmbed, self).__init__(*args, norm_cfg=norm_cfg, **kwargs)
 
     def forward(self, x):
@@ -302,74 +290,71 @@ class VAN(BaseBackbone):
         >>>     print(out.size())
         (1, 256, 7, 7)
     """
+
     arch_zoo = {
-        **dict.fromkeys(['b0', 't', 'tiny'],
-                        {'embed_dims': [32, 64, 160, 256],
-                         'depths': [3, 3, 5, 2],
-                         'ffn_ratios': [8, 8, 4, 4]}),
-        **dict.fromkeys(['b1', 's', 'small'],
-                        {'embed_dims': [64, 128, 320, 512],
-                         'depths': [2, 2, 4, 2],
-                         'ffn_ratios': [8, 8, 4, 4]}),
-        **dict.fromkeys(['b2', 'b', 'base'],
-                        {'embed_dims': [64, 128, 320, 512],
-                         'depths': [3, 3, 12, 3],
-                         'ffn_ratios': [8, 8, 4, 4]}),
-        **dict.fromkeys(['b3', 'l', 'large'],
-                        {'embed_dims': [64, 128, 320, 512],
-                         'depths': [3, 5, 27, 3],
-                         'ffn_ratios': [8, 8, 4, 4]}),
-        **dict.fromkeys(['b4'],
-                        {'embed_dims': [64, 128, 320, 512],
-                         'depths': [3, 6, 40, 3],
-                         'ffn_ratios': [8, 8, 4, 4]}),
-        **dict.fromkeys(['b5'],
-                        {'embed_dims': [96, 192, 480, 768],
-                         'depths': [3, 3, 24, 3],
-                         'ffn_ratios': [8, 8, 4, 4]}),
-        **dict.fromkeys(['b6'],
-                        {'embed_dims': [96, 192, 384, 768],
-                         'depths': [6, 6, 90, 6],
-                         'ffn_ratios': [8, 8, 4, 4]}),
+        **dict.fromkeys(
+            ["b0", "t", "tiny"], {"embed_dims": [32, 64, 160, 256], "depths": [3, 3, 5, 2], "ffn_ratios": [8, 8, 4, 4]}
+        ),
+        **dict.fromkeys(
+            ["b1", "s", "small"],
+            {"embed_dims": [64, 128, 320, 512], "depths": [2, 2, 4, 2], "ffn_ratios": [8, 8, 4, 4]},
+        ),
+        **dict.fromkeys(
+            ["b2", "b", "base"],
+            {"embed_dims": [64, 128, 320, 512], "depths": [3, 3, 12, 3], "ffn_ratios": [8, 8, 4, 4]},
+        ),
+        **dict.fromkeys(
+            ["b3", "l", "large"],
+            {"embed_dims": [64, 128, 320, 512], "depths": [3, 5, 27, 3], "ffn_ratios": [8, 8, 4, 4]},
+        ),
+        **dict.fromkeys(
+            ["b4"], {"embed_dims": [64, 128, 320, 512], "depths": [3, 6, 40, 3], "ffn_ratios": [8, 8, 4, 4]}
+        ),
+        **dict.fromkeys(
+            ["b5"], {"embed_dims": [96, 192, 480, 768], "depths": [3, 3, 24, 3], "ffn_ratios": [8, 8, 4, 4]}
+        ),
+        **dict.fromkeys(
+            ["b6"], {"embed_dims": [96, 192, 384, 768], "depths": [6, 6, 90, 6], "ffn_ratios": [8, 8, 4, 4]}
+        ),
     }  # yapf: disable
 
-    def __init__(self,
-                 arch='tiny',
-                 patch_sizes=[7, 3, 3, 3],
-                 in_channels=3,
-                 drop_rate=0.,
-                 drop_path_rate=0.,
-                 out_indices=(3, ),
-                 frozen_stages=-1,
-                 norm_eval=False,
-                 norm_cfg=dict(type='LN'),
-                 block_cfgs=dict(),
-                 init_cfg=None):
+    def __init__(
+        self,
+        arch="tiny",
+        patch_sizes=[7, 3, 3, 3],
+        in_channels=3,
+        drop_rate=0.0,
+        drop_path_rate=0.0,
+        out_indices=(3,),
+        frozen_stages=-1,
+        norm_eval=False,
+        norm_cfg=dict(type="LN"),
+        block_cfgs=dict(),
+        init_cfg=None,
+    ):
         super(VAN, self).__init__(init_cfg=init_cfg)
 
         if isinstance(arch, str):
             arch = arch.lower()
-            assert arch in set(self.arch_zoo), \
-                f'Arch {arch} is not in default archs {set(self.arch_zoo)}'
+            assert arch in set(self.arch_zoo), f"Arch {arch} is not in default archs {set(self.arch_zoo)}"
             self.arch_settings = self.arch_zoo[arch]
         else:
-            essential_keys = {'embed_dims', 'depths', 'ffn_ratios'}
-            assert isinstance(arch, dict) and set(arch) == essential_keys, \
-                f'Custom arch needs a dict with keys {essential_keys}'
+            essential_keys = {"embed_dims", "depths", "ffn_ratios"}
+            assert (
+                isinstance(arch, dict) and set(arch) == essential_keys
+            ), f"Custom arch needs a dict with keys {essential_keys}"
             self.arch_settings = arch
 
-        self.embed_dims = self.arch_settings['embed_dims']
-        self.depths = self.arch_settings['depths']
-        self.ffn_ratios = self.arch_settings['ffn_ratios']
+        self.embed_dims = self.arch_settings["embed_dims"]
+        self.depths = self.arch_settings["depths"]
+        self.ffn_ratios = self.arch_settings["ffn_ratios"]
         self.num_stages = len(self.depths)
         self.out_indices = out_indices
         self.frozen_stages = frozen_stages
         self.norm_eval = norm_eval
 
         total_depth = sum(self.depths)
-        dpr = [
-            x.item() for x in torch.linspace(0, drop_path_rate, total_depth)
-        ]  # stochastic depth decay rule
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, total_depth)]  # stochastic depth decay rule
 
         cur_block_idx = 0
         for i, depth in enumerate(self.depths):
@@ -380,22 +365,27 @@ class VAN(BaseBackbone):
                 kernel_size=patch_sizes[i],
                 stride=patch_sizes[i] // 2 + 1,
                 padding=(patch_sizes[i] // 2, patch_sizes[i] // 2),
-                norm_cfg=dict(type='BN'))
+                norm_cfg=dict(type="BN"),
+            )
 
-            blocks = ModuleList([
-                VANBlock(
-                    embed_dims=self.embed_dims[i],
-                    ffn_ratio=self.ffn_ratios[i],
-                    drop_rate=drop_rate,
-                    drop_path_rate=dpr[cur_block_idx + j],
-                    **block_cfgs) for j in range(depth)
-            ])
+            blocks = ModuleList(
+                [
+                    VANBlock(
+                        embed_dims=self.embed_dims[i],
+                        ffn_ratio=self.ffn_ratios[i],
+                        drop_rate=drop_rate,
+                        drop_path_rate=dpr[cur_block_idx + j],
+                        **block_cfgs,
+                    )
+                    for j in range(depth)
+                ]
+            )
             cur_block_idx += depth
             norm = build_norm_layer(norm_cfg, self.embed_dims[i])[1]
 
-            self.add_module(f'patch_embed{i + 1}', patch_embed)
-            self.add_module(f'blocks{i + 1}', blocks)
-            self.add_module(f'norm{i + 1}', norm)
+            self.add_module(f"patch_embed{i + 1}", patch_embed)
+            self.add_module(f"blocks{i + 1}", blocks)
+            self.add_module(f"norm{i + 1}", norm)
 
     def train(self, mode=True):
         super(VAN, self).train(mode)
@@ -409,19 +399,19 @@ class VAN(BaseBackbone):
     def _freeze_stages(self):
         for i in range(0, self.frozen_stages + 1):
             # freeze patch embed
-            m = getattr(self, f'patch_embed{i + 1}')
+            m = getattr(self, f"patch_embed{i + 1}")
             m.eval()
             for param in m.parameters():
                 param.requires_grad = False
 
             # freeze blocks
-            m = getattr(self, f'blocks{i + 1}')
+            m = getattr(self, f"blocks{i + 1}")
             m.eval()
             for param in m.parameters():
                 param.requires_grad = False
 
             # freeze norm
-            m = getattr(self, f'norm{i + 1}')
+            m = getattr(self, f"norm{i + 1}")
             m.eval()
             for param in m.parameters():
                 param.requires_grad = False
@@ -429,16 +419,15 @@ class VAN(BaseBackbone):
     def forward(self, x):
         outs = []
         for i in range(self.num_stages):
-            patch_embed = getattr(self, f'patch_embed{i + 1}')
-            blocks = getattr(self, f'blocks{i + 1}')
-            norm = getattr(self, f'norm{i + 1}')
+            patch_embed = getattr(self, f"patch_embed{i + 1}")
+            blocks = getattr(self, f"blocks{i + 1}")
+            norm = getattr(self, f"norm{i + 1}")
             x, hw_shape = patch_embed(x)
             for block in blocks:
                 x = block(x)
             x = x.flatten(2).transpose(1, 2)
             x = norm(x)
-            x = x.reshape(-1, *hw_shape,
-                          block.out_channels).permute(0, 3, 1, 2).contiguous()
+            x = x.reshape(-1, *hw_shape, block.out_channels).permute(0, 3, 1, 2).contiguous()
             if i in self.out_indices:
                 outs.append(x)
 

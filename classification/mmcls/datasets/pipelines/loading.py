@@ -1,12 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os
 import os.path as osp
+import shutil
 
 import mmcv
 import numpy as np
 
 from ..builder import PIPELINES
-import shutil
-import os
+
 
 @PIPELINES.register_module()
 class LoadImageFromFile(object):
@@ -27,10 +28,7 @@ class LoadImageFromFile(object):
             Defaults to ``dict(backend='disk')``.
     """
 
-    def __init__(self,
-                 to_float32=False,
-                 color_type='color',
-                 file_client_args=dict(backend='disk')):
+    def __init__(self, to_float32=False, color_type="color", file_client_args=dict(backend="disk")):
         self.to_float32 = to_float32
         self.color_type = color_type
         self.file_client_args = file_client_args.copy()
@@ -40,20 +38,19 @@ class LoadImageFromFile(object):
         if self.file_client is None:
             self.file_client = mmcv.FileClient(**self.file_client_args)
 
-        if results['img_prefix'] is not None:
-            filename = osp.join(results['img_prefix'],
-                                results['img_info']['filename'])
+        if results["img_prefix"] is not None:
+            filename = osp.join(results["img_prefix"], results["img_info"]["filename"])
         else:
-            filename = results['img_info']['filename']
+            filename = results["img_info"]["filename"]
         # print(filename)
         # if ' ' in filename:
-            # shutil.copy(filename, filename.replace(' ', ''))
-            # os.remove(filename)
-            # filename = filename.replace(' ', '')
+        # shutil.copy(filename, filename.replace(' ', ''))
+        # os.remove(filename)
+        # filename = filename.replace(' ', '')
         # img = mmcv.imread(filename)
         # mmcv.imwrite(img, filename)
         # print()
-        
+
         # img_bytes = self.file_client.get(filename)
         # img = mmcv.imfrombytes(img_bytes,ddflag=self.color_type)
         img = mmcv.imread(filename)
@@ -63,21 +60,22 @@ class LoadImageFromFile(object):
             print(filename)
             img = np.zeros((100, 100, 3)).astype(np.float32)
 
-        results['filename'] = filename
-        results['ori_filename'] = results['img_info']['filename']
-        results['img'] = img
-        results['img_shape'] = img.shape
-        results['ori_shape'] = img.shape
+        results["filename"] = filename
+        results["ori_filename"] = results["img_info"]["filename"]
+        results["img"] = img
+        results["img_shape"] = img.shape
+        results["ori_shape"] = img.shape
         num_channels = 1 if len(img.shape) < 3 else img.shape[2]
-        results['img_norm_cfg'] = dict(
-            mean=np.zeros(num_channels, dtype=np.float32),
-            std=np.ones(num_channels, dtype=np.float32),
-            to_rgb=False)
+        results["img_norm_cfg"] = dict(
+            mean=np.zeros(num_channels, dtype=np.float32), std=np.ones(num_channels, dtype=np.float32), to_rgb=False
+        )
         return results
 
     def __repr__(self):
-        repr_str = (f'{self.__class__.__name__}('
-                    f'to_float32={self.to_float32}, '
-                    f"color_type='{self.color_type}', "
-                    f'file_client_args={self.file_client_args})')
+        repr_str = (
+            f"{self.__class__.__name__}("
+            f"to_float32={self.to_float32}, "
+            f"color_type='{self.color_type}', "
+            f"file_client_args={self.file_client_args})"
+        )
         return repr_str

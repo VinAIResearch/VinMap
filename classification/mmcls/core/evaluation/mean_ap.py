@@ -61,11 +61,9 @@ def mAP(pred, target):
         pred = pred.detach().cpu().numpy()
         target = target.detach().cpu().numpy()
     elif not (isinstance(pred, np.ndarray) and isinstance(target, np.ndarray)):
-        raise TypeError('pred and target should both be torch.Tensor or'
-                        'np.ndarray')
+        raise TypeError("pred and target should both be torch.Tensor or" "np.ndarray")
 
-    assert pred.shape == \
-        target.shape, 'pred and target should be in the same shape.'
+    assert pred.shape == target.shape, "pred and target should be in the same shape."
     num_classes = pred.shape[1]
     ap = np.zeros(num_classes)
     for k in range(num_classes):

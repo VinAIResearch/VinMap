@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
-
 from mmocr.models.builder import DETECTORS
 from mmocr.models.common.detectors import SingleStageDetector
 
@@ -9,16 +8,8 @@ from mmocr.models.common.detectors import SingleStageDetector
 class SingleStageTextDetector(SingleStageDetector):
     """The class for implementing single stage text detector."""
 
-    def __init__(self,
-                 backbone,
-                 neck,
-                 bbox_head,
-                 train_cfg=None,
-                 test_cfg=None,
-                 pretrained=None,
-                 init_cfg=None):
-        SingleStageDetector.__init__(self, backbone, neck, bbox_head,
-                                     train_cfg, test_cfg, pretrained, init_cfg)
+    def __init__(self, backbone, neck, bbox_head, train_cfg=None, test_cfg=None, pretrained=None, init_cfg=None):
+        SingleStageDetector.__init__(self, backbone, neck, bbox_head, train_cfg, test_cfg, pretrained, init_cfg)
 
     def forward_train(self, img, img_metas, **kwargs):
         """
@@ -48,14 +39,11 @@ class SingleStageTextDetector(SingleStageDetector):
 
         if len(img_metas) > 1:
             boundaries = [
-                self.bbox_head.get_boundary(*(outs[i].unsqueeze(0)),
-                                            [img_metas[i]], rescale)
+                self.bbox_head.get_boundary(*(outs[i].unsqueeze(0)), [img_metas[i]], rescale)
                 for i in range(len(img_metas))
             ]
 
         else:
-            boundaries = [
-                self.bbox_head.get_boundary(*outs, img_metas, rescale)
-            ]
+            boundaries = [self.bbox_head.get_boundary(*outs, img_metas, rescale)]
 
         return boundaries

@@ -20,19 +20,18 @@ def digit_version(version_str: str, length: int = 4):
         tuple[int]: The version info in digits (integers).
     """
     version = parse(version_str)
-    assert version.release, f'failed to parse version {version_str}'
+    assert version.release, f"failed to parse version {version_str}"
     release = list(version.release)
     release = release[:length]
     if len(release) < length:
         release = release + [0] * (length - len(release))
     if version.is_prerelease:
-        mapping = {'a': -3, 'b': -2, 'rc': -1}
+        mapping = {"a": -3, "b": -2, "rc": -1}
         val = -4
         # version.pre can be None
         if version.pre:
             if version.pre[0] not in mapping:
-                warnings.warn(f'unknown prerelease version {version.pre[0]}, '
-                              'version checking may go wrong')
+                warnings.warn(f"unknown prerelease version {version.pre[0]}, " "version checking may go wrong")
             else:
                 val = mapping[version.pre[0]]
             release.extend([val, version.pre[-1]])
@@ -46,25 +45,27 @@ def digit_version(version_str: str, length: int = 4):
     return tuple(release)
 
 
-mmcv_minimum_version = '1.3.8'
-mmcv_maximum_version = '1.8.0'
+mmcv_minimum_version = "1.3.8"
+mmcv_maximum_version = "1.8.0"
 mmcv_version = digit_version(mmcv.__version__)
 
-assert (mmcv_version >= digit_version(mmcv_minimum_version)
-        and mmcv_version < digit_version(mmcv_maximum_version)), \
-    f'MMCV {mmcv.__version__} is incompatible with MMOCR {__version__}. ' \
-    f'Please use MMCV >= {mmcv_minimum_version}, ' \
-    f'<= {mmcv_maximum_version} instead.'
+assert mmcv_version >= digit_version(mmcv_minimum_version) and mmcv_version < digit_version(mmcv_maximum_version), (
+    f"MMCV {mmcv.__version__} is incompatible with MMOCR {__version__}. "
+    f"Please use MMCV >= {mmcv_minimum_version}, "
+    f"<= {mmcv_maximum_version} instead."
+)
 
-mmdet_minimum_version = '2.21.0'
-mmdet_maximum_version = '3.0.0'
+mmdet_minimum_version = "2.21.0"
+mmdet_maximum_version = "3.0.0"
 mmdet_version = digit_version(mmdet.__version__)
 
-assert (mmdet_version >= digit_version(mmdet_minimum_version)
-        and mmdet_version < digit_version(mmdet_maximum_version)), \
-    f'MMDetection {mmdet.__version__} is incompatible ' \
-    f'with MMOCR {__version__}. ' \
-    f'Please use MMDetection >= {mmdet_minimum_version}, ' \
-    f'<= {mmdet_maximum_version} instead.'
+assert mmdet_version >= digit_version(mmdet_minimum_version) and mmdet_version < digit_version(
+    mmdet_maximum_version
+), (
+    f"MMDetection {mmdet.__version__} is incompatible "
+    f"with MMOCR {__version__}. "
+    f"Please use MMDetection >= {mmdet_minimum_version}, "
+    f"<= {mmdet_maximum_version} instead."
+)
 
-__all__ = ['__version__', 'short_version', 'digit_version']
+__all__ = ["__version__", "short_version", "digit_version"]

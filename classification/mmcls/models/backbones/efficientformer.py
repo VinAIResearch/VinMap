@@ -4,8 +4,7 @@ from typing import Optional, Sequence
 
 import torch
 import torch.nn as nn
-from mmcv.cnn.bricks import (ConvModule, DropPath, build_activation_layer,
-                             build_norm_layer)
+from mmcv.cnn.bricks import ConvModule, DropPath, build_activation_layer, build_norm_layer
 from mmcv.runner import BaseModule, ModuleList, Sequential
 
 from ..builder import BACKBONES
@@ -29,13 +28,7 @@ class AttentionWithBias(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads=8,
-                 key_dim=32,
-                 attn_ratio=4.,
-                 resolution=7,
-                 init_cfg=None):
+    def __init__(self, embed_dims, num_heads=8, key_dim=32, attn_ratio=4.0, resolution=7, init_cfg=None):
         super().__init__(init_cfg=init_cfg)
         self.num_heads = num_heads
         self.scale = key_dim**-0.5
@@ -58,16 +51,14 @@ class AttentionWithBias(BaseModule):
                 if offset not in attention_offsets:
                     attention_offsets[offset] = len(attention_offsets)
                 idxs.append(attention_offsets[offset])
-        self.attention_biases = nn.Parameter(
-            torch.zeros(num_heads, len(attention_offsets)))
-        self.register_buffer('attention_bias_idxs',
-                             torch.LongTensor(idxs).view(N, N))
+        self.attention_biases = nn.Parameter(torch.zeros(num_heads, len(attention_offsets)))
+        self.register_buffer("attention_bias_idxs", torch.LongTensor(idxs).view(N, N))
 
     @torch.no_grad()
     def train(self, mode=True):
         """change the mode of model."""
         super().train(mode)
-        if mode and hasattr(self, 'ab'):
+        if mode and hasattr(self, "ab"):
             del self.ab
         else:
             self.ab = self.attention_biases[:, self.attention_bias_idxs]
@@ -83,9 +74,9 @@ class AttentionWithBias(BaseModule):
         qkv = qkv.reshape(B, N, self.num_heads, -1).permute(0, 2, 1, 3)
         q, k, v = qkv.split([self.key_dim, self.key_dim, self.d], dim=-1)
 
-        attn = ((q @ k.transpose(-2, -1)) * self.scale +
-                (self.attention_biases[:, self.attention_bias_idxs]
-                 if self.training else self.ab))
+        attn = (q @ k.transpose(-2, -1)) * self.scale + (
+            self.attention_biases[:, self.attention_bias_idxs] if self.training else self.ab
+        )
         attn = attn.softmax(dim=-1)
         x = (attn @ v).transpose(1, 2).reshape(B, N, self.dh)
         x = self.proj(x)
@@ -95,7 +86,9 @@ class AttentionWithBias(BaseModule):
 class Flat(nn.Module):
     """Flat the input from (B, C, H, W) to (B, H*W, C)."""
 
-    def __init__(self, ):
+    def __init__(
+        self,
+    ):
         super().__init__()
 
     def forward(self, x: torch.Tensor):
@@ -121,13 +114,15 @@ class LinearMlp(BaseModule):
             Default: None.
     """
 
-    def __init__(self,
-                 in_features: int,
-                 hidden_features: Optional[int] = None,
-                 out_features: Optional[int] = None,
-                 act_cfg=dict(type='GELU'),
-                 drop=0.,
-                 init_cfg=None):
+    def __init__(
+        self,
+        in_features: int,
+        hidden_features: Optional[int] = None,
+        out_features: Optional[int] = None,
+        act_cfg=dict(type="GELU"),
+        drop=0.0,
+        init_cfg=None,
+    ):
         super().__init__(init_cfg=init_cfg)
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
@@ -167,14 +162,16 @@ class ConvMlp(BaseModule):
             Default: None.
     """
 
-    def __init__(self,
-                 in_features,
-                 hidden_features=None,
-                 out_features=None,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='GELU'),
-                 drop=0.,
-                 init_cfg=None):
+    def __init__(
+        self,
+        in_features,
+        hidden_features=None,
+        out_features=None,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="GELU"),
+        drop=0.0,
+        init_cfg=None,
+    ):
         super().__init__(init_cfg=init_cfg)
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
@@ -206,28 +203,25 @@ class Meta3D(BaseModule):
     """Meta Former block using 3 dimensions inputs, ``torch.Tensor`` with shape
     (B, N, C)."""
 
-    def __init__(self,
-                 dim,
-                 mlp_ratio=4.,
-                 norm_cfg=dict(type='LN'),
-                 act_cfg=dict(type='GELU'),
-                 drop=0.,
-                 drop_path=0.,
-                 use_layer_scale=True,
-                 init_cfg=None):
+    def __init__(
+        self,
+        dim,
+        mlp_ratio=4.0,
+        norm_cfg=dict(type="LN"),
+        act_cfg=dict(type="GELU"),
+        drop=0.0,
+        drop_path=0.0,
+        use_layer_scale=True,
+        init_cfg=None,
+    ):
         super().__init__(init_cfg=init_cfg)
         self.norm1 = build_norm_layer(norm_cfg, dim)[1]
         self.token_mixer = AttentionWithBias(dim)
         self.norm2 = build_norm_layer(norm_cfg, dim)[1]
         mlp_hidden_dim = int(dim * mlp_ratio)
-        self.mlp = LinearMlp(
-            in_features=dim,
-            hidden_features=mlp_hidden_dim,
-            act_cfg=act_cfg,
-            drop=drop)
+        self.mlp = LinearMlp(in_features=dim, hidden_features=mlp_hidden_dim, act_cfg=act_cfg, drop=drop)
 
-        self.drop_path = DropPath(drop_path) if drop_path > 0. \
-            else nn.Identity()
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         if use_layer_scale:
             self.ls1 = LayerScale(dim)
             self.ls2 = LayerScale(dim)
@@ -244,30 +238,27 @@ class Meta4D(BaseModule):
     """Meta Former block using 4 dimensions inputs, ``torch.Tensor`` with shape
     (B, C, H, W)."""
 
-    def __init__(self,
-                 dim,
-                 pool_size=3,
-                 mlp_ratio=4.,
-                 act_cfg=dict(type='GELU'),
-                 drop=0.,
-                 drop_path=0.,
-                 use_layer_scale=True,
-                 init_cfg=None):
+    def __init__(
+        self,
+        dim,
+        pool_size=3,
+        mlp_ratio=4.0,
+        act_cfg=dict(type="GELU"),
+        drop=0.0,
+        drop_path=0.0,
+        use_layer_scale=True,
+        init_cfg=None,
+    ):
         super().__init__(init_cfg=init_cfg)
 
         self.token_mixer = Pooling(pool_size=pool_size)
         mlp_hidden_dim = int(dim * mlp_ratio)
-        self.mlp = ConvMlp(
-            in_features=dim,
-            hidden_features=mlp_hidden_dim,
-            act_cfg=act_cfg,
-            drop=drop)
+        self.mlp = ConvMlp(in_features=dim, hidden_features=mlp_hidden_dim, act_cfg=act_cfg, drop=drop)
 
-        self.drop_path = DropPath(drop_path) if drop_path > 0. \
-            else nn.Identity()
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         if use_layer_scale:
-            self.ls1 = LayerScale(dim, data_format='channels_first')
-            self.ls2 = LayerScale(dim, data_format='channels_first')
+            self.ls1 = LayerScale(dim, data_format="channels_first")
+            self.ls2 = LayerScale(dim, data_format="channels_first")
         else:
             self.ls1, self.ls2 = nn.Identity(), nn.Identity()
 
@@ -277,18 +268,20 @@ class Meta4D(BaseModule):
         return x
 
 
-def basic_blocks(in_channels,
-                 out_channels,
-                 index,
-                 layers,
-                 pool_size=3,
-                 mlp_ratio=4.,
-                 act_cfg=dict(type='GELU'),
-                 drop_rate=.0,
-                 drop_path_rate=0.,
-                 use_layer_scale=True,
-                 vit_num=1,
-                 has_downsamper=False):
+def basic_blocks(
+    in_channels,
+    out_channels,
+    index,
+    layers,
+    pool_size=3,
+    mlp_ratio=4.0,
+    act_cfg=dict(type="GELU"),
+    drop_rate=0.0,
+    drop_path_rate=0.0,
+    use_layer_scale=True,
+    vit_num=1,
+    has_downsamper=False,
+):
     """generate EfficientFormer blocks for a stage."""
     blocks = []
     if has_downsamper:
@@ -300,13 +293,14 @@ def basic_blocks(in_channels,
                 stride=2,
                 padding=1,
                 bias=True,
-                norm_cfg=dict(type='BN'),
-                act_cfg=None))
+                norm_cfg=dict(type="BN"),
+                act_cfg=None,
+            )
+        )
     if index == 3 and vit_num == layers[index]:
         blocks.append(Flat())
     for block_idx in range(layers[index]):
-        block_dpr = drop_path_rate * (block_idx + sum(layers[:index])) / (
-            sum(layers) - 1)
+        block_dpr = drop_path_rate * (block_idx + sum(layers[:index])) / (sum(layers) - 1)
         if index == 3 and layers[index] - block_idx <= vit_num:
             blocks.append(
                 Meta3D(
@@ -316,7 +310,8 @@ def basic_blocks(in_channels,
                     drop=drop_rate,
                     drop_path=block_dpr,
                     use_layer_scale=use_layer_scale,
-                ))
+                )
+            )
         else:
             blocks.append(
                 Meta4D(
@@ -325,7 +320,9 @@ def basic_blocks(in_channels,
                     act_cfg=act_cfg,
                     drop=drop_rate,
                     drop_path=block_dpr,
-                    use_layer_scale=use_layer_scale))
+                    use_layer_scale=use_layer_scale,
+                )
+            )
             if index == 3 and layers[index] - block_idx - 1 == vit_num:
                 blocks.append(Flat())
     blocks = nn.Sequential(*blocks)
@@ -406,69 +403,69 @@ class EfficientFormer(BaseBackbone):
     # --downsamples: [x,x,x,x], has downsample or not in the four stages
     # --vit_num：(int), the num of vit blocks in the last stage
     arch_settings = {
-        'l1': {
-            'layers': [3, 2, 6, 4],
-            'embed_dims': [48, 96, 224, 448],
-            'downsamples': [False, True, True, True],
-            'vit_num': 1,
+        "l1": {
+            "layers": [3, 2, 6, 4],
+            "embed_dims": [48, 96, 224, 448],
+            "downsamples": [False, True, True, True],
+            "vit_num": 1,
         },
-        'l3': {
-            'layers': [4, 4, 12, 6],
-            'embed_dims': [64, 128, 320, 512],
-            'downsamples': [False, True, True, True],
-            'vit_num': 4,
+        "l3": {
+            "layers": [4, 4, 12, 6],
+            "embed_dims": [64, 128, 320, 512],
+            "downsamples": [False, True, True, True],
+            "vit_num": 4,
         },
-        'l7': {
-            'layers': [6, 6, 18, 8],
-            'embed_dims': [96, 192, 384, 768],
-            'downsamples': [False, True, True, True],
-            'vit_num': 8,
+        "l7": {
+            "layers": [6, 6, 18, 8],
+            "embed_dims": [96, 192, 384, 768],
+            "downsamples": [False, True, True, True],
+            "vit_num": 8,
         },
     }
 
-    def __init__(self,
-                 arch='l1',
-                 in_channels=3,
-                 pool_size=3,
-                 mlp_ratios=4,
-                 reshape_last_feat=False,
-                 out_indices=-1,
-                 frozen_stages=-1,
-                 act_cfg=dict(type='GELU'),
-                 drop_rate=0.,
-                 drop_path_rate=0.,
-                 use_layer_scale=True,
-                 init_cfg=None):
+    def __init__(
+        self,
+        arch="l1",
+        in_channels=3,
+        pool_size=3,
+        mlp_ratios=4,
+        reshape_last_feat=False,
+        out_indices=-1,
+        frozen_stages=-1,
+        act_cfg=dict(type="GELU"),
+        drop_rate=0.0,
+        drop_path_rate=0.0,
+        use_layer_scale=True,
+        init_cfg=None,
+    ):
 
         super().__init__(init_cfg=init_cfg)
         self.num_extra_tokens = 0  # no cls_token, no dist_token
 
         if isinstance(arch, str):
-            assert arch in self.arch_settings, \
-                f'Unavailable arch, please choose from ' \
-                f'({set(self.arch_settings)}) or pass a dict.'
+            assert arch in self.arch_settings, (
+                f"Unavailable arch, please choose from " f"({set(self.arch_settings)}) or pass a dict."
+            )
             arch = self.arch_settings[arch]
         elif isinstance(arch, dict):
-            default_keys = set(self.arch_settings['l1'].keys())
-            assert set(arch.keys()) == default_keys, \
-                f'The arch dict must have {default_keys}, ' \
-                f'but got {list(arch.keys())}.'
+            default_keys = set(self.arch_settings["l1"].keys())
+            assert set(arch.keys()) == default_keys, (
+                f"The arch dict must have {default_keys}, " f"but got {list(arch.keys())}."
+            )
 
-        self.layers = arch['layers']
-        self.embed_dims = arch['embed_dims']
-        self.downsamples = arch['downsamples']
-        assert isinstance(self.layers, list) and isinstance(
-            self.embed_dims, list) and isinstance(self.downsamples, list)
-        assert len(self.layers) == len(self.embed_dims) == len(
-            self.downsamples)
+        self.layers = arch["layers"]
+        self.embed_dims = arch["embed_dims"]
+        self.downsamples = arch["downsamples"]
+        assert (
+            isinstance(self.layers, list) and isinstance(self.embed_dims, list) and isinstance(self.downsamples, list)
+        )
+        assert len(self.layers) == len(self.embed_dims) == len(self.downsamples)
 
-        self.vit_num = arch['vit_num']
+        self.vit_num = arch["vit_num"]
         self.reshape_last_feat = reshape_last_feat
 
-        assert self.vit_num >= 0, "'vit_num' must be an integer " \
-                                  'greater than or equal to 0.'
-        assert self.vit_num <= self.layers[-1], (
-            "'vit_num' must be an integer smaller than layer number")
+        assert self.vit_num >= 0, "'vit_num' must be an integer " "greater than or equal to 0."
+        assert self.vit_num <= self.layers[-1], "'vit_num' must be an integer smaller than layer number"
 
         self._make_stem(in_channels, self.embed_dims[0])
 
@@ -492,33 +489,31 @@ class EfficientFormer(BaseBackbone):
                 drop_path_rate=drop_path_rate,
                 vit_num=self.vit_num,
                 use_layer_scale=use_layer_scale,
-                has_downsamper=self.downsamples[i])
+                has_downsamper=self.downsamples[i],
+            )
             network.append(stage)
 
         self.network = ModuleList(network)
 
         if isinstance(out_indices, int):
             out_indices = [out_indices]
-        assert isinstance(out_indices, Sequence), \
-            f'"out_indices" must by a sequence or int, ' \
-            f'get {type(out_indices)} instead.'
+        assert isinstance(out_indices, Sequence), (
+            f'"out_indices" must by a sequence or int, ' f"get {type(out_indices)} instead."
+        )
         for i, index in enumerate(out_indices):
             if index < 0:
                 out_indices[i] = 4 + index
-                assert out_indices[i] >= 0, f'Invalid out_indices {index}'
+                assert out_indices[i] >= 0, f"Invalid out_indices {index}"
 
         self.out_indices = out_indices
         for i_layer in self.out_indices:
-            if not self.reshape_last_feat and \
-                    i_layer == 3 and self.vit_num > 0:
-                layer = build_norm_layer(
-                    dict(type='LN'), self.embed_dims[i_layer])[1]
+            if not self.reshape_last_feat and i_layer == 3 and self.vit_num > 0:
+                layer = build_norm_layer(dict(type="LN"), self.embed_dims[i_layer])[1]
             else:
                 # use GN with 1 group as channel-first LN2D
-                layer = build_norm_layer(
-                    dict(type='GN', num_groups=1), self.embed_dims[i_layer])[1]
+                layer = build_norm_layer(dict(type="GN", num_groups=1), self.embed_dims[i_layer])[1]
 
-            layer_name = f'norm{i_layer}'
+            layer_name = f"norm{i_layer}"
             self.add_module(layer_name, layer)
 
         self.frozen_stages = frozen_stages
@@ -535,8 +530,9 @@ class EfficientFormer(BaseBackbone):
                 padding=1,
                 bias=True,
                 conv_cfg=None,
-                norm_cfg=dict(type='BN'),
-                inplace=True),
+                norm_cfg=dict(type="BN"),
+                inplace=True,
+            ),
             ConvModule(
                 stem_channels // 2,
                 stem_channels,
@@ -545,8 +541,10 @@ class EfficientFormer(BaseBackbone):
                 padding=1,
                 bias=True,
                 conv_cfg=None,
-                norm_cfg=dict(type='BN'),
-                inplace=True))
+                norm_cfg=dict(type="BN"),
+                inplace=True,
+            ),
+        )
 
     def forward_tokens(self, x):
         outs = []
@@ -557,7 +555,7 @@ class EfficientFormer(BaseBackbone):
                     H, W = H // 2, W // 2
             x = block(x)
             if idx in self.out_indices:
-                norm_layer = getattr(self, f'norm{idx}')
+                norm_layer = getattr(self, f"norm{idx}")
 
                 if idx == len(self.network) - 1 and x.dim() == 3:
                     # when ``vit-num`` > 0 and in the last stage,
@@ -596,7 +594,7 @@ class EfficientFormer(BaseBackbone):
             for param in module.parameters():
                 param.requires_grad = False
             if i in self.out_indices:
-                norm_layer = getattr(self, f'norm{i}')
+                norm_layer = getattr(self, f"norm{i}")
                 norm_layer.eval()
                 for param in norm_layer.parameters():
                     param.requires_grad = False

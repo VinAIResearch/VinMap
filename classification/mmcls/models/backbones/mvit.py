@@ -37,7 +37,7 @@ def resize_decomposed_rel_pos(rel_pos, q_size, k_size):
             # (L, C) -> (1, C, L)
             rel_pos.transpose(0, 1).unsqueeze(0),
             size=max_rel_dist,
-            mode='linear',
+            mode="linear",
         )
         # (1, C, L) -> (L, C)
         resized = resized.squeeze(0).transpose(0, 1)
@@ -54,13 +54,7 @@ def resize_decomposed_rel_pos(rel_pos, q_size, k_size):
     return resized[relative_coords.long()]
 
 
-def add_decomposed_rel_pos(attn,
-                           q,
-                           q_shape,
-                           k_shape,
-                           rel_pos_h,
-                           rel_pos_w,
-                           has_cls_token=False):
+def add_decomposed_rel_pos(attn, q, q_shape, k_shape, rel_pos_h, rel_pos_w, has_cls_token=False):
     """Spatial Relative Positional Embeddings."""
     sp_idx = 1 if has_cls_token else 0
     B, num_heads, _, C = q.shape
@@ -71,8 +65,8 @@ def add_decomposed_rel_pos(attn,
     Rw = resize_decomposed_rel_pos(rel_pos_w, q_w, k_w)
 
     r_q = q[:, :, sp_idx:].reshape(B, num_heads, q_h, q_w, C)
-    rel_h = torch.einsum('byhwc,hkc->byhwk', r_q, Rh)
-    rel_w = torch.einsum('byhwc,wkc->byhwk', r_q, Rw)
+    rel_h = torch.einsum("byhwc,hkc->byhwk", r_q, Rh)
+    rel_w = torch.einsum("byhwc,wkc->byhwk", r_q, Rw)
     rel_pos_embed = rel_h[:, :, :, :, :, None] + rel_w[:, :, :, :, None, :]
 
     attn_map = attn[:, :, sp_idx:, sp_idx:].view(B, -1, q_h, q_w, k_h, k_w)
@@ -100,12 +94,7 @@ class MLP(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 in_channels,
-                 hidden_channels=None,
-                 out_channels=None,
-                 act_cfg=dict(type='GELU'),
-                 init_cfg=None):
+    def __init__(self, in_channels, hidden_channels=None, out_channels=None, act_cfg=dict(type="GELU"), init_cfg=None):
         super().__init__(init_cfg=init_cfg)
         out_channels = out_channels or in_channels
         hidden_channels = hidden_channels or in_channels
@@ -120,10 +109,7 @@ class MLP(BaseModule):
         return x
 
 
-def attention_pool(x: torch.Tensor,
-                   pool: nn.Module,
-                   in_size: tuple,
-                   norm: Optional[nn.Module] = None):
+def attention_pool(x: torch.Tensor, pool: nn.Module, in_size: tuple, norm: Optional[nn.Module] = None):
     """Pooling the feature tokens.
 
     Args:
@@ -141,7 +127,7 @@ def attention_pool(x: torch.Tensor,
         num_heads = 1
         B, L, C = x.shape
     else:
-        raise RuntimeError(f'Unsupported input dimension {x.shape}')
+        raise RuntimeError(f"Unsupported input dimension {x.shape}")
 
     H, W = in_size
     assert L == H * W
@@ -190,20 +176,22 @@ class MultiScaleAttention(BaseModule):
             Defaults to None.
     """
 
-    def __init__(self,
-                 in_dims,
-                 out_dims,
-                 num_heads,
-                 qkv_bias=True,
-                 norm_cfg=dict(type='LN'),
-                 pool_kernel=(3, 3),
-                 stride_q=1,
-                 stride_kv=1,
-                 rel_pos_spatial=False,
-                 residual_pooling=True,
-                 input_size=None,
-                 rel_pos_zero_init=False,
-                 init_cfg=None):
+    def __init__(
+        self,
+        in_dims,
+        out_dims,
+        num_heads,
+        qkv_bias=True,
+        norm_cfg=dict(type="LN"),
+        pool_kernel=(3, 3),
+        stride_q=1,
+        stride_kv=1,
+        rel_pos_spatial=False,
+        residual_pooling=True,
+        input_size=None,
+        rel_pos_zero_init=False,
+        init_cfg=None,
+    ):
         super().__init__(init_cfg=init_cfg)
         self.num_heads = num_heads
         self.in_dims = in_dims
@@ -253,8 +241,7 @@ class MultiScaleAttention(BaseModule):
         """Weight initialization."""
         super().init_weights()
 
-        if (isinstance(self.init_cfg, dict)
-                and self.init_cfg['type'] == 'Pretrained'):
+        if isinstance(self.init_cfg, dict) and self.init_cfg["type"] == "Pretrained":
             # Suppress rel_pos_zero_init if use pretrained model.
             return
 
@@ -277,8 +264,7 @@ class MultiScaleAttention(BaseModule):
 
         attn = (q * self.scale) @ k.transpose(-2, -1)
         if self.rel_pos_spatial:
-            attn = add_decomposed_rel_pos(attn, q, q_shape, k_shape,
-                                          self.rel_pos_h, self.rel_pos_w)
+            attn = add_decomposed_rel_pos(attn, q, q_shape, k_shape, self.rel_pos_h, self.rel_pos_w)
 
         attn = attn.softmax(dim=-1)
         x = attn @ v
@@ -336,8 +322,8 @@ class MultiScaleBlock(BaseModule):
         mlp_ratio=4.0,
         qkv_bias=True,
         drop_path=0.0,
-        norm_cfg=dict(type='LN'),
-        act_cfg=dict(type='GELU'),
+        norm_cfg=dict(type="LN"),
+        act_cfg=dict(type="GELU"),
         qkv_pool_kernel=(3, 3),
         stride_q=1,
         stride_kv=1,
@@ -367,17 +353,15 @@ class MultiScaleBlock(BaseModule):
             rel_pos_spatial=rel_pos_spatial,
             residual_pooling=residual_pooling,
             input_size=input_size,
-            rel_pos_zero_init=rel_pos_zero_init)
-        self.drop_path = DropPath(
-            drop_path) if drop_path > 0.0 else nn.Identity()
+            rel_pos_zero_init=rel_pos_zero_init,
+        )
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
         self.norm2 = build_norm_layer(norm_cfg, attn_dims)[1]
 
         self.mlp = MLP(
-            in_channels=attn_dims,
-            hidden_channels=int(attn_dims * mlp_ratio),
-            out_channels=out_dims,
-            act_cfg=act_cfg)
+            in_channels=attn_dims, hidden_channels=int(attn_dims * mlp_ratio), out_channels=out_dims, act_cfg=act_cfg
+        )
 
         if in_dims != out_dims:
             self.proj = nn.Linear(in_dims, out_dims)
@@ -387,8 +371,7 @@ class MultiScaleBlock(BaseModule):
         if stride_q > 1:
             kernel_skip = stride_q + 1
             padding_skip = int(kernel_skip // 2)
-            self.pool_skip = nn.MaxPool2d(
-                kernel_skip, stride_q, padding_skip, ceil_mode=False)
+            self.pool_skip = nn.MaxPool2d(kernel_skip, stride_q, padding_skip, ceil_mode=False)
 
             if input_size is not None:
                 input_size = to_2tuple(input_size)
@@ -502,93 +485,70 @@ class MViT(BaseBackbone):
         scale2: torch.Size([1, 384, 14, 14])
         scale3: torch.Size([1, 768, 7, 7])
     """
+
     arch_zoo = {
-        'tiny': {
-            'embed_dims': 96,
-            'num_layers': 10,
-            'num_heads': 1,
-            'downscale_indices': [1, 3, 8]
-        },
-        'small': {
-            'embed_dims': 96,
-            'num_layers': 16,
-            'num_heads': 1,
-            'downscale_indices': [1, 3, 14]
-        },
-        'base': {
-            'embed_dims': 96,
-            'num_layers': 24,
-            'num_heads': 1,
-            'downscale_indices': [2, 5, 21]
-        },
-        'large': {
-            'embed_dims': 144,
-            'num_layers': 48,
-            'num_heads': 2,
-            'downscale_indices': [2, 8, 44]
-        },
+        "tiny": {"embed_dims": 96, "num_layers": 10, "num_heads": 1, "downscale_indices": [1, 3, 8]},
+        "small": {"embed_dims": 96, "num_layers": 16, "num_heads": 1, "downscale_indices": [1, 3, 14]},
+        "base": {"embed_dims": 96, "num_layers": 24, "num_heads": 1, "downscale_indices": [2, 5, 21]},
+        "large": {"embed_dims": 144, "num_layers": 48, "num_heads": 2, "downscale_indices": [2, 8, 44]},
     }
     num_extra_tokens = 0
 
-    def __init__(self,
-                 arch='base',
-                 img_size=224,
-                 in_channels=3,
-                 out_scales=-1,
-                 drop_path_rate=0.,
-                 use_abs_pos_embed=False,
-                 interpolate_mode='bicubic',
-                 pool_kernel=(3, 3),
-                 dim_mul=2,
-                 head_mul=2,
-                 adaptive_kv_stride=4,
-                 rel_pos_spatial=True,
-                 residual_pooling=True,
-                 dim_mul_in_attention=True,
-                 rel_pos_zero_init=False,
-                 mlp_ratio=4.,
-                 qkv_bias=True,
-                 norm_cfg=dict(type='LN', eps=1e-6),
-                 patch_cfg=dict(kernel_size=7, stride=4, padding=3),
-                 init_cfg=None):
+    def __init__(
+        self,
+        arch="base",
+        img_size=224,
+        in_channels=3,
+        out_scales=-1,
+        drop_path_rate=0.0,
+        use_abs_pos_embed=False,
+        interpolate_mode="bicubic",
+        pool_kernel=(3, 3),
+        dim_mul=2,
+        head_mul=2,
+        adaptive_kv_stride=4,
+        rel_pos_spatial=True,
+        residual_pooling=True,
+        dim_mul_in_attention=True,
+        rel_pos_zero_init=False,
+        mlp_ratio=4.0,
+        qkv_bias=True,
+        norm_cfg=dict(type="LN", eps=1e-6),
+        patch_cfg=dict(kernel_size=7, stride=4, padding=3),
+        init_cfg=None,
+    ):
         super().__init__(init_cfg)
 
         if isinstance(arch, str):
             arch = arch.lower()
-            assert arch in set(self.arch_zoo), \
-                f'Arch {arch} is not in default archs {set(self.arch_zoo)}'
+            assert arch in set(self.arch_zoo), f"Arch {arch} is not in default archs {set(self.arch_zoo)}"
             self.arch_settings = self.arch_zoo[arch]
         else:
-            essential_keys = {
-                'embed_dims', 'num_layers', 'num_heads', 'downscale_indices'
-            }
-            assert isinstance(arch, dict) and essential_keys <= set(arch), \
-                f'Custom arch needs a dict with keys {essential_keys}'
+            essential_keys = {"embed_dims", "num_layers", "num_heads", "downscale_indices"}
+            assert isinstance(arch, dict) and essential_keys <= set(
+                arch
+            ), f"Custom arch needs a dict with keys {essential_keys}"
             self.arch_settings = arch
 
-        self.embed_dims = self.arch_settings['embed_dims']
-        self.num_layers = self.arch_settings['num_layers']
-        self.num_heads = self.arch_settings['num_heads']
-        self.downscale_indices = self.arch_settings['downscale_indices']
+        self.embed_dims = self.arch_settings["embed_dims"]
+        self.num_layers = self.arch_settings["num_layers"]
+        self.num_heads = self.arch_settings["num_heads"]
+        self.downscale_indices = self.arch_settings["downscale_indices"]
         self.num_scales = len(self.downscale_indices) + 1
-        self.stage_indices = {
-            index - 1: i
-            for i, index in enumerate(self.downscale_indices)
-        }
+        self.stage_indices = {index - 1: i for i, index in enumerate(self.downscale_indices)}
         self.stage_indices[self.num_layers - 1] = self.num_scales - 1
         self.use_abs_pos_embed = use_abs_pos_embed
         self.interpolate_mode = interpolate_mode
 
         if isinstance(out_scales, int):
             out_scales = [out_scales]
-        assert isinstance(out_scales, Sequence), \
-            f'"out_scales" must by a sequence or int, ' \
-            f'get {type(out_scales)} instead.'
+        assert isinstance(out_scales, Sequence), (
+            f'"out_scales" must by a sequence or int, ' f"get {type(out_scales)} instead."
+        )
         for i, index in enumerate(out_scales):
             if index < 0:
                 out_scales[i] = self.num_scales + index
-            assert 0 <= out_scales[i] <= self.num_scales, \
-                f'Invalid out_scales {index}'
+            assert 0 <= out_scales[i] <= self.num_scales, f"Invalid out_scales {index}"
         self.out_scales = sorted(list(out_scales))
 
         # Set patch embedding
@@ -596,7 +556,7 @@ class MViT(BaseBackbone):
             in_channels=in_channels,
             input_size=img_size,
             embed_dims=self.embed_dims,
-            conv_type='Conv2d',
+            conv_type="Conv2d",
         )
         _patch_cfg.update(patch_cfg)
         self.patch_embed = PatchEmbed(**_patch_cfg)
@@ -605,8 +565,7 @@ class MViT(BaseBackbone):
         # Set absolute position embedding
         if self.use_abs_pos_embed:
             num_patches = self.patch_resolution[0] * self.patch_resolution[1]
-            self.pos_embed = nn.Parameter(
-                torch.zeros(1, num_patches, self.embed_dims))
+            self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, self.embed_dims))
 
         # stochastic depth decay rule
         dpr = np.linspace(0, drop_path_rate, self.num_layers)
@@ -649,7 +608,8 @@ class MViT(BaseBackbone):
                 residual_pooling=residual_pooling,
                 dim_mul_in_attention=dim_mul_in_attention,
                 input_size=input_size,
-                rel_pos_zero_init=rel_pos_zero_init)
+                rel_pos_zero_init=rel_pos_zero_init,
+            )
             self.blocks.append(attention_block)
 
             input_size = attention_block.init_out_size
@@ -659,13 +619,12 @@ class MViT(BaseBackbone):
                 stage_index = self.stage_indices[i]
                 if stage_index in self.out_scales:
                     norm_layer = build_norm_layer(norm_cfg, out_dims)[1]
-                    self.add_module(f'norm{stage_index}', norm_layer)
+                    self.add_module(f"norm{stage_index}", norm_layer)
 
     def init_weights(self):
         super().init_weights()
 
-        if (isinstance(self.init_cfg, dict)
-                and self.init_cfg['type'] == 'Pretrained'):
+        if isinstance(self.init_cfg, dict) and self.init_cfg["type"] == "Pretrained":
             # Suppress default init if use pretrained model.
             return
 
@@ -683,7 +642,8 @@ class MViT(BaseBackbone):
                 self.patch_resolution,
                 patch_resolution,
                 mode=self.interpolate_mode,
-                num_extra_tokens=self.num_extra_tokens)
+                num_extra_tokens=self.num_extra_tokens,
+            )
 
         outs = []
         for i, block in enumerate(self.blocks):
@@ -693,7 +653,7 @@ class MViT(BaseBackbone):
                 stage_index = self.stage_indices[i]
                 if stage_index in self.out_scales:
                     B, _, C = x.shape
-                    x = getattr(self, f'norm{stage_index}')(x)
+                    x = getattr(self, f"norm{stage_index}")(x)
                     out = x.transpose(1, 2).reshape(B, C, *patch_resolution)
                     outs.append(out.contiguous())
 

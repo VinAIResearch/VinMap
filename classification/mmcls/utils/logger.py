@@ -17,7 +17,7 @@ def get_root_logger(log_file=None, log_level=logging.INFO):
     Returns:
         :obj:`logging.Logger`: The obtained logger
     """
-    return get_logger('mmcls', log_file, log_level)
+    return get_logger("mmcls", log_file, log_level)
 
 
 def load_json_log(json_log):
@@ -42,13 +42,13 @@ def load_json_log(json_log):
                 }
     """
     log_dict = dict()
-    with open(json_log, 'r') as log_file:
+    with open(json_log, "r") as log_file:
         for line in log_file:
             log = json.loads(line.strip())
             # skip lines without `epoch` field
-            if 'epoch' not in log:
+            if "epoch" not in log:
                 continue
-            epoch = log.pop('epoch')
+            epoch = log.pop("epoch")
             if epoch not in log_dict:
                 log_dict[epoch] = defaultdict(list)
             for k, v in log.items():

@@ -14,6 +14,7 @@ from ..utils import to_ntuple
 from .resnet import Bottleneck as ResNetBottleneck
 from .resnext import Bottleneck as ResNeXtBottleneck
 
+
 eps = 1.0e-5
 
 
@@ -42,27 +43,23 @@ class DarknetBottleneck(BaseModule):
             Defaults to ``dict(type='Swish')``.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 expansion=2,
-                 add_identity=True,
-                 use_depthwise=False,
-                 conv_cfg=None,
-                 drop_path_rate=0,
-                 norm_cfg=dict(type='BN', eps=1e-5),
-                 act_cfg=dict(type='LeakyReLU', inplace=True),
-                 init_cfg=None):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        expansion=2,
+        add_identity=True,
+        use_depthwise=False,
+        conv_cfg=None,
+        drop_path_rate=0,
+        norm_cfg=dict(type="BN", eps=1e-5),
+        act_cfg=dict(type="LeakyReLU", inplace=True),
+        init_cfg=None,
+    ):
         super().__init__(init_cfg)
         hidden_channels = int(out_channels / expansion)
         conv = DepthwiseSeparableConvModule if use_depthwise else ConvModule
-        self.conv1 = ConvModule(
-            in_channels,
-            hidden_channels,
-            1,
-            conv_cfg=conv_cfg,
-            norm_cfg=norm_cfg,
-            act_cfg=act_cfg)
+        self.conv1 = ConvModule(in_channels, hidden_channels, 1, conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
         self.conv2 = conv(
             hidden_channels,
             out_channels,
@@ -71,12 +68,11 @@ class DarknetBottleneck(BaseModule):
             padding=1,
             conv_cfg=conv_cfg,
             norm_cfg=norm_cfg,
-            act_cfg=act_cfg)
-        self.add_identity = \
-            add_identity and in_channels == out_channels
+            act_cfg=act_cfg,
+        )
+        self.add_identity = add_identity and in_channels == out_channels
 
-        self.drop_path = DropPath(drop_prob=drop_path_rate
-                                  ) if drop_path_rate > eps else nn.Identity()
+        self.drop_path = DropPath(drop_prob=drop_path_rate) if drop_path_rate > eps else nn.Identity()
 
     def forward(self, x):
         identity = x
@@ -135,21 +131,23 @@ class CSPStage(BaseModule):
             Default: dict(type='LeakyReLU', inplace=True)
     """
 
-    def __init__(self,
-                 block_fn,
-                 in_channels,
-                 out_channels,
-                 has_downsampler=True,
-                 down_growth=False,
-                 expand_ratio=0.5,
-                 bottle_ratio=2,
-                 num_blocks=1,
-                 block_dpr=0,
-                 block_args={},
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN', eps=1e-5),
-                 act_cfg=dict(type='LeakyReLU', inplace=True),
-                 init_cfg=None):
+    def __init__(
+        self,
+        block_fn,
+        in_channels,
+        out_channels,
+        has_downsampler=True,
+        down_growth=False,
+        expand_ratio=0.5,
+        bottle_ratio=2,
+        num_blocks=1,
+        block_dpr=0,
+        block_args={},
+        conv_cfg=None,
+        norm_cfg=dict(type="BN", eps=1e-5),
+        act_cfg=dict(type="LeakyReLU", inplace=True),
+        init_cfg=None,
+    ):
         super().__init__(init_cfg)
         # grow downsample channels to output channels
         down_channels = out_channels if down_growth else in_channels
@@ -164,7 +162,8 @@ class CSPStage(BaseModule):
                 padding=1,
                 groups=32 if block_fn is ResNeXtBottleneck else 1,
                 norm_cfg=norm_cfg,
-                act_cfg=act_cfg)
+                act_cfg=act_cfg,
+            )
         else:
             self.downsample_conv = nn.Identity()
 
@@ -174,10 +173,10 @@ class CSPStage(BaseModule):
             out_channels=exp_channels,
             kernel_size=1,
             norm_cfg=norm_cfg,
-            act_cfg=act_cfg if block_fn is DarknetBottleneck else None)
+            act_cfg=act_cfg if block_fn is DarknetBottleneck else None,
+        )
 
-        assert exp_channels % 2 == 0, \
-            'The channel number before blocks must be divisible by 2.'
+        assert exp_channels % 2 == 0, "The channel number before blocks must be divisible by 2."
         block_channels = exp_channels // 2
         blocks = []
         for i in range(num_blocks):
@@ -189,22 +188,13 @@ class CSPStage(BaseModule):
                 conv_cfg=conv_cfg,
                 norm_cfg=norm_cfg,
                 act_cfg=act_cfg,
-                **block_args)
+                **block_args,
+            )
             blocks.append(block_fn(**block_cfg))
         self.blocks = Sequential(*blocks)
-        self.atfer_blocks_conv = ConvModule(
-            block_channels,
-            block_channels,
-            1,
-            norm_cfg=norm_cfg,
-            act_cfg=act_cfg)
+        self.atfer_blocks_conv = ConvModule(block_channels, block_channels, 1, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
-        self.final_conv = ConvModule(
-            2 * block_channels,
-            out_channels,
-            1,
-            norm_cfg=norm_cfg,
-            act_cfg=act_cfg)
+        self.final_conv = ConvModule(2 * block_channels, out_channels, 1, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
     def forward(self, x):
         x = self.downsample_conv(x)
@@ -299,35 +289,37 @@ class CSPNet(BaseModule):
         (1, 128, 56, 56)
     """
 
-    def __init__(self,
-                 arch,
-                 stem_fn,
-                 in_channels=3,
-                 out_indices=-1,
-                 frozen_stages=-1,
-                 drop_path_rate=0.,
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN', eps=1e-5),
-                 act_cfg=dict(type='LeakyReLU', inplace=True),
-                 norm_eval=False,
-                 init_cfg=dict(type='Kaiming', layer='Conv2d')):
+    def __init__(
+        self,
+        arch,
+        stem_fn,
+        in_channels=3,
+        out_indices=-1,
+        frozen_stages=-1,
+        drop_path_rate=0.0,
+        conv_cfg=None,
+        norm_cfg=dict(type="BN", eps=1e-5),
+        act_cfg=dict(type="LeakyReLU", inplace=True),
+        norm_eval=False,
+        init_cfg=dict(type="Kaiming", layer="Conv2d"),
+    ):
         super().__init__(init_cfg=init_cfg)
         self.arch = self.expand_arch(arch)
-        self.num_stages = len(self.arch['in_channels'])
+        self.num_stages = len(self.arch["in_channels"])
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
         self.norm_eval = norm_eval
         if frozen_stages not in range(-1, self.num_stages):
-            raise ValueError('frozen_stages must be in range(-1, '
-                             f'{self.num_stages}). But received '
-                             f'{frozen_stages}')
+            raise ValueError(
+                "frozen_stages must be in range(-1, " f"{self.num_stages}). But received " f"{frozen_stages}"
+            )
         self.frozen_stages = frozen_stages
 
         self.stem = stem_fn(in_channels)
 
         stages = []
-        depths = self.arch['num_blocks']
+        depths = self.arch["num_blocks"]
         dpr = torch.linspace(0, drop_path_rate, sum(depths)).split(depths)
 
         for i in range(self.num_stages):
@@ -338,39 +330,39 @@ class CSPNet(BaseModule):
                 conv_cfg=conv_cfg,
                 norm_cfg=norm_cfg,
                 act_cfg=act_cfg,
-                init_cfg=init_cfg)
+                init_cfg=init_cfg,
+            )
             stages.append(csp_stage)
         self.stages = Sequential(*stages)
 
         if isinstance(out_indices, int):
             out_indices = [out_indices]
-        assert isinstance(out_indices, Sequence), \
-            f'"out_indices" must by a sequence or int, ' \
-            f'get {type(out_indices)} instead.'
+        assert isinstance(out_indices, Sequence), (
+            f'"out_indices" must by a sequence or int, ' f"get {type(out_indices)} instead."
+        )
         out_indices = list(out_indices)
         for i, index in enumerate(out_indices):
             if index < 0:
                 out_indices[i] = len(self.stages) + index
-            assert 0 <= out_indices[i] <= len(self.stages), \
-                f'Invalid out_indices {index}.'
+            assert 0 <= out_indices[i] <= len(self.stages), f"Invalid out_indices {index}."
         self.out_indices = out_indices
 
     @staticmethod
     def expand_arch(arch):
-        num_stages = len(arch['in_channels'])
+        num_stages = len(arch["in_channels"])
 
-        def to_tuple(x, name=''):
+        def to_tuple(x, name=""):
             if isinstance(x, (list, tuple)):
-                assert len(x) == num_stages, \
-                    f'The length of {name} ({len(x)}) does not ' \
-                    f'equals to the number of stages ({num_stages})'
+                assert len(x) == num_stages, (
+                    f"The length of {name} ({len(x)}) does not " f"equals to the number of stages ({num_stages})"
+                )
                 return tuple(x)
             else:
-                return (x, ) * num_stages
+                return (x,) * num_stages
 
         full_arch = {k: to_tuple(v, k) for k, v in arch.items()}
-        if 'block_args' not in full_arch:
-            full_arch['block_args'] = to_tuple({})
+        if "block_args" not in full_arch:
+            full_arch["block_args"] = to_tuple({})
         return full_arch
 
     def _freeze_stages(self):
@@ -442,9 +434,9 @@ class CSPDarkNet(CSPNet):
         (1, 512, 26, 26)
         (1, 1024, 13, 13)
     """
+
     arch_settings = {
-        53:
-        dict(
+        53: dict(
             block_fn=DarknetBottleneck,
             in_channels=(32, 64, 128, 256, 512),
             out_channels=(64, 128, 256, 512, 1024),
@@ -456,25 +448,29 @@ class CSPDarkNet(CSPNet):
         ),
     }
 
-    def __init__(self,
-                 depth,
-                 in_channels=3,
-                 out_indices=(4, ),
-                 frozen_stages=-1,
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN', eps=1e-5),
-                 act_cfg=dict(type='LeakyReLU', inplace=True),
-                 norm_eval=False,
-                 init_cfg=dict(
-                     type='Kaiming',
-                     layer='Conv2d',
-                     a=math.sqrt(5),
-                     distribution='uniform',
-                     mode='fan_in',
-                     nonlinearity='leaky_relu')):
+    def __init__(
+        self,
+        depth,
+        in_channels=3,
+        out_indices=(4,),
+        frozen_stages=-1,
+        conv_cfg=None,
+        norm_cfg=dict(type="BN", eps=1e-5),
+        act_cfg=dict(type="LeakyReLU", inplace=True),
+        norm_eval=False,
+        init_cfg=dict(
+            type="Kaiming",
+            layer="Conv2d",
+            a=math.sqrt(5),
+            distribution="uniform",
+            mode="fan_in",
+            nonlinearity="leaky_relu",
+        ),
+    ):
 
-        assert depth in self.arch_settings, 'depth must be one of ' \
-            f'{list(self.arch_settings.keys())}, but get {depth}.'
+        assert depth in self.arch_settings, (
+            "depth must be one of " f"{list(self.arch_settings.keys())}, but get {depth}."
+        )
 
         super().__init__(
             arch=self.arch_settings[depth],
@@ -486,19 +482,21 @@ class CSPDarkNet(CSPNet):
             norm_cfg=norm_cfg,
             act_cfg=act_cfg,
             norm_eval=norm_eval,
-            init_cfg=init_cfg)
+            init_cfg=init_cfg,
+        )
 
     def _make_stem_layer(self, in_channels):
         """using a stride=1 conv as the stem in CSPDarknet."""
         # `stem_channels` equals to the `in_channels` in the first stage.
-        stem_channels = self.arch['in_channels'][0]
+        stem_channels = self.arch["in_channels"][0]
         stem = ConvModule(
             in_channels=in_channels,
             out_channels=stem_channels,
             kernel_size=3,
             padding=1,
             norm_cfg=self.norm_cfg,
-            act_cfg=self.act_cfg)
+            act_cfg=self.act_cfg,
+        )
         return stem
 
 
@@ -537,9 +535,9 @@ class CSPResNet(CSPNet):
         (1, 512, 26, 26)
         (1, 1024, 13, 13)
     """
+
     arch_settings = {
-        50:
-        dict(
+        50: dict(
             block_fn=ResNetBottleneck,
             in_channels=(64, 128, 256, 512),
             out_channels=(128, 256, 512, 1024),
@@ -547,22 +545,26 @@ class CSPResNet(CSPNet):
             expand_ratio=4,
             bottle_ratio=2,
             has_downsampler=(False, True, True, True),
-            down_growth=False),
+            down_growth=False,
+        ),
     }
 
-    def __init__(self,
-                 depth,
-                 in_channels=3,
-                 out_indices=(3, ),
-                 frozen_stages=-1,
-                 deep_stem=False,
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN', eps=1e-5),
-                 act_cfg=dict(type='LeakyReLU', inplace=True),
-                 norm_eval=False,
-                 init_cfg=dict(type='Kaiming', layer='Conv2d')):
-        assert depth in self.arch_settings, 'depth must be one of ' \
-            f'{list(self.arch_settings.keys())}, but get {depth}.'
+    def __init__(
+        self,
+        depth,
+        in_channels=3,
+        out_indices=(3,),
+        frozen_stages=-1,
+        deep_stem=False,
+        conv_cfg=None,
+        norm_cfg=dict(type="BN", eps=1e-5),
+        act_cfg=dict(type="LeakyReLU", inplace=True),
+        norm_eval=False,
+        init_cfg=dict(type="Kaiming", layer="Conv2d"),
+    ):
+        assert depth in self.arch_settings, (
+            "depth must be one of " f"{list(self.arch_settings.keys())}, but get {depth}."
+        )
         self.deep_stem = deep_stem
 
         super().__init__(
@@ -575,11 +577,12 @@ class CSPResNet(CSPNet):
             norm_cfg=norm_cfg,
             act_cfg=act_cfg,
             norm_eval=norm_eval,
-            init_cfg=init_cfg)
+            init_cfg=init_cfg,
+        )
 
     def _make_stem_layer(self, in_channels):
         # `stem_channels` equals to the `in_channels` in the first stage.
-        stem_channels = self.arch['in_channels'][0]
+        stem_channels = self.arch["in_channels"][0]
         if self.deep_stem:
             stem = nn.Sequential(
                 ConvModule(
@@ -590,7 +593,8 @@ class CSPResNet(CSPNet):
                     padding=1,
                     conv_cfg=self.conv_cfg,
                     norm_cfg=self.norm_cfg,
-                    act_cfg=self.act_cfg),
+                    act_cfg=self.act_cfg,
+                ),
                 ConvModule(
                     stem_channels // 2,
                     stem_channels // 2,
@@ -599,7 +603,8 @@ class CSPResNet(CSPNet):
                     padding=1,
                     conv_cfg=self.conv_cfg,
                     norm_cfg=self.norm_cfg,
-                    act_cfg=self.act_cfg),
+                    act_cfg=self.act_cfg,
+                ),
                 ConvModule(
                     stem_channels // 2,
                     stem_channels,
@@ -608,7 +613,9 @@ class CSPResNet(CSPNet):
                     padding=1,
                     conv_cfg=self.conv_cfg,
                     norm_cfg=self.norm_cfg,
-                    act_cfg=self.act_cfg))
+                    act_cfg=self.act_cfg,
+                ),
+            )
         else:
             stem = nn.Sequential(
                 ConvModule(
@@ -619,8 +626,10 @@ class CSPResNet(CSPNet):
                     padding=3,
                     conv_cfg=self.conv_cfg,
                     norm_cfg=self.norm_cfg,
-                    act_cfg=self.act_cfg),
-                nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+                    act_cfg=self.act_cfg,
+                ),
+                nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            )
         return stem
 
 
@@ -659,9 +668,9 @@ class CSPResNeXt(CSPResNet):
         (1, 1024, 14, 14)
         (1, 2048, 7, 7)
     """
+
     arch_settings = {
-        50:
-        dict(
+        50: dict(
             block_fn=ResNeXtBottleneck,
             in_channels=(64, 256, 512, 1024),
             out_channels=(256, 512, 1024, 2048),

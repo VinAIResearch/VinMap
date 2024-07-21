@@ -1,10 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import cv2
+import mmocr.utils as utils
 import numpy as np
 import torch
-
-import mmocr.utils as utils
 from mmocr.models.builder import CONVERTORS
+
 from .base import BaseConvertor
 
 
@@ -22,13 +22,7 @@ class SegConvertor(BaseConvertor):
         lower (bool): If True, convert original string to lower case.
     """
 
-    def __init__(self,
-                 dict_type='DICT36',
-                 dict_file=None,
-                 dict_list=None,
-                 with_unknown=True,
-                 lower=False,
-                 **kwargs):
+    def __init__(self, dict_type="DICT36", dict_file=None, dict_list=None, with_unknown=True, lower=False, **kwargs):
         super().__init__(dict_type, dict_file, dict_list)
         assert isinstance(with_unknown, bool)
         assert isinstance(lower, bool)
@@ -39,12 +33,12 @@ class SegConvertor(BaseConvertor):
 
     def update_dict(self):
         # background
-        self.idx2char.insert(0, '<BG>')
+        self.idx2char.insert(0, "<BG>")
 
         # unknown
         self.unknown_idx = None
         if self.with_unknown:
-            self.idx2char.append('<UKN>')
+            self.idx2char.append("<UKN>")
             self.unknown_idx = len(self.idx2char) - 1
 
         # update char2idx
@@ -67,21 +61,17 @@ class SegConvertor(BaseConvertor):
         texts, scores = [], []
         for b in range(output.size(0)):
             seg_pred = output[b].detach()
-            valid_width = int(
-                output.size(-1) * img_metas[b]['valid_ratio'] + 1)
-            seg_res = torch.argmax(
-                seg_pred[:, :, :valid_width],
-                dim=0).cpu().numpy().astype(np.int32)
+            valid_width = int(output.size(-1) * img_metas[b]["valid_ratio"] + 1)
+            seg_res = torch.argmax(seg_pred[:, :, :valid_width], dim=0).cpu().numpy().astype(np.int32)
 
             seg_thr = np.where(seg_res == 0, 0, 255).astype(np.uint8)
-            _, labels, stats, centroids = cv2.connectedComponentsWithStats(
-                seg_thr)
+            _, labels, stats, centroids = cv2.connectedComponentsWithStats(seg_thr)
 
             component_num = stats.shape[0]
 
             all_res = []
             for i in range(component_num):
-                temp_loc = (labels == i)
+                temp_loc = labels == i
                 temp_value = seg_res[temp_loc]
                 temp_center = centroids[i]
 
@@ -98,8 +88,7 @@ class SegConvertor(BaseConvertor):
                 if temp_max_cls == 0:
                     continue
                 temp_max_score = 1.0 * temp_max_num / temp_total_num
-                all_res.append(
-                    [temp_max_cls, temp_center, temp_max_num, temp_max_score])
+                all_res.append([temp_max_cls, temp_center, temp_max_num, temp_max_score])
 
             all_res = sorted(all_res, key=lambda s: s[1][0])
             chars, char_scores = [], []
@@ -109,17 +98,17 @@ class SegConvertor(BaseConvertor):
                     continue
                 temp_char_index = res[0]
                 if temp_char_index >= len(self.idx2char):
-                    temp_char = ''
+                    temp_char = ""
                 elif temp_char_index <= 0:
-                    temp_char = ''
+                    temp_char = ""
                 elif temp_char_index == self.unknown_idx:
-                    temp_char = ''
+                    temp_char = ""
                 else:
                     temp_char = self.idx2char[temp_char_index]
                 chars.append(temp_char)
                 char_scores.append(res[3])
 
-            text = ''.join(chars)
+            text = "".join(chars)
 
             texts.append(text)
             scores.append(char_scores)

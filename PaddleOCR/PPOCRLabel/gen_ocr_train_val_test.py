@@ -1,8 +1,8 @@
 # coding:utf8
-import os
-import shutil
-import random
 import argparse
+import os
+import random
+import shutil
 
 
 # 删除划分的训练集、验证集、测试集文件夹，重新创建一个空的文件夹
@@ -32,8 +32,8 @@ def splitTrainVal(root, absTrainRootPath, absValRootPath, absTestRootPath, train
     labelRecordLen = len(labelFileContent)
 
     for index, labelRecordInfo in enumerate(labelFileContent):
-        imageRelativePath = labelRecordInfo.split('\t')[0]
-        imageLabel = labelRecordInfo.split('\t')[1]
+        imageRelativePath = labelRecordInfo.split("\t")[0]
+        imageLabel = labelRecordInfo.split("\t")[1]
         imageName = os.path.basename(imageRelativePath)
 
         if flag == "det":
@@ -89,18 +89,33 @@ def genDetRecTrainVal(args):
     recValTxt = open(os.path.join(args.recRootPath, "val.txt"), "a", encoding="UTF-8")
     recTestTxt = open(os.path.join(args.recRootPath, "test.txt"), "a", encoding="UTF-8")
 
-    splitTrainVal(args.datasetRootPath, detAbsTrainRootPath, detAbsValRootPath, detAbsTestRootPath, detTrainTxt, detValTxt,
-                  detTestTxt, "det")
+    splitTrainVal(
+        args.datasetRootPath,
+        detAbsTrainRootPath,
+        detAbsValRootPath,
+        detAbsTestRootPath,
+        detTrainTxt,
+        detValTxt,
+        detTestTxt,
+        "det",
+    )
 
     for root, dirs, files in os.walk(args.datasetRootPath):
         for dir in dirs:
-            if dir == 'crop_img':
-                splitTrainVal(root, recAbsTrainRootPath, recAbsValRootPath, recAbsTestRootPath, recTrainTxt, recValTxt,
-                              recTestTxt, "rec")
+            if dir == "crop_img":
+                splitTrainVal(
+                    root,
+                    recAbsTrainRootPath,
+                    recAbsValRootPath,
+                    recAbsTestRootPath,
+                    recTrainTxt,
+                    recValTxt,
+                    recTestTxt,
+                    "rec",
+                )
             else:
                 continue
         break
-
 
 
 if __name__ == "__main__":
@@ -108,44 +123,36 @@ if __name__ == "__main__":
     # 说明：可以根据自己的路径和需求调整参数，图像数据往往多人合作分批标注，每一批图像数据放在一个文件夹内用PPOCRLabel进行标注，
     # 如此会有多个标注好的图像文件夹汇总并划分训练集、验证集、测试集的需求
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--trainValTestRatio",
-        type=str,
-        default="6:2:2",
-        help="ratio of trainset:valset:testset")
+    parser.add_argument("--trainValTestRatio", type=str, default="6:2:2", help="ratio of trainset:valset:testset")
     parser.add_argument(
         "--datasetRootPath",
         type=str,
         default="../train_data/",
-        help="path to the dataset marked by ppocrlabel, E.g, dataset folder named 1,2,3..."
+        help="path to the dataset marked by ppocrlabel, E.g, dataset folder named 1,2,3...",
     )
     parser.add_argument(
         "--detRootPath",
         type=str,
         default="../train_data/det",
-        help="the path where the divided detection dataset is placed")
+        help="the path where the divided detection dataset is placed",
+    )
     parser.add_argument(
         "--recRootPath",
         type=str,
         default="../train_data/rec",
-        help="the path where the divided recognition dataset is placed"
+        help="the path where the divided recognition dataset is placed",
     )
     parser.add_argument(
-        "--detLabelFileName",
-        type=str,
-        default="Label.txt",
-        help="the name of the detection annotation file")
+        "--detLabelFileName", type=str, default="Label.txt", help="the name of the detection annotation file"
+    )
     parser.add_argument(
-        "--recLabelFileName",
-        type=str,
-        default="rec_gt.txt",
-        help="the name of the recognition annotation file"
+        "--recLabelFileName", type=str, default="rec_gt.txt", help="the name of the recognition annotation file"
     )
     parser.add_argument(
         "--recImageDirName",
         type=str,
         default="crop_img",
-        help="the name of the folder where the cropped recognition dataset is located"
+        help="the name of the folder where the cropped recognition dataset is located",
     )
     args = parser.parse_args()
     genDetRecTrainVal(args)

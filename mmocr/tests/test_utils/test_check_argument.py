@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import numpy as np
-
 import mmocr.utils as utils
+import numpy as np
 
 
 def test_is_3dlist():
@@ -26,7 +25,7 @@ def test_is_type_list():
     assert utils.is_type_list([], float)
     assert utils.is_type_list([np.array([])], np.ndarray)
     assert utils.is_type_list([1], int)
-    assert utils.is_type_list(['str'], str)
+    assert utils.is_type_list(["str"], str)
 
 
 def test_is_none_or_type():
@@ -35,7 +34,7 @@ def test_is_none_or_type():
     assert utils.is_none_or_type(1.0, float)
     assert utils.is_none_or_type(np.ndarray([]), np.ndarray)
     assert utils.is_none_or_type(1, int)
-    assert utils.is_none_or_type('str', str)
+    assert utils.is_none_or_type("str", str)
 
 
 def test_valid_boundary():

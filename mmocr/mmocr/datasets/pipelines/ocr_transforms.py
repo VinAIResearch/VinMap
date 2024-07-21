@@ -2,17 +2,16 @@
 import math
 
 import mmcv
+import mmocr.utils as utils
 import numpy as np
 import torch
 import torchvision.transforms.functional as TF
 from mmcv.runner.dist_utils import get_dist_info
 from mmdet.datasets.builder import PIPELINES
+from mmocr.datasets.pipelines.crop import warp_img
 from PIL import Image
 from shapely.geometry import Polygon
 from shapely.geometry import box as shapely_box
-
-import mmocr.utils as utils
-from mmocr.datasets.pipelines.crop import warp_img
 
 
 @PIPELINES.register_module()
@@ -52,21 +51,22 @@ class ResizeOCR:
               [2, 1, 1, 2, 3, 4, 4, 3]
     """
 
-    def __init__(self,
-                 height,
-                 min_width=None,
-                 max_width=None,
-                 keep_aspect_ratio=True,
-                 img_pad_value=0,
-                 width_downsample_ratio=1.0 / 16,
-                 backend=None,
-                 padding_mode='constant'):
+    def __init__(
+        self,
+        height,
+        min_width=None,
+        max_width=None,
+        keep_aspect_ratio=True,
+        img_pad_value=0,
+        width_downsample_ratio=1.0 / 16,
+        backend=None,
+        padding_mode="constant",
+    ):
         assert isinstance(height, (int, tuple))
         assert utils.is_none_or_type(min_width, (int, tuple))
         assert utils.is_none_or_type(max_width, (int, tuple))
         if not keep_aspect_ratio:
-            assert max_width is not None, ('"max_width" must assigned '
-                                           'if "keep_aspect_ratio" is False')
+            assert max_width is not None, '"max_width" must assigned ' 'if "keep_aspect_ratio" is False'
         if isinstance(height, tuple):
             assert isinstance(min_width, tuple)
             assert isinstance(max_width, tuple)
@@ -96,7 +96,7 @@ class ResizeOCR:
             dst_min_width = self.min_width[idx]
             dst_max_width = self.max_width[idx]
 
-        img_shape = results['img_shape']
+        img_shape = results["img_shape"]
         ori_height, ori_width = img_shape[:2]
         valid_ratio = 1.0
         resize_shape = list(img_shape)
@@ -113,9 +113,7 @@ class ResizeOCR:
             if dst_max_width is not None:
                 valid_ratio = min(1.0, 1.0 * new_width / dst_max_width)
                 resize_width = min(dst_max_width, new_width)
-                img_resize = mmcv.imresize(
-                    results['img'], (resize_width, dst_height),
-                    backend=self.backend)
+                img_resize = mmcv.imresize(results["img"], (resize_width, dst_height), backend=self.backend)
                 resize_shape = img_resize.shape
                 pad_shape = img_resize.shape
                 if new_width < dst_max_width:
@@ -123,26 +121,23 @@ class ResizeOCR:
                         img_resize,
                         shape=(dst_height, dst_max_width),
                         pad_val=self.img_pad_value,
-                        padding_mode=self.padding_mode)
+                        padding_mode=self.padding_mode,
+                    )
                     pad_shape = img_resize.shape
             else:
-                img_resize = mmcv.imresize(
-                    results['img'], (new_width, dst_height),
-                    backend=self.backend)
+                img_resize = mmcv.imresize(results["img"], (new_width, dst_height), backend=self.backend)
                 resize_shape = img_resize.shape
                 pad_shape = img_resize.shape
         else:
-            img_resize = mmcv.imresize(
-                results['img'], (dst_max_width, dst_height),
-                backend=self.backend)
+            img_resize = mmcv.imresize(results["img"], (dst_max_width, dst_height), backend=self.backend)
             resize_shape = img_resize.shape
             pad_shape = img_resize.shape
 
-        results['img'] = img_resize
-        results['img_shape'] = resize_shape
-        results['resize_shape'] = resize_shape
-        results['pad_shape'] = pad_shape
-        results['valid_ratio'] = valid_ratio
+        results["img"] = img_resize
+        results["img_shape"] = resize_shape
+        results["resize_shape"] = resize_shape
+        results["pad_shape"] = pad_shape
+        results["valid_ratio"] = valid_ratio
 
         return results
 
@@ -155,7 +150,7 @@ class ToTensorOCR:
         pass
 
     def __call__(self, results):
-        results['img'] = TF.to_tensor(results['img'].copy())
+        results["img"] = TF.to_tensor(results["img"].copy())
 
         return results
 
@@ -169,8 +164,8 @@ class NormalizeOCR:
         self.std = std
 
     def __call__(self, results):
-        results['img'] = TF.normalize(results['img'], self.mean, self.std)
-        results['img_norm_cfg'] = dict(mean=self.mean, std=self.std)
+        results["img"] = TF.normalize(results["img"], self.mean, self.std)
+        results["img_norm_cfg"] = dict(mean=self.mean, std=self.std)
         return results
 
 
@@ -188,11 +183,13 @@ class OnlineCropOCR:
             relative to height.
     """
 
-    def __init__(self,
-                 box_keys=['x1', 'y1', 'x2', 'y2', 'x3', 'y3', 'x4', 'y4'],
-                 jitter_prob=0.5,
-                 max_jitter_ratio_x=0.05,
-                 max_jitter_ratio_y=0.02):
+    def __init__(
+        self,
+        box_keys=["x1", "y1", "x2", "y2", "x3", "y3", "x4", "y4"],
+        jitter_prob=0.5,
+        max_jitter_ratio_x=0.05,
+        max_jitter_ratio_y=0.02,
+    ):
         assert utils.is_type_list(box_keys, str)
         assert 0 <= jitter_prob <= 1
         assert 0 <= max_jitter_ratio_x <= 1
@@ -205,17 +202,17 @@ class OnlineCropOCR:
 
     def __call__(self, results):
 
-        if 'img_info' not in results:
+        if "img_info" not in results:
             return results
 
         crop_flag = True
         box = []
         for key in self.box_keys:
-            if key not in results['img_info']:
+            if key not in results["img_info"]:
                 crop_flag = False
                 break
 
-            box.append(float(results['img_info'][key]))
+            box.append(float(results["img_info"][key]))
 
         if not crop_flag:
             return results
@@ -223,13 +220,12 @@ class OnlineCropOCR:
         jitter_flag = np.random.random() > self.jitter_prob
 
         kwargs = dict(
-            jitter_flag=jitter_flag,
-            jitter_ratio_x=self.max_jitter_ratio_x,
-            jitter_ratio_y=self.max_jitter_ratio_y)
-        crop_img = warp_img(results['img'], box, **kwargs)
+            jitter_flag=jitter_flag, jitter_ratio_x=self.max_jitter_ratio_x, jitter_ratio_y=self.max_jitter_ratio_y
+        )
+        crop_img = warp_img(results["img"], box, **kwargs)
 
-        results['img'] = crop_img
-        results['img_shape'] = crop_img.shape
+        results["img"] = crop_img
+        results["img_shape"] = crop_img.shape
 
         return results
 
@@ -245,11 +241,13 @@ class FancyPCA:
 
     def __init__(self, eig_vec=None, eig_val=None):
         if eig_vec is None:
-            eig_vec = torch.Tensor([
-                [-0.5675, +0.7192, +0.4009],
-                [-0.5808, -0.0045, -0.8140],
-                [-0.5836, -0.6948, +0.4203],
-            ]).t()
+            eig_vec = torch.Tensor(
+                [
+                    [-0.5675, +0.7192, +0.4009],
+                    [-0.5808, -0.0045, -0.8140],
+                    [-0.5836, -0.6948, +0.4203],
+                ]
+            ).t()
         if eig_val is None:
             eig_val = torch.Tensor([[0.2175, 0.0188, 0.0045]])
         self.eig_val = eig_val  # 1*3
@@ -264,9 +262,9 @@ class FancyPCA:
         return tensor
 
     def __call__(self, results):
-        img = results['img']
+        img = results["img"]
         tensor = self.pca(img)
-        results['img'] = tensor
+        results["img"] = tensor
 
         return results
 
@@ -294,41 +292,34 @@ class RandomPaddingOCR:
         else:
             assert utils.is_type_list(max_ratio, float)
             assert len(max_ratio) == 4
-        assert box_type is None or box_type in ('char_rects', 'char_quads')
+        assert box_type is None or box_type in ("char_rects", "char_quads")
 
         self.max_ratio = max_ratio
         self.box_type = box_type
 
     def __call__(self, results):
 
-        img_shape = results['img_shape']
+        img_shape = results["img_shape"]
         ori_height, ori_width = img_shape[:2]
 
-        random_padding_left = round(
-            np.random.uniform(0, self.max_ratio[0]) * ori_width)
-        random_padding_top = round(
-            np.random.uniform(0, self.max_ratio[1]) * ori_height)
-        random_padding_right = round(
-            np.random.uniform(0, self.max_ratio[2]) * ori_width)
-        random_padding_bottom = round(
-            np.random.uniform(0, self.max_ratio[3]) * ori_height)
+        random_padding_left = round(np.random.uniform(0, self.max_ratio[0]) * ori_width)
+        random_padding_top = round(np.random.uniform(0, self.max_ratio[1]) * ori_height)
+        random_padding_right = round(np.random.uniform(0, self.max_ratio[2]) * ori_width)
+        random_padding_bottom = round(np.random.uniform(0, self.max_ratio[3]) * ori_height)
 
-        padding = (random_padding_left, random_padding_top,
-                   random_padding_right, random_padding_bottom)
-        img = mmcv.impad(results['img'], padding=padding, padding_mode='edge')
+        padding = (random_padding_left, random_padding_top, random_padding_right, random_padding_bottom)
+        img = mmcv.impad(results["img"], padding=padding, padding_mode="edge")
 
-        results['img'] = img
-        results['img_shape'] = img.shape
+        results["img"] = img
+        results["img_shape"] = img.shape
 
         if self.box_type is not None:
-            num_points = 2 if self.box_type == 'char_rects' else 4
-            char_num = len(results['ann_info'][self.box_type])
+            num_points = 2 if self.box_type == "char_rects" else 4
+            char_num = len(results["ann_info"][self.box_type])
             for i in range(char_num):
                 for j in range(num_points):
-                    results['ann_info'][self.box_type][i][
-                        j * 2] += random_padding_left
-                    results['ann_info'][self.box_type][i][
-                        j * 2 + 1] += random_padding_top
+                    results["ann_info"][self.box_type][i][j * 2] += random_padding_left
+                    results["ann_info"][self.box_type][i][j * 2 + 1] += random_padding_top
 
         return results
 
@@ -350,45 +341,36 @@ class RandomRotateImageBox:
             for quadrangle with ``x1y1x2y2x3y3x4y4`` style.
     """
 
-    def __init__(self, min_angle=-10, max_angle=10, box_type='char_quads'):
-        assert box_type in ('char_rects', 'char_quads')
+    def __init__(self, min_angle=-10, max_angle=10, box_type="char_quads"):
+        assert box_type in ("char_rects", "char_quads")
 
         self.min_angle = min_angle
         self.max_angle = max_angle
         self.box_type = box_type
 
     def __call__(self, results):
-        in_img = results['img']
-        in_chars = results['ann_info']['chars']
-        in_boxes = results['ann_info'][self.box_type]
+        in_img = results["img"]
+        in_chars = results["ann_info"]["chars"]
+        in_boxes = results["ann_info"][self.box_type]
 
         img_width, img_height = in_img.size
-        rotate_center = [img_width / 2., img_height / 2.]
+        rotate_center = [img_width / 2.0, img_height / 2.0]
 
         tan_temp_max_angle = rotate_center[1] / rotate_center[0]
-        temp_max_angle = np.arctan(tan_temp_max_angle) * 180. / np.pi
+        temp_max_angle = np.arctan(tan_temp_max_angle) * 180.0 / np.pi
 
-        random_angle = np.random.uniform(
-            max(self.min_angle, -temp_max_angle),
-            min(self.max_angle, temp_max_angle))
-        random_angle_radian = random_angle * np.pi / 180.
+        random_angle = np.random.uniform(max(self.min_angle, -temp_max_angle), min(self.max_angle, temp_max_angle))
+        random_angle_radian = random_angle * np.pi / 180.0
 
         img_box = shapely_box(0, 0, img_width, img_height)
 
-        out_img = TF.rotate(
-            in_img,
-            random_angle,
-            resample=False,
-            expand=False,
-            center=rotate_center)
+        out_img = TF.rotate(in_img, random_angle, resample=False, expand=False, center=rotate_center)
 
-        out_boxes, out_chars = self.rotate_bbox(in_boxes, in_chars,
-                                                random_angle_radian,
-                                                rotate_center, img_box)
+        out_boxes, out_chars = self.rotate_bbox(in_boxes, in_chars, random_angle_radian, rotate_center, img_box)
 
-        results['img'] = out_img
-        results['ann_info']['chars'] = out_chars
-        results['ann_info'][self.box_type] = out_boxes
+        results["img"] = out_img
+        results["ann_info"]["chars"] = out_chars
+        results["ann_info"][self.box_type] = out_boxes
 
         return results
 
@@ -400,12 +382,10 @@ class RandomRotateImageBox:
             temp_bbox = []
             for i in range(len(bbox) // 2):
                 point = [bbox[2 * i], bbox[2 * i + 1]]
-                temp_bbox.append(
-                    RandomRotateImageBox.rotate_point(point, angle, center))
+                temp_bbox.append(RandomRotateImageBox.rotate_point(point, angle, center))
             poly_temp_bbox = Polygon(temp_bbox).buffer(0)
             if poly_temp_bbox.is_valid:
-                if img_box.intersects(poly_temp_bbox) and (
-                        not img_box.touches(poly_temp_bbox)):
+                if img_box.intersects(poly_temp_bbox) and (not img_box.touches(poly_temp_bbox)):
                     temp_bbox_area = poly_temp_bbox.area
 
                     intersect_area = img_box.intersection(poly_temp_bbox).area
@@ -426,10 +406,8 @@ class RandomRotateImageBox:
         sin_theta = math.sin(-angle)
         c_x = center[0]
         c_y = center[1]
-        new_x = (point[0] - c_x) * cos_theta - (point[1] -
-                                                c_y) * sin_theta + c_x
-        new_y = (point[0] - c_x) * sin_theta + (point[1] -
-                                                c_y) * cos_theta + c_y
+        new_x = (point[0] - c_x) * cos_theta - (point[1] - c_y) * sin_theta + c_x
+        new_y = (point[0] - c_x) * sin_theta + (point[1] - c_y) * cos_theta + c_y
 
         return [new_x, new_y]
 
@@ -442,9 +420,9 @@ class OpencvToPil:
         pass
 
     def __call__(self, results):
-        img = results['img'][..., ::-1]
+        img = results["img"][..., ::-1]
         img = Image.fromarray(img)
-        results['img'] = img
+        results["img"] = img
 
         return results
 
@@ -461,9 +439,9 @@ class PilToOpencv:
         pass
 
     def __call__(self, results):
-        img = np.asarray(results['img'])
+        img = np.asarray(results["img"])
         img = img[..., ::-1]
-        results['img'] = img
+        results["img"] = img
 
         return results
 

@@ -51,27 +51,28 @@ class T2TTransformerLayer(BaseModule):
         keep the same with the official implementation.
     """
 
-    def __init__(self,
-                 embed_dims,
-                 num_heads,
-                 feedforward_channels,
-                 input_dims=None,
-                 drop_rate=0.,
-                 attn_drop_rate=0.,
-                 drop_path_rate=0.,
-                 num_fcs=2,
-                 qkv_bias=False,
-                 qk_scale=None,
-                 act_cfg=dict(type='GELU'),
-                 norm_cfg=dict(type='LN'),
-                 init_cfg=None):
+    def __init__(
+        self,
+        embed_dims,
+        num_heads,
+        feedforward_channels,
+        input_dims=None,
+        drop_rate=0.0,
+        attn_drop_rate=0.0,
+        drop_path_rate=0.0,
+        num_fcs=2,
+        qkv_bias=False,
+        qk_scale=None,
+        act_cfg=dict(type="GELU"),
+        norm_cfg=dict(type="LN"),
+        init_cfg=None,
+    ):
         super(T2TTransformerLayer, self).__init__(init_cfg=init_cfg)
 
         self.v_shortcut = True if input_dims is not None else False
         input_dims = input_dims or embed_dims
 
-        self.norm1_name, norm1 = build_norm_layer(
-            norm_cfg, input_dims, postfix=1)
+        self.norm1_name, norm1 = build_norm_layer(norm_cfg, input_dims, postfix=1)
         self.add_module(self.norm1_name, norm1)
 
         self.attn = MultiheadAttention(
@@ -80,13 +81,13 @@ class T2TTransformerLayer(BaseModule):
             num_heads=num_heads,
             attn_drop=attn_drop_rate,
             proj_drop=drop_rate,
-            dropout_layer=dict(type='DropPath', drop_prob=drop_path_rate),
+            dropout_layer=dict(type="DropPath", drop_prob=drop_path_rate),
             qkv_bias=qkv_bias,
-            qk_scale=qk_scale or (input_dims // num_heads)**-0.5,
-            v_shortcut=self.v_shortcut)
+            qk_scale=qk_scale or (input_dims // num_heads) ** -0.5,
+            v_shortcut=self.v_shortcut,
+        )
 
-        self.norm2_name, norm2 = build_norm_layer(
-            norm_cfg, embed_dims, postfix=2)
+        self.norm2_name, norm2 = build_norm_layer(norm_cfg, embed_dims, postfix=2)
         self.add_module(self.norm2_name, norm2)
 
         self.ffn = FFN(
@@ -94,8 +95,9 @@ class T2TTransformerLayer(BaseModule):
             feedforward_channels=feedforward_channels,
             num_fcs=num_fcs,
             ffn_drop=drop_rate,
-            dropout_layer=dict(type='DropPath', drop_prob=drop_path_rate),
-            act_cfg=act_cfg)
+            dropout_layer=dict(type="DropPath", drop_prob=drop_path_rate),
+            act_cfg=act_cfg,
+        )
 
     @property
     def norm1(self):
@@ -148,25 +150,18 @@ class T2TModule(BaseModule):
 
         self.embed_dims = embed_dims
 
-        self.soft_split0 = nn.Unfold(
-            kernel_size=(7, 7), stride=(4, 4), padding=(2, 2))
-        self.soft_split1 = nn.Unfold(
-            kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
-        self.soft_split2 = nn.Unfold(
-            kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+        self.soft_split0 = nn.Unfold(kernel_size=(7, 7), stride=(4, 4), padding=(2, 2))
+        self.soft_split1 = nn.Unfold(kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+        self.soft_split2 = nn.Unfold(kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
 
         if not use_performer:
             self.attention1 = T2TTransformerLayer(
-                input_dims=in_channels * 7 * 7,
-                embed_dims=token_dims,
-                num_heads=1,
-                feedforward_channels=token_dims)
+                input_dims=in_channels * 7 * 7, embed_dims=token_dims, num_heads=1, feedforward_channels=token_dims
+            )
 
             self.attention2 = T2TTransformerLayer(
-                input_dims=token_dims * 3 * 3,
-                embed_dims=token_dims,
-                num_heads=1,
-                feedforward_channels=token_dims)
+                input_dims=token_dims * 3 * 3, embed_dims=token_dims, num_heads=1, feedforward_channels=token_dims
+            )
 
             self.project = nn.Linear(token_dims * 3 * 3, embed_dims)
         else:
@@ -185,10 +180,8 @@ class T2TModule(BaseModule):
         padding = to_2tuple(unfold.padding)
         dilation = to_2tuple(unfold.dilation)
 
-        h_out = (h + 2 * padding[0] - dilation[0] *
-                 (kernel_size[0] - 1) - 1) // stride[0] + 1
-        w_out = (w + 2 * padding[1] - dilation[1] *
-                 (kernel_size[1] - 1) - 1) // stride[1] + 1
+        h_out = (h + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) // stride[0] + 1
+        w_out = (w + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) // stride[1] + 1
         return (h_out, w_out)
 
     def forward(self, x):
@@ -198,13 +191,13 @@ class T2TModule(BaseModule):
 
         for step in [1, 2]:
             # re-structurization/reconstruction
-            attn = getattr(self, f'attention{step}')
+            attn = getattr(self, f"attention{step}")
             x = attn(x).transpose(1, 2)
             B, C, _ = x.shape
             x = x.reshape(B, C, hw_shape[0], hw_shape[1])
 
             # soft split
-            soft_split = getattr(self, f'soft_split{step}')
+            soft_split = getattr(self, f"soft_split{step}")
             hw_shape = self._get_unfold_size(soft_split, hw_shape)
             x = soft_split(x).transpose(1, 2)
 
@@ -275,62 +268,60 @@ class T2T_ViT(BaseBackbone):
         init_cfg (dict, optional): The Config for initialization.
             Defaults to None.
     """
+
     num_extra_tokens = 1  # cls_token
 
-    def __init__(self,
-                 img_size=224,
-                 in_channels=3,
-                 embed_dims=384,
-                 num_layers=14,
-                 out_indices=-1,
-                 drop_rate=0.,
-                 drop_path_rate=0.,
-                 norm_cfg=dict(type='LN'),
-                 final_norm=True,
-                 with_cls_token=True,
-                 output_cls_token=True,
-                 interpolate_mode='bicubic',
-                 t2t_cfg=dict(),
-                 layer_cfgs=dict(),
-                 init_cfg=None):
+    def __init__(
+        self,
+        img_size=224,
+        in_channels=3,
+        embed_dims=384,
+        num_layers=14,
+        out_indices=-1,
+        drop_rate=0.0,
+        drop_path_rate=0.0,
+        norm_cfg=dict(type="LN"),
+        final_norm=True,
+        with_cls_token=True,
+        output_cls_token=True,
+        interpolate_mode="bicubic",
+        t2t_cfg=dict(),
+        layer_cfgs=dict(),
+        init_cfg=None,
+    ):
         super(T2T_ViT, self).__init__(init_cfg)
 
         # Token-to-Token Module
-        self.tokens_to_token = T2TModule(
-            img_size=img_size,
-            in_channels=in_channels,
-            embed_dims=embed_dims,
-            **t2t_cfg)
+        self.tokens_to_token = T2TModule(img_size=img_size, in_channels=in_channels, embed_dims=embed_dims, **t2t_cfg)
         self.patch_resolution = self.tokens_to_token.init_out_size
         num_patches = self.patch_resolution[0] * self.patch_resolution[1]
 
         # Set cls token
         if output_cls_token:
-            assert with_cls_token is True, f'with_cls_token must be True if' \
-                f'set output_cls_token to True, but got {with_cls_token}'
+            assert with_cls_token is True, (
+                f"with_cls_token must be True if" f"set output_cls_token to True, but got {with_cls_token}"
+            )
         self.with_cls_token = with_cls_token
         self.output_cls_token = output_cls_token
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dims))
 
         # Set position embedding
         self.interpolate_mode = interpolate_mode
-        sinusoid_table = get_sinusoid_encoding(
-            num_patches + self.num_extra_tokens, embed_dims)
-        self.register_buffer('pos_embed', sinusoid_table)
+        sinusoid_table = get_sinusoid_encoding(num_patches + self.num_extra_tokens, embed_dims)
+        self.register_buffer("pos_embed", sinusoid_table)
         self._register_load_state_dict_pre_hook(self._prepare_pos_embed)
 
         self.drop_after_pos = nn.Dropout(p=drop_rate)
 
         if isinstance(out_indices, int):
             out_indices = [out_indices]
-        assert isinstance(out_indices, Sequence), \
-            f'"out_indices" must be a sequence or int, ' \
-            f'get {type(out_indices)} instead.'
+        assert isinstance(out_indices, Sequence), (
+            f'"out_indices" must be a sequence or int, ' f"get {type(out_indices)} instead."
+        )
         for i, index in enumerate(out_indices):
             if index < 0:
                 out_indices[i] = num_layers + index
-            assert 0 <= out_indices[i] <= num_layers, \
-                f'Invalid out_indices {index}'
+            assert 0 <= out_indices[i] <= num_layers, f"Invalid out_indices {index}"
         self.out_indices = out_indices
 
         # stochastic depth decay rule
@@ -343,13 +334,13 @@ class T2T_ViT(BaseBackbone):
             else:
                 layer_cfg = deepcopy(layer_cfgs)
             layer_cfg = {
-                'embed_dims': embed_dims,
-                'num_heads': 6,
-                'feedforward_channels': 3 * embed_dims,
-                'drop_path_rate': dpr[i],
-                'qkv_bias': False,
-                'norm_cfg': norm_cfg,
-                **layer_cfg
+                "embed_dims": embed_dims,
+                "num_heads": 6,
+                "feedforward_channels": 3 * embed_dims,
+                "drop_path_rate": dpr[i],
+                "qkv_bias": False,
+                "norm_cfg": norm_cfg,
+                **layer_cfg,
             }
 
             layer = T2TTransformerLayer(**layer_cfg)
@@ -364,35 +355,30 @@ class T2T_ViT(BaseBackbone):
     def init_weights(self):
         super().init_weights()
 
-        if (isinstance(self.init_cfg, dict)
-                and self.init_cfg['type'] == 'Pretrained'):
+        if isinstance(self.init_cfg, dict) and self.init_cfg["type"] == "Pretrained":
             # Suppress custom init if use pretrained model.
             return
 
-        trunc_normal_(self.cls_token, std=.02)
+        trunc_normal_(self.cls_token, std=0.02)
 
     def _prepare_pos_embed(self, state_dict, prefix, *args, **kwargs):
-        name = prefix + 'pos_embed'
+        name = prefix + "pos_embed"
         if name not in state_dict.keys():
             return
 
         ckpt_pos_embed_shape = state_dict[name].shape
         if self.pos_embed.shape != ckpt_pos_embed_shape:
             from mmcls.utils import get_root_logger
-            logger = get_root_logger()
-            logger.info(
-                f'Resize the pos_embed shape from {ckpt_pos_embed_shape} '
-                f'to {self.pos_embed.shape}.')
 
-            ckpt_pos_embed_shape = to_2tuple(
-                int(np.sqrt(ckpt_pos_embed_shape[1] - self.num_extra_tokens)))
+            logger = get_root_logger()
+            logger.info(f"Resize the pos_embed shape from {ckpt_pos_embed_shape} " f"to {self.pos_embed.shape}.")
+
+            ckpt_pos_embed_shape = to_2tuple(int(np.sqrt(ckpt_pos_embed_shape[1] - self.num_extra_tokens)))
             pos_embed_shape = self.tokens_to_token.init_out_size
 
-            state_dict[name] = resize_pos_embed(state_dict[name],
-                                                ckpt_pos_embed_shape,
-                                                pos_embed_shape,
-                                                self.interpolate_mode,
-                                                self.num_extra_tokens)
+            state_dict[name] = resize_pos_embed(
+                state_dict[name], ckpt_pos_embed_shape, pos_embed_shape, self.interpolate_mode, self.num_extra_tokens
+            )
 
     def forward(self, x):
         B = x.shape[0]
@@ -407,7 +393,8 @@ class T2T_ViT(BaseBackbone):
             self.patch_resolution,
             patch_resolution,
             mode=self.interpolate_mode,
-            num_extra_tokens=self.num_extra_tokens)
+            num_extra_tokens=self.num_extra_tokens,
+        )
         x = self.drop_after_pos(x)
 
         if not self.with_cls_token:

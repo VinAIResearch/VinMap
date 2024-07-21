@@ -3,7 +3,7 @@ from .builder import AUGMENT
 from .utils import one_hot_encoding
 
 
-@AUGMENT.register_module(name='Identity')
+@AUGMENT.register_module(name="Identity")
 class Identity(object):
     """Change gt_label to one_hot encoding and keep img as the same.
 

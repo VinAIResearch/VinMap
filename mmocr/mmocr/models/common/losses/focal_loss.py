@@ -25,7 +25,6 @@ class FocalLoss(nn.Module):
     def forward(self, input, target):
         logit = F.log_softmax(input, dim=1)
         pt = torch.exp(logit)
-        logit = (1 - pt)**self.gamma * logit
-        loss = F.nll_loss(
-            logit, target, self.weight, ignore_index=self.ignore_index)
+        logit = (1 - pt) ** self.gamma * logit
+        loss = F.nll_loss(logit, target, self.weight, ignore_index=self.ignore_index)
         return loss

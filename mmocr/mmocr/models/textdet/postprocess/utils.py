@@ -5,11 +5,10 @@ import operator
 import cv2
 import numpy as np
 import pyclipper
+from mmocr.core.evaluation.utils import boundary_iou
 from numpy.fft import ifft
 from numpy.linalg import norm
 from shapely.geometry import Polygon
-
-from mmocr.core.evaluation.utils import boundary_iou
 
 
 def filter_instance(area, confidence, min_area, min_confidence):
@@ -28,7 +27,7 @@ def box_score_fast(bitmap, _box):
     box[:, 0] = box[:, 0] - xmin
     box[:, 1] = box[:, 1] - ymin
     cv2.fillPoly(mask, box.reshape(1, -1, 2).astype(np.int32), 1)
-    return cv2.mean(bitmap[ymin:ymax + 1, xmin:xmax + 1], mask)[0]
+    return cv2.mean(bitmap[ymin : ymax + 1, xmin : xmax + 1], mask)[0]
 
 
 def unclip(box, unclip_ratio=1.5):
@@ -43,22 +42,17 @@ def unclip(box, unclip_ratio=1.5):
 def fill_hole(input_mask):
     h, w = input_mask.shape
     canvas = np.zeros((h + 2, w + 2), np.uint8)
-    canvas[1:h + 1, 1:w + 1] = input_mask.copy()
+    canvas[1 : h + 1, 1 : w + 1] = input_mask.copy()
 
     mask = np.zeros((h + 4, w + 4), np.uint8)
 
     cv2.floodFill(canvas, mask, (0, 0), 1)
-    canvas = canvas[1:h + 1, 1:w + 1].astype(np.bool)
+    canvas = canvas[1 : h + 1, 1 : w + 1].astype(np.bool)
 
     return ~canvas | input_mask
 
 
-def centralize(points_yx,
-               normal_sin,
-               normal_cos,
-               radius,
-               contour_mask,
-               step_ratio=0.03):
+def centralize(points_yx, normal_sin, normal_cos, radius, contour_mask, step_ratio=0.03):
 
     h, w = contour_mask.shape
     top_yx = bot_yx = points_yx
@@ -67,17 +61,25 @@ def centralize(points_yx,
     while np.any(step_flags):
         next_yx = np.array(top_yx + step, dtype=np.int32)
         next_y, next_x = next_yx[:, 0], next_yx[:, 1]
-        step_flags = (next_y >= 0) & (next_y < h) & (next_x > 0) & (
-            next_x < w) & contour_mask[np.clip(next_y, 0, h - 1),
-                                       np.clip(next_x, 0, w - 1)]
+        step_flags = (
+            (next_y >= 0)
+            & (next_y < h)
+            & (next_x > 0)
+            & (next_x < w)
+            & contour_mask[np.clip(next_y, 0, h - 1), np.clip(next_x, 0, w - 1)]
+        )
         top_yx = top_yx + step_flags.reshape((-1, 1)) * step
     step_flags = np.ones((len(points_yx), 1), dtype=np.bool)
     while np.any(step_flags):
         next_yx = np.array(bot_yx - step, dtype=np.int32)
         next_y, next_x = next_yx[:, 0], next_yx[:, 1]
-        step_flags = (next_y >= 0) & (next_y < h) & (next_x > 0) & (
-            next_x < w) & contour_mask[np.clip(next_y, 0, h - 1),
-                                       np.clip(next_x, 0, w - 1)]
+        step_flags = (
+            (next_y >= 0)
+            & (next_y < h)
+            & (next_x > 0)
+            & (next_x < w)
+            & contour_mask[np.clip(next_y, 0, h - 1), np.clip(next_x, 0, w - 1)]
+        )
         bot_yx = bot_yx - step_flags.reshape((-1, 1)) * step
     centers = np.array((top_yx + bot_yx) * 0.5, dtype=np.int32)
     return centers
@@ -127,7 +129,7 @@ def poly_nms(polygons, threshold):
         A = polygons[index[-1]][:-1]
         index = np.delete(index, -1)
 
-        iou_list = np.zeros((len(index), ))
+        iou_list = np.zeros((len(index),))
         for i in range(len(index)):
             B = polygons[index[i]][:-1]
 
@@ -139,27 +141,27 @@ def poly_nms(polygons, threshold):
 
 
 def fourier2poly(fourier_coeff, num_reconstr_points=50):
-    """ Inverse Fourier transform
-        Args:
-            fourier_coeff (ndarray): Fourier coefficients shaped (n, 2k+1),
-                with n and k being candidates number and Fourier degree
-                respectively.
-            num_reconstr_points (int): Number of reconstructed polygon points.
-        Returns:
-            Polygons (ndarray): The reconstructed polygons shaped (n, n')
-        """
+    """Inverse Fourier transform
+    Args:
+        fourier_coeff (ndarray): Fourier coefficients shaped (n, 2k+1),
+            with n and k being candidates number and Fourier degree
+            respectively.
+        num_reconstr_points (int): Number of reconstructed polygon points.
+    Returns:
+        Polygons (ndarray): The reconstructed polygons shaped (n, n')
+    """
 
-    a = np.zeros((len(fourier_coeff), num_reconstr_points), dtype='complex')
+    a = np.zeros((len(fourier_coeff), num_reconstr_points), dtype="complex")
     k = (len(fourier_coeff[0]) - 1) // 2
 
-    a[:, 0:k + 1] = fourier_coeff[:, k:]
+    a[:, 0 : k + 1] = fourier_coeff[:, k:]
     a[:, -k:] = fourier_coeff[:, :k]
 
     poly_complex = ifft(a) * num_reconstr_points
     polygon = np.zeros((len(fourier_coeff), num_reconstr_points, 2))
     polygon[:, :, 0] = poly_complex.real
     polygon[:, :, 1] = poly_complex.imag
-    return polygon.astype('int32').reshape((len(fourier_coeff), -1))
+    return polygon.astype("int32").reshape((len(fourier_coeff), -1))
 
 
 class Node:
@@ -181,7 +183,7 @@ class Node:
         link_node.__links.add(self)
 
 
-def graph_propagation(edges, scores, text_comps, edge_len_thr=50.):
+def graph_propagation(edges, scores, text_comps, edge_len_thr=50.0):
     """Propagate edge score information and construct graph. This code was
     partially adapted from https://github.com/GXYM/DRRG licensed under the MIT
     license.
@@ -215,8 +217,7 @@ def graph_propagation(edges, scores, text_comps, edge_len_thr=50.):
             if distance > edge_len_thr:
                 scores[i] = 0
         if (edge[0], edge[1]) in score_dict:
-            score_dict[edge[0], edge[1]] = 0.5 * (
-                score_dict[edge[0], edge[1]] + scores[i])
+            score_dict[edge[0], edge[1]] = 0.5 * (score_dict[edge[0], edge[1]] + scores[i])
         else:
             score_dict[edge[0], edge[1]] = scores[i]
 
@@ -256,10 +257,13 @@ def connected_components(nodes, score_dict, link_thr):
         node_queue = [node]
         while node_queue:
             node = node_queue.pop(0)
-            neighbors = set([
-                neighbor for neighbor in node.links if
-                score_dict[tuple(sorted([node.ind, neighbor.ind]))] >= link_thr
-            ])
+            neighbors = set(
+                [
+                    neighbor
+                    for neighbor in node.links
+                    if score_dict[tuple(sorted([node.ind, neighbor.ind]))] >= link_thr
+                ]
+            )
             neighbors.difference_update(cluster)
             nodes.difference_update(neighbors)
             cluster.update(neighbors)
@@ -282,8 +286,7 @@ def clusters2labels(clusters, num_nodes):
     """
     assert isinstance(clusters, list)
     assert all([isinstance(cluster, list) for cluster in clusters])
-    assert all(
-        [isinstance(node, Node) for cluster in clusters for node in cluster])
+    assert all([isinstance(node, Node) for cluster in clusters for node in cluster])
     assert isinstance(num_nodes, int)
 
     node_labels = np.zeros(num_nodes)
@@ -313,7 +316,7 @@ def remove_single(text_comps, comp_pred_labels):
     single_flags = np.zeros_like(comp_pred_labels)
     pred_labels = np.unique(comp_pred_labels)
     for label in pred_labels:
-        current_label_flag = (comp_pred_labels == label)
+        current_label_flag = comp_pred_labels == label
         if np.sum(current_label_flag) == 1:
             single_flags[np.where(current_label_flag)[0][0]] = 1
     keep_ind = [i for i in range(len(comp_pred_labels)) if not single_flags[i]]
@@ -324,7 +327,7 @@ def remove_single(text_comps, comp_pred_labels):
 
 
 def norm2(point1, point2):
-    return ((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)**0.5
+    return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
 
 
 def min_connect_path(points):
@@ -450,25 +453,19 @@ def comps2boundaries(text_comps, comp_pred_labels):
         return boundaries
     for cluster_ind in range(0, int(np.max(comp_pred_labels)) + 1):
         cluster_comp_inds = np.where(comp_pred_labels == cluster_ind)
-        text_comp_boxes = text_comps[cluster_comp_inds, :8].reshape(
-            (-1, 4, 2)).astype(np.int32)
+        text_comp_boxes = text_comps[cluster_comp_inds, :8].reshape((-1, 4, 2)).astype(np.int32)
         score = np.mean(text_comps[cluster_comp_inds, -1])
 
         if text_comp_boxes.shape[0] < 1:
             continue
 
         elif text_comp_boxes.shape[0] > 1:
-            centers = np.mean(
-                text_comp_boxes, axis=1).astype(np.int32).tolist()
+            centers = np.mean(text_comp_boxes, axis=1).astype(np.int32).tolist()
             shortest_path = min_connect_path(centers)
             text_comp_boxes = text_comp_boxes[shortest_path]
-            top_line = np.mean(
-                text_comp_boxes[:, 0:2, :], axis=1).astype(np.int32).tolist()
-            bot_line = np.mean(
-                text_comp_boxes[:, 2:4, :], axis=1).astype(np.int32).tolist()
-            top_line, bot_line = fix_corner(top_line, bot_line,
-                                            text_comp_boxes[0],
-                                            text_comp_boxes[-1])
+            top_line = np.mean(text_comp_boxes[:, 0:2, :], axis=1).astype(np.int32).tolist()
+            bot_line = np.mean(text_comp_boxes[:, 2:4, :], axis=1).astype(np.int32).tolist()
+            top_line, bot_line = fix_corner(top_line, bot_line, text_comp_boxes[0], text_comp_boxes[-1])
             boundary_points = top_line + bot_line[::-1]
 
         else:

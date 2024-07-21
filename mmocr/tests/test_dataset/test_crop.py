@@ -4,7 +4,6 @@ from itertools import chain, permutations
 
 import numpy as np
 import pytest
-
 from mmocr.datasets.pipelines.box_utils import sort_vertex, sort_vertex8
 from mmocr.datasets.pipelines.crop import box_jitter, crop_img, warp_img
 
@@ -56,9 +55,9 @@ def test_box_jitter():
     with pytest.raises(AssertionError):
         box_jitter(dummy_points_x, [])
     with pytest.raises(AssertionError):
-        box_jitter(dummy_points_x, dummy_points_y, jitter_ratio_x=1.)
+        box_jitter(dummy_points_x, dummy_points_y, jitter_ratio_x=1.0)
     with pytest.raises(AssertionError):
-        box_jitter(dummy_points_x, dummy_points_y, jitter_ratio_y=1.)
+        box_jitter(dummy_points_x, dummy_points_y, jitter_ratio_y=1.0)
 
     box_jitter(dummy_points_x, dummy_points_y, **kwargs)
 
@@ -88,8 +87,8 @@ def test_min_rect_crop():
     cropped_img = crop_img(
         dummy_img,
         dummy_box,
-        0.,
-        0.,
+        0.0,
+        0.0,
     )
 
     with pytest.raises(AssertionError):

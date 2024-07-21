@@ -21,11 +21,13 @@ class HRFuseScales(BaseModule):
             Defaults to ``dict(type='Normal', layer='Linear', std=0.01))``.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels=2048,
-                 norm_cfg=dict(type='BN', momentum=0.1),
-                 init_cfg=dict(type='Normal', layer='Linear', std=0.01)):
+    def __init__(
+        self,
+        in_channels,
+        out_channels=2048,
+        norm_cfg=dict(type="BN", momentum=0.1),
+        init_cfg=dict(type="Normal", layer="Linear", std=0.01),
+    ):
         super(HRFuseScales, self).__init__(init_cfg=init_cfg)
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -45,7 +47,8 @@ class HRFuseScales(BaseModule):
                     out_channels=out_channels[i],
                     num_blocks=1,
                     stride=1,
-                ))
+                )
+            )
         self.increase_layers = nn.ModuleList(increase_layers)
 
         # Downsample feature maps in each scale.
@@ -60,7 +63,8 @@ class HRFuseScales(BaseModule):
                     padding=1,
                     norm_cfg=self.norm_cfg,
                     bias=False,
-                ))
+                )
+            )
         self.downsample_layers = nn.ModuleList(downsample_layers)
 
         # The final conv block before final classifier linear layer.
@@ -77,7 +81,6 @@ class HRFuseScales(BaseModule):
 
         feat = self.increase_layers[0](x[0])
         for i in range(len(self.downsample_layers)):
-            feat = self.downsample_layers[i](feat) + \
-                self.increase_layers[i + 1](x[i + 1])
+            feat = self.downsample_layers[i](feat) + self.increase_layers[i + 1](x[i + 1])
 
-        return (self.final_layer(feat), )
+        return (self.final_layer(feat),)

@@ -13,24 +13,25 @@
 # limitations under the License.
 import paddle
 import paddle.nn as nn
-
 from arch.spectral_norm import spectral_norm
 
 
 class CBN(nn.Layer):
-    def __init__(self,
-                 name,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 stride=1,
-                 padding=0,
-                 dilation=1,
-                 groups=1,
-                 use_bias=False,
-                 norm_layer=None,
-                 act=None,
-                 act_attr=None):
+    def __init__(
+        self,
+        name,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        use_bias=False,
+        norm_layer=None,
+        act=None,
+        act_attr=None,
+    ):
         super(CBN, self).__init__()
         if use_bias:
             bias_attr = paddle.ParamAttr(name=name + "_bias")
@@ -45,16 +46,15 @@ class CBN(nn.Layer):
             dilation=dilation,
             groups=groups,
             weight_attr=paddle.ParamAttr(name=name + "_weights"),
-            bias_attr=bias_attr)
+            bias_attr=bias_attr,
+        )
         if norm_layer:
-            self._norm_layer = getattr(paddle.nn, norm_layer)(
-                num_features=out_channels, name=name + "_bn")
+            self._norm_layer = getattr(paddle.nn, norm_layer)(num_features=out_channels, name=name + "_bn")
         else:
             self._norm_layer = None
         if act:
             if act_attr:
-                self._act = getattr(paddle.nn, act)(**act_attr,
-                                                    name=name + "_" + act)
+                self._act = getattr(paddle.nn, act)(**act_attr, name=name + "_" + act)
             else:
                 self._act = getattr(paddle.nn, act)(name=name + "_" + act)
         else:
@@ -70,19 +70,21 @@ class CBN(nn.Layer):
 
 
 class SNConv(nn.Layer):
-    def __init__(self,
-                 name,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 stride=1,
-                 padding=0,
-                 dilation=1,
-                 groups=1,
-                 use_bias=False,
-                 norm_layer=None,
-                 act=None,
-                 act_attr=None):
+    def __init__(
+        self,
+        name,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        use_bias=False,
+        norm_layer=None,
+        act=None,
+        act_attr=None,
+    ):
         super(SNConv, self).__init__()
         if use_bias:
             bias_attr = paddle.ParamAttr(name=name + "_bias")
@@ -98,16 +100,16 @@ class SNConv(nn.Layer):
                 dilation=dilation,
                 groups=groups,
                 weight_attr=paddle.ParamAttr(name=name + "_weights"),
-                bias_attr=bias_attr))
+                bias_attr=bias_attr,
+            )
+        )
         if norm_layer:
-            self._norm_layer = getattr(paddle.nn, norm_layer)(
-                num_features=out_channels, name=name + "_bn")
+            self._norm_layer = getattr(paddle.nn, norm_layer)(num_features=out_channels, name=name + "_bn")
         else:
             self._norm_layer = None
         if act:
             if act_attr:
-                self._act = getattr(paddle.nn, act)(**act_attr,
-                                                    name=name + "_" + act)
+                self._act = getattr(paddle.nn, act)(**act_attr, name=name + "_" + act)
             else:
                 self._act = getattr(paddle.nn, act)(name=name + "_" + act)
         else:
@@ -123,20 +125,22 @@ class SNConv(nn.Layer):
 
 
 class SNConvTranspose(nn.Layer):
-    def __init__(self,
-                 name,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 stride=1,
-                 padding=0,
-                 output_padding=0,
-                 dilation=1,
-                 groups=1,
-                 use_bias=False,
-                 norm_layer=None,
-                 act=None,
-                 act_attr=None):
+    def __init__(
+        self,
+        name,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        padding=0,
+        output_padding=0,
+        dilation=1,
+        groups=1,
+        use_bias=False,
+        norm_layer=None,
+        act=None,
+        act_attr=None,
+    ):
         super(SNConvTranspose, self).__init__()
         if use_bias:
             bias_attr = paddle.ParamAttr(name=name + "_bias")
@@ -153,16 +157,16 @@ class SNConvTranspose(nn.Layer):
                 dilation=dilation,
                 groups=groups,
                 weight_attr=paddle.ParamAttr(name=name + "_weights"),
-                bias_attr=bias_attr))
+                bias_attr=bias_attr,
+            )
+        )
         if norm_layer:
-            self._norm_layer = getattr(paddle.nn, norm_layer)(
-                num_features=out_channels, name=name + "_bn")
+            self._norm_layer = getattr(paddle.nn, norm_layer)(num_features=out_channels, name=name + "_bn")
         else:
             self._norm_layer = None
         if act:
             if act_attr:
-                self._act = getattr(paddle.nn, act)(**act_attr,
-                                                    name=name + "_" + act)
+                self._act = getattr(paddle.nn, act)(**act_attr, name=name + "_" + act)
             else:
                 self._act = getattr(paddle.nn, act)(name=name + "_" + act)
         else:
@@ -178,8 +182,7 @@ class SNConvTranspose(nn.Layer):
 
 
 class MiddleNet(nn.Layer):
-    def __init__(self, name, in_channels, mid_channels, out_channels,
-                 use_bias):
+    def __init__(self, name, in_channels, mid_channels, out_channels, use_bias):
         super(MiddleNet, self).__init__()
         self._sn_conv1 = SNConv(
             name=name + "_sn_conv1",
@@ -188,20 +191,23 @@ class MiddleNet(nn.Layer):
             kernel_size=1,
             use_bias=use_bias,
             norm_layer=None,
-            act=None)
+            act=None,
+        )
         self._pad2d = nn.Pad2D(padding=[1, 1, 1, 1], mode="replicate")
         self._sn_conv2 = SNConv(
             name=name + "_sn_conv2",
             in_channels=mid_channels,
             out_channels=mid_channels,
             kernel_size=3,
-            use_bias=use_bias)
+            use_bias=use_bias,
+        )
         self._sn_conv3 = SNConv(
             name=name + "_sn_conv3",
             in_channels=mid_channels,
             out_channels=out_channels,
             kernel_size=1,
-            use_bias=use_bias)
+            use_bias=use_bias,
+        )
 
     def forward(self, x):
 
@@ -213,8 +219,7 @@ class MiddleNet(nn.Layer):
 
 
 class ResBlock(nn.Layer):
-    def __init__(self, name, channels, norm_layer, use_dropout, use_dilation,
-                 use_bias):
+    def __init__(self, name, channels, norm_layer, use_dropout, use_dilation, use_bias):
         super(ResBlock, self).__init__()
         if use_dilation:
             padding_mat = [1, 1, 1, 1]
@@ -231,7 +236,8 @@ class ResBlock(nn.Layer):
             norm_layer=norm_layer,
             use_bias=use_bias,
             act="ReLU",
-            act_attr=None)
+            act_attr=None,
+        )
         if use_dropout:
             self._dropout = nn.Dropout(0.5)
         else:
@@ -245,7 +251,8 @@ class ResBlock(nn.Layer):
             norm_layer=norm_layer,
             use_bias=use_bias,
             act="ReLU",
-            act_attr=None)
+            act_attr=None,
+        )
 
     def forward(self, x):
         pad1 = self._pad1.forward(x)

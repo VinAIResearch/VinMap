@@ -1,15 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import mmocr.utils as utils
 import numpy as np
 
-import mmocr.utils as utils
 from . import utils as eval_utils
 
 
-def eval_hmean_iou(pred_boxes,
-                   gt_boxes,
-                   gt_ignored_boxes,
-                   iou_thr=0.5,
-                   precision_thr=0.5):
+def eval_hmean_iou(pred_boxes, gt_boxes, gt_ignored_boxes, iou_thr=0.5, precision_thr=0.5):
     """Evaluate hmean of text detection using IOU standard.
 
     Args:
@@ -60,8 +56,7 @@ def eval_hmean_iou(pred_boxes,
         gt_polys = [eval_utils.points2polygon(p) for p in gt_all]
         gt_ignored_index = [gt_num + i for i in range(len(gt_ignored))]
         gt_num = len(gt_polys)
-        pred_polys, _, pred_ignored_index = eval_utils.ignore_pred(
-            pred, gt_ignored_index, gt_polys, precision_thr)
+        pred_polys, _, pred_ignored_index = eval_utils.ignore_pred(pred, gt_ignored_index, gt_polys, precision_thr)
 
         # match.
         if gt_num > 0 and pred_num > 0:
@@ -76,14 +71,16 @@ def eval_hmean_iou(pred_boxes,
                     gt_pol = gt_polys[gt_id]
                     det_pol = pred_polys[pred_id]
 
-                    iou_mat[gt_id,
-                            pred_id] = eval_utils.poly_iou(det_pol, gt_pol)
+                    iou_mat[gt_id, pred_id] = eval_utils.poly_iou(det_pol, gt_pol)
 
             for gt_id in range(gt_num):
                 for pred_id in range(pred_num):
-                    if (gt_hit[gt_id] != 0 or pred_hit[pred_id] != 0
-                            or gt_id in gt_ignored_index
-                            or pred_id in pred_ignored_index):
+                    if (
+                        gt_hit[gt_id] != 0
+                        or pred_hit[pred_id] != 0
+                        or gt_id in gt_ignored_index
+                        or pred_id in pred_ignored_index
+                    ):
                         continue
                     if iou_mat[gt_id, pred_id] > iou_thr:
                         gt_hit[gt_id] = 1
@@ -93,25 +90,25 @@ def eval_hmean_iou(pred_boxes,
         gt_care_number = gt_num - gt_ignored_num
         pred_care_number = pred_num - len(pred_ignored_index)
 
-        r, p, h = eval_utils.compute_hmean(hit_num, hit_num, gt_care_number,
-                                           pred_care_number)
+        r, p, h = eval_utils.compute_hmean(hit_num, hit_num, gt_care_number, pred_care_number)
 
-        img_results.append({'recall': r, 'precision': p, 'hmean': h})
+        img_results.append({"recall": r, "precision": p, "hmean": h})
 
         dataset_hit_num += hit_num
         dataset_gt_num += gt_care_number
         dataset_pred_num += pred_care_number
 
     dataset_r, dataset_p, dataset_h = eval_utils.compute_hmean(
-        dataset_hit_num, dataset_hit_num, dataset_gt_num, dataset_pred_num)
+        dataset_hit_num, dataset_hit_num, dataset_gt_num, dataset_pred_num
+    )
 
     dataset_results = {
-        'num_gts': dataset_gt_num,
-        'num_dets': dataset_pred_num,
-        'num_match': dataset_hit_num,
-        'recall': dataset_r,
-        'precision': dataset_p,
-        'hmean': dataset_h
+        "num_gts": dataset_gt_num,
+        "num_dets": dataset_pred_num,
+        "num_match": dataset_hit_num,
+        "recall": dataset_r,
+        "precision": dataset_p,
+        "hmean": dataset_h,
     }
 
     return dataset_results, img_results

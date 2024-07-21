@@ -4,9 +4,9 @@ import cv2
 import numpy as np
 import torch
 from mmcv.ops import contour_expand
-
 from mmocr.core import points2boundary
 from mmocr.models.builder import POSTPROCESSOR
+
 from .base_postprocessor import BasePostprocessor
 
 
@@ -23,13 +23,15 @@ class PSEPostprocessor(BasePostprocessor):
         min_text_area (int): The minimal text instance region area.
     """
 
-    def __init__(self,
-                 text_repr_type='poly',
-                 min_kernel_confidence=0.5,
-                 min_text_avg_confidence=0.85,
-                 min_kernel_area=0,
-                 min_text_area=16,
-                 **kwargs):
+    def __init__(
+        self,
+        text_repr_type="poly",
+        min_kernel_confidence=0.5,
+        min_text_avg_confidence=0.85,
+        min_kernel_area=0,
+        min_text_area=16,
+        **kwargs
+    ):
         super().__init__(text_repr_type)
 
         assert 0 <= min_kernel_confidence <= 1
@@ -63,11 +65,9 @@ class PSEPostprocessor(BasePostprocessor):
 
         kernel_masks = kernel_masks.data.cpu().numpy().astype(np.uint8)
 
-        region_num, labels = cv2.connectedComponents(
-            kernel_masks[-1], connectivity=4)
+        region_num, labels = cv2.connectedComponents(kernel_masks[-1], connectivity=4)
 
-        labels = contour_expand(kernel_masks, labels, self.min_kernel_area,
-                                region_num)
+        labels = contour_expand(kernel_masks, labels, self.min_kernel_area, region_num)
         labels = np.array(labels)
         label_num = np.max(labels)
         boundaries = []
@@ -75,13 +75,10 @@ class PSEPostprocessor(BasePostprocessor):
             points = np.array(np.where(labels == i)).transpose((1, 0))[:, ::-1]
             area = points.shape[0]
             score_instance = np.mean(score[labels == i]).item()
-            if not self.is_valid_instance(area, score_instance,
-                                          self.min_text_area,
-                                          self.min_text_avg_confidence):
+            if not self.is_valid_instance(area, score_instance, self.min_text_area, self.min_text_avg_confidence):
                 continue
 
-            vertices_confidence = points2boundary(points, self.text_repr_type,
-                                                  score_instance)
+            vertices_confidence = points2boundary(points, self.text_repr_type, score_instance)
             if vertices_confidence is not None:
                 boundaries.append(vertices_confidence)
 
