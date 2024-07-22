@@ -37,11 +37,11 @@ Please refer to [installation guide](docs/install.md)
 
 ## Dataset :open_file_folder:
 
-The VinMap dataset comprises a total of 6,858 images with diverse resolutions. Among these, 2,000 images are non-map images, 2,777 maps do not depict Vietnam, and 1,002 maps represent Vietnam and include either the Truong Sa or Hoang Sa islands (866 maps are in Vietnamese, and 136 maps are not in Vietnamese). There are 1,079 maps of Vietnam that do not contain both the Truong Sa and Hoang Sa islands (291 maps are in Vietnamese, and 788 maps are not in Vietnamese). Vietnam maps encompass various geographic regions, yet to instruct vision models to prioritize specific map areas such as Truong Sa and Hoang Sa, adhering to governmental regulations, VinMap offers box annotations for every Vietnam map containing both the Truong Sa and Hoang Sa islands. This meticulous annotation process establishes the groundwork for advancing map analysis research in Vietnam
+The VinMap dataset comprises a total of 6,858 images with diverse resolutions. Among these, 2,000 images are non-map images, 2,777 maps do not depict Vietnam, and 1,002 maps represent Vietnam and include either the Truong Sa or Hoang Sa islands (866 maps are in Vietnamese, and 136 maps are not in Vietnamese). There are 1,079 maps of Vietnam that do not contain both the Truong Sa and Hoang Sa islands (291 maps are in Vietnamese, and 788 maps are not in Vietnamese). Vietnam maps encompass various geographic regions, yet to instruct vision models to prioritize specific map areas such as Truong Sa and Hoang Sa, adhering to governmental regulations, VinMap offers box annotations for every Vietnam map containing both the Truong Sa and Hoang Sa islands. This meticulous annotation process establishes the groundwork for advancing map analysis research in Vietnam.
 
 ![overview](docs/dataset.png)
 
-Details of the dataset construction and experimental results can be found in [our paper](https://arxiv.org/abs/2312.10671):
+Details of the dataset construction and experimental results can be found in [our paper](https://arxiv.org/abs/2407.10709):
 
 By downloading the VinMap dataset, USER agrees:
 
@@ -49,16 +49,6 @@ By downloading the VinMap dataset, USER agrees:
 * to not distribute VinMap or part of VinMap in any original or modified form.
 * and to cite our MAPR paper above whenever VinMap is employed to help produce published results.
 
-### Copyright (c) 2021 VinAI Research
-```
-THE DATA IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE DATA OR THE USE OR OTHER DEALINGS IN THE
-DATA.
-```
 
 Please refer to [dataset preparation guide](docs/dataset.md)
 
@@ -132,4 +122,14 @@ team for their support in testing and deployment.
 
 If you have any questions or suggestions about this repo, please feel free to contact me (phucnda@gmail.com).
 
+## Copyright (c) 2024 VinAI Research
+```
+THE DATA IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE DATA OR THE USE OR OTHER DEALINGS IN THE
+DATA.
+```
   
