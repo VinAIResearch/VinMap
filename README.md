@@ -122,7 +122,7 @@ team for their support in testing and deployment.
 
 If you have any questions or suggestions about this repo, please feel free to contact me (phucnda@gmail.com).
 
-## Copyright (c) 2024 VinAI Research
+## Copyright (c) 2024 VinAI
 ```
 THE DATA IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
