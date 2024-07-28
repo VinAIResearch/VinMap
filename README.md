@@ -116,7 +116,7 @@ python gradio_demo.py
 
 We sincerely thank the MIC-VN team for
 data crawling and labeling. We thank Mr. Que Nguyen and his
-team for their support in testing and deployment.
+team for their support in testing and deployment. The source code is built upon VietOCR and MMOCR.
 
 ## Contacts
 

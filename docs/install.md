@@ -26,8 +26,7 @@ cd ../
 cd vietocr
 pip install -v -e .
 cd ../
-cd PaddleOCR
-pip install -v -e .
+pip install PaddleOCR
 
 # Extra env
 pip install paddlepaddle
