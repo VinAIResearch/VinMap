@@ -18,7 +18,7 @@ This paper explores the application of computer vision technologies to the analy
 
 ![overview](docs/pipeline.png)
 
-Details of the model architecture and experimental results can be found in [our paper](https://arxiv.org/abs/2312.10671):
+Details of the model architecture and experimental results can be found in [our paper](https://arxiv.org/abs/2407.10709):
 ```bibtext
 @inproceedings{nguyen_vinmap,
   title={Detecting Omissions in Geographic Maps through Computer Vision},
