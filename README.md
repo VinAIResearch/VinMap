@@ -21,10 +21,10 @@ This paper explores the application of computer vision technologies to the analy
 Details of the model architecture and experimental results can be found in [our paper](https://arxiv.org/abs/2312.10671):
 ```bibtext
 @inproceedings{nguyen_vinmap,
-  title={Detecting Omissions in Geographic Maps through Computer Vision}, 
-  author={Nguyen, Phuc and Anh, Do and Minh Hoai},
+  title={Detecting Omissions in Geographic Maps through Computer Vision},
+  author={Phuc Nguyen and Anh Do and Minh Hoai},
   year={2024},
-  booktitle={2024 International Conference on Multimedia Analysis and Pattern Recognition (MAPR)}
+  booktitle={International Conference on Multimedia Analysis and Pattern Recognition}
 }
 ```
 **Please CITE** our [paper](https://arxiv.org/abs/2407.10709) whenever this repository is used to help produce published results or incorporated into other software.
